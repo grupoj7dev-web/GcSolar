@@ -54,7 +54,6 @@ jobs:
             ./ "$SSH_USER@$SSH_HOST:$SSH_TARGET_DIR/"
 
       - name: Post deploy command
-        if: ${{ secrets.POST_DEPLOY_CMD != '' }}
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
@@ -62,4 +61,6 @@ jobs:
           POST_DEPLOY_CMD: ${{ secrets.POST_DEPLOY_CMD }}
         run: |
           set -e
-          ssh -p "${SSH_PORT:-22}" "$SSH_USER@$SSH_HOST" "$POST_DEPLOY_CMD"
+          if [ -n "$POST_DEPLOY_CMD" ]; then
+            ssh -p "${SSH_PORT:-22}" "$SSH_USER@$SSH_HOST" "$POST_DEPLOY_CMD"
+          fi
