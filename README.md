@@ -14,6 +14,9 @@ Landing page institucional da GC Solar.
 
 O deploy roda via GitHub Actions em todo push na branch `main`.
 
+- `.github/workflows/pages.yml`: publica automaticamente no GitHub Pages (com `CNAME` para `gc.solar`).
+- `.github/workflows/deploy.yml`: deploy por SSH para servidor proprio (executa apenas se os secrets existirem).
+
 ### Secrets necessarios no GitHub
 
 - `SSH_HOST`: host do servidor (ex.: `gc.solar` ou IP)

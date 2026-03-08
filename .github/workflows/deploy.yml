@@ -9,11 +9,29 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.precheck.outputs.ready }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Check required secrets
+        id: precheck
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_TARGET_DIR: ${{ secrets.SSH_TARGET_DIR }}
+        run: |
+          if [ -n "$SSH_PRIVATE_KEY" ] && [ -n "$SSH_HOST" ] && [ -n "$SSH_USER" ] && [ -n "$SSH_TARGET_DIR" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "Missing SSH secrets. Skipping server deploy."
+          fi
+
       - name: Configure SSH
+        if: steps.precheck.outputs.ready == 'true'
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           SSH_HOST: ${{ secrets.SSH_HOST }}
@@ -26,6 +44,7 @@ jobs:
           ssh-keyscan -p "${SSH_PORT:-22}" -H "$SSH_HOST" >> ~/.ssh/known_hosts
 
       - name: Ensure remote dir
+        if: steps.precheck.outputs.ready == 'true'
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
@@ -36,6 +55,7 @@ jobs:
           ssh -p "${SSH_PORT:-22}" "$SSH_USER@$SSH_HOST" "mkdir -p '$SSH_TARGET_DIR'"
 
       - name: Upload landing files
+        if: steps.precheck.outputs.ready == 'true'
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
@@ -54,6 +74,7 @@ jobs:
             ./ "$SSH_USER@$SSH_HOST:$SSH_TARGET_DIR/"
 
       - name: Post deploy command
+        if: steps.precheck.outputs.ready == 'true'
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
