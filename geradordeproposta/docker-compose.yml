@@ -1,0 +1,36 @@
+version: '3'
+
+services:
+  frontend:
+    container_name: gpro-frontend
+    image: nginx:alpine
+    restart: always
+    volumes:
+      - ./dist:/usr/share/nginx/html
+      - ./nginx-docker.conf:/etc/nginx/conf.d/default.conf
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.gpro.rule=Host(`gpro.iasolar.io`)"
+      - "traefik.http.routers.gpro.entrypoints=websecure"
+      - "traefik.http.routers.gpro.tls.certresolver=letsencrypt"
+      - "traefik.http.services.gpro.loadbalancer.server.port=80"
+    networks:
+      - traefik-public
+    depends_on:
+      - backend
+
+  backend:
+    container_name: gpro-backend
+    image: node:20-alpine
+    restart: always
+    working_dir: /app
+    volumes:
+      - ./server:/app/server
+      - ./package.json:/app/package.json
+    command: sh -c "npm install --production && node server/index.js"
+    networks:
+      - traefik-public
+
+networks:
+  traefik-public:
+    external: true

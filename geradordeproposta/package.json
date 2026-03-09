@@ -1,0 +1,41 @@
+{
+  "name": "geradordeproposta",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"node server/index.js\" \"vite\"",
+    "build": "vite build",
+    "deploy": "node deploy.js",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.87.1",
+    "archiver": "^7.0.1",
+    "axios": "^1.13.4",
+    "concurrently": "^9.2.1",
+    "cors": "^2.8.5",
+    "express": "^5.2.1",
+    "firebase": "^12.8.0",
+    "lucide-react": "^0.561.0",
+    "node-ssh": "^13.2.1",
+    "pdf-parse": "^2.4.5",
+    "pdfjs-dist": "^5.4.449",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.10.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/react": "^19.2.5",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "eslint": "^9.39.1",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "globals": "^16.5.0",
+    "ssh2": "^1.17.0",
+    "vite": "^7.2.4"
+  }
+}

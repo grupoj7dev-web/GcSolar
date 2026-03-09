@@ -1,0 +1,43 @@
+.gc-embed-shell {
+  min-height: 100vh;
+  background:
+    radial-gradient(900px 260px at 0% -20%, rgba(34, 197, 94, 0.09), transparent 60%),
+    #f5faf6;
+  padding: 20px;
+}
+
+.gc-embed-shell .list-header h1,
+.gc-embed-shell .new-proposal-header h1,
+.gc-embed-shell .proposal-view-header h1 {
+  color: #0f2d1d;
+}
+
+.gc-embed-shell .btn-new,
+.gc-embed-shell .btn-create,
+.gc-embed-shell .btn-save {
+  background: #1f7a44;
+  border-color: #1f7a44;
+}
+
+.gc-embed-shell .btn-new:hover,
+.gc-embed-shell .btn-create:hover,
+.gc-embed-shell .btn-save:hover {
+  background: #176337;
+}
+
+.gc-embed-shell .filter-buttons button.active,
+.gc-embed-shell .page-number.active {
+  background: #1f7a44;
+  border-color: #1f7a44;
+}
+
+.gc-embed-shell .search-box input:focus,
+.gc-embed-shell .form-group input:focus,
+.gc-embed-shell .form-group select:focus {
+  border-color: #1f7a44;
+  box-shadow: 0 0 0 3px rgba(31, 122, 68, 0.15);
+}
+
+.gc-embed-shell .code {
+  color: #176337;
+}
