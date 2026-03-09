@@ -1,0 +1,276 @@
+.partners-main {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 1.15rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.partners-head {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: flex-start !important;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem !important;
+  margin: 0 !important;
+  min-height: unset !important;
+  height: auto !important;
+  max-height: none !important;
+}
+
+.partners-head > div:first-child {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.partners-head h1 {
+  font-family: "Montserrat", sans-serif;
+  margin: 0;
+  line-height: 1.1;
+  font-size: 2rem;
+}
+
+.partners-head p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 1.02rem;
+}
+
+.head-actions {
+  display: flex;
+  gap: 0.55rem;
+  align-self: flex-start;
+  margin: 0;
+}
+
+.status {
+  margin-bottom: 0.7rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.table-wrap {
+  border: 1px solid var(--table-border);
+  border-radius: 12px;
+  overflow: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 620px;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.64rem 0.7rem;
+  border-bottom: 1px solid var(--table-border);
+  font-size: 0.9rem;
+}
+
+thead th {
+  background: var(--table-head);
+  font-weight: 700;
+}
+
+.empty {
+  text-align: center;
+  color: var(--muted);
+}
+
+.row-actions {
+  display: inline-flex;
+  gap: 0.4rem;
+}
+
+.mini-btn {
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 0.34rem 0.54rem;
+  cursor: pointer;
+  font-size: 0.82rem;
+}
+
+.mini-btn.delete {
+  color: #b91c1c;
+  border-color: #fecaca;
+  background: #fff1f2;
+}
+
+.btn {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.56rem 0.78rem;
+  cursor: pointer;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.btn-primary {
+  background: #16703f;
+  color: #fff;
+  border-color: #16703f;
+}
+
+.btn-primary:hover {
+  filter: brightness(1.05);
+}
+
+.btn-ghost {
+  background: var(--surface-soft);
+  color: var(--text);
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 8, 23, 0.52);
+}
+
+.modal-card {
+  position: relative;
+  max-width: 860px;
+  width: calc(100% - 2rem);
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+  margin: 1rem auto;
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 1rem;
+  box-shadow: 0 18px 32px rgba(2, 8, 23, 0.35);
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.8rem;
+}
+
+.modal-head h2 {
+  font-family: "Montserrat", sans-serif;
+  font-size: 1.1rem;
+}
+
+.icon-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 0.7rem;
+}
+
+.field span {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.field input,
+.field select {
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 0.58rem 0.68rem;
+  font: inherit;
+}
+
+.permissions {
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  margin-top: 0.2rem;
+  margin-bottom: 0.85rem;
+  padding: 0.8rem;
+}
+
+.permissions legend {
+  padding: 0 0.35rem;
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.permissions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem 0.8rem;
+}
+
+.permissions-grid label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+}
+
+.commission-box {
+  border: 1px dashed var(--card-border);
+  border-radius: 12px;
+  padding: 0.8rem;
+  margin-bottom: 0.85rem;
+}
+
+.commission-box h3 {
+  font-family: "Montserrat", sans-serif;
+  font-size: 0.95rem;
+  margin-bottom: 0.3rem;
+}
+
+.commission-box p {
+  margin-bottom: 0.7rem;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.commission-box.disabled {
+  opacity: 0.58;
+}
+
+.actions {
+  display: flex;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 900px) {
+  .partners-head {
+    align-items: flex-start !important;
+  }
+
+  .form-grid,
+  .permissions-grid {
+    grid-template-columns: 1fr;
+  }
+}

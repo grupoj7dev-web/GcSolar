@@ -1,4 +1,4 @@
-﻿import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import {
   getAuth,
   getIdTokenResult,
@@ -31,6 +31,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const COLL_SUBSCRIBERS = "gcredito_subscribers";
+const COLL_PENDING = "assinantes_pendentes";
 
 const appShell = document.getElementById("appShell");
 const toggleSidebarBtn = document.getElementById("toggleSidebar");
@@ -83,6 +85,13 @@ const formDiscount = document.getElementById("formDiscount");
 const formStatus = document.getElementById("formStatus");
 const formConcessionaria = document.getElementById("formConcessionaria");
 const formObs = document.getElementById("formObs");
+const dossierModal = document.getElementById("dossierModal");
+const dossierBody = document.getElementById("dossierBody");
+const dossierStatusText = document.getElementById("dossierStatusText");
+const dossierCloseBtn = document.getElementById("dossierCloseBtn");
+const dossierCancelBtn = document.getElementById("dossierCancelBtn");
+const dossierApproveBtn = document.getElementById("dossierApproveBtn");
+const dossierRejectBtn = document.getElementById("dossierRejectBtn");
 
 let scope = null;
 let allSubscribers = [];
@@ -92,6 +101,7 @@ let currentPage = 1;
 const pageSize = 9;
 let activeStatusFilter = "all";
 let activeSort = "name_asc";
+let dossierItemId = null;
 
 function isMobile() {
   return window.matchMedia("(max-width: 960px)").matches;
@@ -151,18 +161,219 @@ function parseDate(value) {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-function statusType(status) {
+function statusType(status, raw = null) {
   const s = String(status || "").toLowerCase();
+  if (s.includes("rejeit")) return "inactive";
+  if (s.includes("cadastro_pendente") || s.includes("aguardando_aprovacao")) return "pending";
+  if (s.includes("aguardando_assinatura") || s.includes("contrato_enviado")) return "awaiting_signature";
+  if (s.includes("assinado")) return "awaiting_rateio";
+  if (s.includes("assinatura") || s.includes("signature")) return "awaiting_signature";
+  if (s.includes("rateio") || s.includes("allocation")) return "awaiting_rateio";
   if (s.includes("pend") || s.includes("aguard")) return "pending";
   if (s.includes("inativ") || s.includes("suspend")) return "inactive";
+
+  const stage = String(
+    raw?.workflow_stage || raw?.etapa || raw?.pending_reason || raw?.motivo_pendencia || ""
+  ).toLowerCase();
+  if (stage.includes("assinatura") || stage.includes("signature")) return "awaiting_signature";
+  if (stage.includes("rateio") || stage.includes("allocation")) return "awaiting_rateio";
+
   return "active";
 }
 
-function statusLabel(status) {
-  const t = statusType(status);
+function statusLabel(status, raw = null) {
+  const s = String(status || "").toLowerCase();
+  if (s.includes("rejeit")) return "Rejeitado";
+  const t = statusType(status, raw);
+  if (t === "awaiting_signature") return "Aguardando assinatura";
+  if (t === "awaiting_rateio") return "Aguardando rateio";
   if (t === "pending") return "Aguardando";
   if (t === "inactive") return "Inativo";
   return "Ativo";
+}
+
+function isAwaitingItem(item) {
+  return item.sourceCollection === COLL_PENDING &&
+    ["pending", "awaiting_signature", "awaiting_rateio"].includes(item.statusType);
+}
+
+function asText(value) {
+  return String(value || "").trim() || "-";
+}
+
+function escHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function dossierField(label, value) {
+  return `
+    <div class="dossier-item">
+      <small>${escHtml(label)}</small>
+      <strong>${escHtml(asText(value))}</strong>
+    </div>
+  `;
+}
+
+function docLink(label, url) {
+  if (!url) return "";
+  return `<a class="dossier-doc-link" href="${escHtml(url)}" target="_blank" rel="noopener noreferrer"><i class="ph ph-file-arrow-down"></i>${escHtml(label)}</a>`;
+}
+
+function firstFilled(...values) {
+  for (const value of values) {
+    if (value && String(value).trim()) return String(value).trim();
+  }
+  return "";
+}
+
+function openDossierModal(item) {
+  if (!item || item.sourceCollection !== COLL_PENDING) return;
+  const raw = item.raw || {};
+  const endereco = raw.endereco || {};
+  const docs = raw.documentos || {};
+  const docsLegacy = raw.documents || raw.anexos || {};
+  const contrato = raw.contrato || {};
+  const contratoAssinatura = contrato.assinatura || {};
+  const contaEnergiaUrl = firstFilled(docs.contaEnergiaUrl, docsLegacy.contaEnergiaUrl, raw.contaEnergiaUrl);
+  const cnhUrl = firstFilled(docs.cnhUrl, docsLegacy.cnhUrl, raw.cnhUrl);
+  const contratoSocialUrl = firstFilled(docs.contratoSocialUrl, docsLegacy.contratoSocialUrl, raw.contratoSocialUrl);
+  const cnhDonoContaUrl = firstFilled(docs.cnhDonoContaUrl, docsLegacy.cnhDonoContaUrl, raw.cnhDonoContaUrl);
+  const contratoPdfUrl = firstFilled(contrato.pdfUrl, raw.contratoPdfUrl);
+  const selfieAssinaturaUrl = firstFilled(contratoAssinatura.selfieImagem);
+  const assinaturaUrl = firstFilled(contratoAssinatura.assinaturaImagem);
+  const renderedDocs = [
+    docLink("Conta de energia", contaEnergiaUrl),
+    docLink("CNH/RG do responsável", cnhUrl),
+    docLink("Contrato social", contratoSocialUrl),
+    docLink("Documento do terceiro", cnhDonoContaUrl),
+    docLink("Contrato gerado (PDF)", contratoPdfUrl),
+    docLink("Selfie da assinatura", selfieAssinaturaUrl),
+    docLink("Imagem da assinatura", assinaturaUrl),
+  ].filter(Boolean);
+  const titularConta = raw.contaEnergiaNoNomeDoContratante === false ? "Conta em nome de terceiro" : "Conta no nome do contratante";
+
+  dossierItemId = item.id;
+  dossierStatusText.textContent = `Status: ${statusLabel(item.status, raw)}`;
+  dossierBody.innerHTML = `
+    <section class="dossier-section">
+      <h4>Cadastro</h4>
+      <div class="dossier-grid">
+        ${dossierField("Tipo de pessoa", raw.tipoPessoa)}
+        ${dossierField("Nome", raw.nome || raw.razaoSocial)}
+        ${dossierField("Nome fantasia", raw.nomeFantasia)}
+        ${dossierField("Representante", raw.nomeRepresentante)}
+        ${dossierField("CPF/CNPJ", raw.cpfCnpj)}
+        ${dossierField("Nascimento/Fundação", raw.dataNascimento || raw.dataFundacao)}
+      </div>
+    </section>
+    <section class="dossier-section">
+      <h4>Contato e Energia</h4>
+      <div class="dossier-grid">
+        ${dossierField("E-mail", raw.email)}
+        ${dossierField("Telefone", raw.telefone)}
+        ${dossierField("UC", raw.uc)}
+        ${dossierField("Consumo médio", raw.consumoMedio ? `${numberFmt(raw.consumoMedio)} kWh` : "-")}
+        ${dossierField("Desconto", raw.desconto ? `${numberFmt(raw.desconto)}%` : "-")}
+        ${dossierField("Modalidade", raw.modalidade)}
+      </div>
+    </section>
+    <section class="dossier-section">
+      <h4>Endereço e Titularidade</h4>
+      <div class="dossier-grid">
+        ${dossierField("CEP", endereco.cep)}
+        ${dossierField("Cidade/UF", `${asText(endereco.cidade)} / ${asText(endereco.estado)}`)}
+        ${dossierField("Logradouro", endereco.logradouro)}
+        ${dossierField("Número", endereco.numero)}
+        ${dossierField("Complemento", endereco.complemento)}
+        ${dossierField("Bairro", endereco.bairro)}
+        ${dossierField("Titularidade", titularConta)}
+        ${dossierField("Nome do titular na conta", raw.nomeDonoConta)}
+        ${dossierField("CPF/CNPJ do titular na conta", raw.cpfCnpjDonoConta)}
+        ${dossierField("Nascimento do titular na conta", raw.dataNascimentoDonoConta)}
+      </div>
+    </section>
+    <section class="dossier-section">
+      <h4>Documentos enviados</h4>
+      <div class="dossier-docs">
+        ${renderedDocs.length ? renderedDocs.join("") : '<p class="dossier-empty-docs">Nenhum documento encontrado para este cadastro.</p>'}
+      </div>
+    </section>
+  `;
+
+  dossierModal.classList.remove("hidden");
+}
+
+function closeDossierModal() {
+  dossierModal.classList.add("hidden");
+  dossierBody.innerHTML = "";
+  dossierStatusText.textContent = "";
+  dossierItemId = null;
+}
+
+function buildSubscriberPayloadFromPending(item) {
+  const raw = item.raw || {};
+  const isCompany = String(raw.tipoPessoa || "").toLowerCase() === "juridica";
+  const holderType = isCompany ? "company" : "person";
+  const holderName = raw.nome || raw.razaoSocial || raw.nomeFantasia || "";
+  const cpfCnpj = raw.cpfCnpj || "";
+  const nowIso = new Date().toISOString();
+
+  return {
+    user_id: raw.createdBy || raw.user_id || scope.uid,
+    tenantId: raw.tenantId || scope.tenantId,
+    status: "active",
+    concessionaria: raw.concessionaria || "Equatorial",
+    subscriber: {
+      fullName: isCompany ? "" : holderName,
+      companyName: isCompany ? holderName : "",
+      cpf: isCompany ? "" : cpfCnpj,
+      cnpj: isCompany ? cpfCnpj : "",
+      email: raw.email || "",
+      phone: raw.telefone || "",
+      observations: raw.modalidade || "",
+      partnerNumber: "",
+      contacts: {},
+    },
+    energy_account: {
+      holderType,
+      cpfCnpj,
+      holderName,
+      uc: raw.uc || "",
+      partnerNumber: "",
+    },
+    plan_details: {
+      contractedKwh: Number(raw.consumoMedio || 0),
+      discountPercentage: Number(raw.desconto || 0),
+    },
+    plan_contract: {
+      contractedKwh: Number(raw.consumoMedio || 0),
+      discountPercentage: Number(raw.desconto || 0),
+    },
+    created_at: raw.createdAtISO || nowIso,
+    updated_at: nowIso,
+    pending_source_id: item.id,
+  };
+}
+
+async function approvePendingSubscriber(item) {
+  if (!isAwaitingItem(item)) return;
+  const payload = buildSubscriberPayloadFromPending(item);
+  await addDoc(collection(db, COLL_SUBSCRIBERS), payload);
+  await deleteDoc(doc(db, COLL_PENDING, item.id));
+}
+
+async function rejectPendingSubscriber(item) {
+  if (!isAwaitingItem(item)) return;
+  await updateDoc(doc(db, COLL_PENDING, item.id), {
+    status: "rejeitado",
+    reviewed_by: scope.uid,
+    reviewed_at: new Date().toISOString(),
+  });
 }
 
 function holderTypeLabel(holderType) {
@@ -200,9 +411,10 @@ function normalizeSubscriber(docData, id) {
 
   return {
     id,
+    sourceCollection: COLL_SUBSCRIBERS,
     raw: docData,
     status: docData.status || "active",
-    statusType: statusType(docData.status),
+    statusType: statusType(docData.status, docData),
     concessionaria: String(docData.concessionaria || ""),
     holderType: isCompany ? "company" : "person",
     name,
@@ -215,6 +427,34 @@ function normalizeSubscriber(docData, id) {
     discountPercentage: Number.isFinite(discountPercentage) ? discountPercentage : 0,
     observations: subscriber.observations || "",
     createdAt: parseDate(docData.created_at),
+  };
+}
+
+function normalizePendingSubscriber(docData, id) {
+  const isCompany = String(docData.tipoPessoa || "").toLowerCase() === "juridica";
+  const endereco = docData.endereco || {};
+  const nome = docData.nome || docData.razaoSocial || docData.nomeFantasia || "";
+  const cpfCnpj = docData.cpfCnpj || "";
+
+  return {
+    id,
+    sourceCollection: COLL_PENDING,
+    raw: docData,
+    status: docData.status || "cadastro_pendente",
+    statusType: statusType(docData.status, docData),
+    concessionaria: String(docData.concessionaria || "Equatorial"),
+    holderType: isCompany ? "company" : "person",
+    name: nome,
+    cpfCnpj,
+    email: docData.email || "",
+    phone: docData.telefone || "",
+    uc: String(docData.uc || ""),
+    partnerNumber: "",
+    contractedKwh: Number(docData.consumoMedio || 0),
+    discountPercentage: Number(docData.desconto || 0),
+    observations: docData.modalidade || "",
+    createdAt: parseDate(docData.createdAt || docData.createdAtISO || docData.created_at),
+    cidadeEstado: `${endereco.cidade || ""}${endereco.estado ? `/${endereco.estado}` : ""}`,
   };
 }
 
@@ -245,8 +485,8 @@ async function getUserScope(user) {
 }
 
 function belongsToScope(data, userScope) {
-  const userId = String(data.user_id || "");
-  const tenantId = String(data.tenantId || "");
+  const userId = String(data.user_id || data.createdBy || "");
+  const tenantId = String(data.tenantId || data.tenant_id || "");
   if (tenantId && tenantId === userScope.tenantId) return true;
   if (userId && userId === userScope.uid) return true;
   return false;
@@ -289,7 +529,10 @@ function fillForm(item) {
   formPartner.value = item.partnerNumber;
   formContractedKwh.value = item.contractedKwh ?? "";
   formDiscount.value = item.discountPercentage ?? "";
-  formStatus.value = item.statusType;
+  formStatus.value =
+    item.statusType === "awaiting_signature" || item.statusType === "awaiting_rateio"
+      ? "pending"
+      : item.statusType;
   formConcessionaria.value = item.concessionaria;
   formObs.value = item.observations;
 }
@@ -297,7 +540,9 @@ function fillForm(item) {
 function renderStats(list) {
   const total = list.length;
   const ativos = list.filter((x) => x.statusType === "active").length;
-  const pend = list.filter((x) => x.statusType === "pending").length;
+  const pend = list.filter((x) =>
+    ["pending", "awaiting_signature", "awaiting_rateio"].includes(x.statusType)
+  ).length;
   const inat = list.filter((x) => x.statusType === "inactive").length;
 
   statTotal.textContent = total.toLocaleString("pt-BR");
@@ -350,6 +595,13 @@ function renderTable(list) {
   }
 
   const rows = list.map((item) => {
+    const dossierAction = isAwaitingItem(item)
+      ? `<button class="actions-item" type="button" data-action="dossier" data-id="${item.id}">Dossiê completo</button>`
+      : "";
+    const editAction =
+      item.sourceCollection === COLL_SUBSCRIBERS
+        ? `<button class="actions-item" type="button" data-action="edit" data-id="${item.id}">Editar</button>`
+        : "";
     return `
       <tr>
         <td>${item.name || "-"}</td>
@@ -358,7 +610,7 @@ function renderTable(list) {
         <td>${item.uc || "-"}</td>
         <td>${numberFmt(item.contractedKwh)} kWh</td>
         <td>${numberFmt(item.discountPercentage)}%</td>
-        <td><span class="status-pill ${item.statusType}">${statusLabel(item.status)}</span></td>
+        <td><span class="status-pill ${item.statusType}">${statusLabel(item.status, item.raw)}</span></td>
         <td>
           <div class="actions-wrap">
             <button class="actions-trigger" type="button" data-menu-toggle aria-label="Ações">
@@ -366,7 +618,8 @@ function renderTable(list) {
             </button>
             <div class="actions-menu hidden">
               <button class="actions-item" type="button" data-action="view" data-id="${item.id}">Visualizar</button>
-              <button class="actions-item" type="button" data-action="edit" data-id="${item.id}">Editar</button>
+              ${dossierAction}
+              ${editAction}
               <button class="actions-item delete" type="button" data-action="delete" data-id="${item.id}">Excluir</button>
             </div>
           </div>
@@ -388,6 +641,19 @@ function renderCards(list) {
 
   const cards = list.map((item) => {
     const avatarIcon = item.holderType === "company" ? "ph-buildings" : "ph-user-circle";
+    const dossierButton = isAwaitingItem(item)
+      ? `<button class="card-action-btn dossier" type="button" data-action="dossier" data-id="${item.id}">
+            <i class="ph ph-folder-open"></i>
+            Dossiê completo
+          </button>`
+      : "";
+    const editButton =
+      item.sourceCollection === COLL_SUBSCRIBERS
+        ? `<button class="card-action-btn edit" type="button" data-action="edit" data-id="${item.id}">
+            <i class="ph ph-pencil-simple"></i>
+            Editar
+          </button>`
+        : "";
     return `
       <article class="subscriber-card ${item.statusType}">
         <div class="subscriber-card-top">
@@ -398,7 +664,7 @@ function renderCards(list) {
             </div>
           </div>
           <div class="card-badges">
-            <span class="status-pill ${item.statusType}">${statusLabel(item.status)}</span>
+            <span class="status-pill ${item.statusType}">${statusLabel(item.status, item.raw)}</span>
             <span class="type-pill">${holderTypeLabel(item.holderType)}</span>
           </div>
         </div>
@@ -439,10 +705,8 @@ function renderCards(list) {
             <i class="ph ph-eye"></i>
             Ver
           </button>
-          <button class="card-action-btn edit" type="button" data-action="edit" data-id="${item.id}">
-            <i class="ph ph-pencil-simple"></i>
-            Editar
-          </button>
+          ${dossierButton}
+          ${editButton}
           <button class="card-action-btn delete" type="button" data-action="delete" data-id="${item.id}">
             <i class="ph ph-trash"></i>
             Excluir
@@ -530,12 +794,24 @@ function applyFilters() {
 
 async function loadSubscribers() {
   subscribersUpdatedAt.textContent = "Atualizando lista...";
-  const snap = await getDocs(collection(db, "gcredito_subscribers"));
-  allSubscribers = snap.docs
+  const [activeSnap, pendingSnap] = await Promise.all([
+    getDocs(collection(db, COLL_SUBSCRIBERS)),
+    getDocs(collection(db, COLL_PENDING)),
+  ]);
+
+  const activeItems = activeSnap.docs
     .map((d) => ({ id: d.id, ...d.data() }))
     .filter((d) => belongsToScope(d, scope))
-    .map((d) => normalizeSubscriber(d, d.id))
-    .sort((a, b) => (a.name || "").localeCompare(b.name || "", "pt-BR"));
+    .map((d) => normalizeSubscriber(d, d.id));
+
+  const pendingItems = pendingSnap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .filter((d) => belongsToScope(d, scope))
+    .map((d) => normalizePendingSubscriber(d, d.id));
+
+  allSubscribers = [...activeItems, ...pendingItems].sort((a, b) =>
+    (a.name || "").localeCompare(b.name || "", "pt-BR")
+  );
 
   applyFilters();
   subscribersUpdatedAt.textContent = `Atualizado em ${new Date().toLocaleString("pt-BR")}`;
@@ -617,31 +893,40 @@ function buildPayloadFromForm(existingRaw = null) {
 }
 
 async function createSubscriber() {
-  await addDoc(collection(db, "gcredito_subscribers"), buildPayloadFromForm(null));
+  await addDoc(collection(db, COLL_SUBSCRIBERS), buildPayloadFromForm(null));
 }
 
 async function updateSubscriber(docId) {
   const current = allSubscribers.find((x) => x.id === docId);
-  await updateDoc(doc(db, "gcredito_subscribers", docId), buildPayloadFromForm(current?.raw || null));
+  await updateDoc(doc(db, COLL_SUBSCRIBERS, docId), buildPayloadFromForm(current?.raw || null));
 }
 
-async function deleteSubscriber(docId) {
-  await deleteDoc(doc(db, "gcredito_subscribers", docId));
+async function deleteSubscriber(docId, sourceCollection = COLL_SUBSCRIBERS) {
+  await deleteDoc(doc(db, sourceCollection, docId));
 }
 
 async function handleSubscriberAction(action, item) {
   if (!item) return;
 
+  if (action === "dossier") {
+    openDossierModal(item);
+    return;
+  }
+
   if (action === "view") {
     alert(
       `Nome: ${item.name}\nCPF/CNPJ: ${item.cpfCnpj}\nEmail: ${item.email || "-"}\nUC: ${item.uc || "-"}\nkWh Contratado: ${
         item.contractedKwh
-      }\nDesconto: ${item.discountPercentage}%\nStatus: ${statusLabel(item.status)}`
+      }\nDesconto: ${item.discountPercentage}%\nStatus: ${statusLabel(item.status, item.raw)}`
     );
     return;
   }
 
   if (action === "edit") {
+    if (item.sourceCollection !== COLL_SUBSCRIBERS) {
+      alert("Edicao disponivel apenas para assinantes ativos. Pendencias devem ser tratadas no fluxo de aprovacao.");
+      return;
+    }
     fillForm(item);
     showForm(true);
     return;
@@ -651,7 +936,7 @@ async function handleSubscriberAction(action, item) {
     const ok = window.confirm(`Deseja excluir o assinante "${item.name}"?`);
     if (!ok) return;
     try {
-      await deleteSubscriber(item.id);
+      await deleteSubscriber(item.id, item.sourceCollection || COLL_SUBSCRIBERS);
       await loadSubscribers();
     } catch (error) {
       console.error("Erro ao excluir assinante:", error);
@@ -659,6 +944,58 @@ async function handleSubscriberAction(action, item) {
     }
   }
 }
+
+dossierCloseBtn?.addEventListener("click", closeDossierModal);
+dossierCancelBtn?.addEventListener("click", closeDossierModal);
+dossierModal?.addEventListener("click", (event) => {
+  if (event.target === dossierModal) closeDossierModal();
+});
+
+dossierApproveBtn?.addEventListener("click", async () => {
+  if (!dossierItemId) return;
+  const item = allSubscribers.find((x) => x.id === dossierItemId);
+  if (!item || !isAwaitingItem(item)) return;
+
+  const ok = window.confirm(`Aprovar o assinante "${item.name}" e mover para ativos?`);
+  if (!ok) return;
+
+  try {
+    dossierApproveBtn.disabled = true;
+    dossierRejectBtn.disabled = true;
+    await approvePendingSubscriber(item);
+    closeDossierModal();
+    await loadSubscribers();
+  } catch (error) {
+    console.error("Erro ao aprovar assinante pendente:", error);
+    alert("Não foi possível aprovar o assinante.");
+  } finally {
+    dossierApproveBtn.disabled = false;
+    dossierRejectBtn.disabled = false;
+  }
+});
+
+dossierRejectBtn?.addEventListener("click", async () => {
+  if (!dossierItemId) return;
+  const item = allSubscribers.find((x) => x.id === dossierItemId);
+  if (!item || !isAwaitingItem(item)) return;
+
+  const ok = window.confirm(`Rejeitar o assinante "${item.name}"?`);
+  if (!ok) return;
+
+  try {
+    dossierApproveBtn.disabled = true;
+    dossierRejectBtn.disabled = true;
+    await rejectPendingSubscriber(item);
+    closeDossierModal();
+    await loadSubscribers();
+  } catch (error) {
+    console.error("Erro ao rejeitar assinante pendente:", error);
+    alert("Não foi possível rejeitar o assinante.");
+  } finally {
+    dossierApproveBtn.disabled = false;
+    dossierRejectBtn.disabled = false;
+  }
+});
 
 refreshBtn.addEventListener("click", async () => {
   await loadSubscribers();

@@ -1,0 +1,324 @@
+.wa-main {
+    width: 100%;
+    max-width: 1260px;
+    margin: 0 auto;
+    padding: 1.15rem;
+    display: grid;
+    gap: 0.95rem;
+}
+
+.wa-hero {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.9rem;
+    align-items: flex-start;
+    background:
+        radial-gradient(800px 220px at 85% -70%, rgba(56, 189, 248, 0.18), transparent 58%),
+        radial-gradient(720px 220px at -10% 120%, rgba(34, 197, 94, 0.12), transparent 58%),
+        var(--surface);
+    border-radius: 16px;
+    border: 1px solid var(--table-border);
+    box-shadow: 0 12px 28px rgba(11, 24, 16, 0.08);
+}
+
+.wa-hero-content {
+    display: grid;
+    gap: 0.42rem;
+}
+
+.wa-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    width: fit-content;
+    border-radius: 999px;
+    padding: 0.26rem 0.64rem;
+    font-size: 0.76rem;
+    font-weight: 700;
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #86efac;
+}
+
+.wa-kicker i {
+    font-size: 0.92rem;
+}
+
+.wa-hero h1 {
+    margin: 0;
+    font-family: "Montserrat", sans-serif;
+    font-size: clamp(1.65rem, 2.5vw, 2.3rem);
+    line-height: 1.1;
+}
+
+.wa-hero p {
+    margin: 0;
+    color: var(--muted);
+    max-width: 740px;
+    font-size: 1rem;
+}
+
+.wa-hero-steps {
+    margin-top: 0.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.42rem;
+    flex-wrap: wrap;
+}
+
+.wa-hero-steps span {
+    border-radius: 999px;
+    border: 1px solid var(--table-border);
+    background: var(--surface-soft);
+    padding: 0.28rem 0.62rem;
+    font-size: 0.78rem;
+    color: var(--text);
+}
+
+.wa-updated {
+    font-size: 0.8rem;
+    font-weight: 700;
+    border: 1px solid var(--table-border);
+    border-radius: 999px;
+    padding: 0.32rem 0.65rem;
+    background: var(--surface-soft);
+    white-space: nowrap;
+}
+
+.wa-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.8rem;
+    align-items: start;
+}
+
+.wa-info,
+.wa-qr {
+    border-radius: 16px;
+    border: 1px solid var(--table-border);
+    box-shadow: 0 12px 26px rgba(10, 22, 15, 0.06);
+}
+
+.meta-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+}
+
+.meta-card {
+    border: 1px solid var(--table-border);
+    border-radius: 12px;
+    background: var(--surface-soft);
+    padding: 0.7rem 0.76rem;
+}
+
+.meta-user {
+    grid-column: auto;
+}
+
+.meta-label {
+    margin: 0;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.meta-value {
+    margin: 0.2rem 0 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.meta-value.mono {
+    font-family: "Consolas", "SFMono-Regular", "Courier New", monospace;
+    font-size: 0.93rem;
+    word-break: break-all;
+}
+
+.hidden-instance {
+    display: none !important;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 0.22rem 0.58rem;
+    font-size: 0.79rem;
+    font-weight: 800;
+    border: 1px solid var(--table-border);
+}
+
+.status-badge.open {
+    background: #dcfce7;
+    color: #166534;
+    border-color: #86efac;
+}
+
+.status-badge.connecting {
+    background: #dbeafe;
+    color: #1d4ed8;
+    border-color: #93c5fd;
+}
+
+.status-badge.pending {
+    background: #ffedd5;
+    color: #9a3412;
+    border-color: #fdba74;
+}
+
+.status-badge.close {
+    background: #fee2e2;
+    color: #b91c1c;
+    border-color: #fca5a5;
+}
+
+.wa-actions {
+    margin-top: 0.84rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.btn {
+    border-radius: 10px;
+    border: 1px solid var(--table-border);
+    min-height: 42px;
+    padding: 0.56rem 0.9rem;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.34rem;
+    transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #16a34a, #15803d);
+    color: #f0fff4;
+    border-color: #15803d;
+    box-shadow: 0 8px 18px rgba(22, 101, 52, 0.2);
+}
+
+.btn-danger {
+    background: #fee2e2;
+    color: #b91c1c;
+    border-color: #fca5a5;
+}
+
+.btn-ghost {
+    background: var(--surface);
+    color: var(--text);
+}
+
+.btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+.wa-note {
+    margin: 0.72rem 0 0;
+    color: var(--muted);
+    font-size: 0.83rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.status-message {
+    margin-top: 0.7rem;
+    min-height: 22px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--muted);
+}
+
+.wa-qr-head h2 {
+    margin: 0;
+    font-family: "Montserrat", sans-serif;
+    font-size: 1.45rem;
+}
+
+.wa-qr-head p {
+    margin: 0.18rem 0 0;
+    color: var(--muted);
+}
+
+.qr-wrap {
+    margin-top: 0.8rem;
+    min-height: 300px;
+    border: 1px dashed var(--table-border);
+    border-radius: 14px;
+    background:
+        radial-gradient(420px 200px at 50% 0%, rgba(34, 197, 94, 0.09), transparent 65%),
+        var(--surface-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.9rem;
+}
+
+.qr-wrap .empty {
+    color: var(--muted);
+    font-size: 0.9rem;
+    text-align: center;
+    max-width: 240px;
+}
+
+.qr-wrap img {
+    max-width: 100%;
+    width: 300px;
+    height: auto;
+    border-radius: 12px;
+    border: 1px solid var(--table-border);
+    background: #fff;
+    box-shadow: 0 10px 20px rgba(10, 20, 14, 0.16);
+}
+
+.wa-qr-help {
+    margin: 0.72rem 0 0;
+    font-size: 0.82rem;
+    color: var(--muted);
+}
+
+@media (max-width: 760px) {
+    .wa-main {
+        padding: 0.85rem;
+    }
+
+    .wa-hero {
+        flex-direction: column;
+    }
+
+    .meta-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .meta-user {
+        grid-column: auto;
+    }
+
+    .wa-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .qr-wrap {
+        min-height: 300px;
+    }
+}

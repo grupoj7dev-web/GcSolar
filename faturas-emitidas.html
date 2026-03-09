@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GC Solar | Calcular Desconto</title>
-    <meta name="description" content="Lista de propostas do módulo de cálculo de desconto.">
+    <title>GC Solar | Faturas Emitidas</title>
+    <meta name="description" content="Painel financeiro das faturas emitidas.">
     <script>
         (function () {
             try {
@@ -21,7 +21,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <link rel="stylesheet" href="dashboard.css">
-    <link rel="stylesheet" href="calcular-desconto.css">
+    <link rel="stylesheet" href="faturas-emitidas.css">
 </head>
 
 <body>
@@ -39,12 +39,12 @@
                 <a href="assinantes.html" class="nav-item"><i class="ph ph-users-three"></i><span>Assinantes</span></a>
                 <a href="indicar-assinante.html" class="nav-item"><i class="ph ph-user-plus"></i><span>Indicar Assinante</span></a>
                 <a href="cadastrar-rateio.html" class="nav-item"><i class="ph ph-share-network"></i><span>Cadastrar Rateio</span></a>
-                <a href="calcular-desconto.html" class="nav-item active"><i class="ph ph-percent"></i><span>Calcular Desconto</span></a>
+                <a href="calcular-desconto.html" class="nav-item"><i class="ph ph-percent"></i><span>Calcular Desconto</span></a>
                 <a href="geradoras.html" class="nav-item"><i class="ph ph-solar-panel"></i><span>Geradoras</span></a>
                 <a href="fatura-manual.html" class="nav-item"><i class="ph ph-file-plus"></i><span>Fatura Manual</span></a>
-                <a href="procuracao.html" class="nav-item"><i class="ph ph-file-text"></i><span>Procuração</span></a>
+                <a href="procuracao.html" class="nav-item"><i class="ph ph-file-text"></i><span>Procuracao</span></a>
                 <a href="faturas-validacao.html" class="nav-item"><i class="ph ph-seal-warning"></i><span>Faturas em Validacao</span></a>
-                <a href="faturas-emitidas.html" class="nav-item"><i class="ph ph-receipt"></i><span>Faturas Emitidas</span></a>
+                <a href="faturas-emitidas.html" class="nav-item active"><i class="ph ph-receipt"></i><span>Faturas Emitidas</span></a>
                 <a href="whatsapp.html" class="nav-item"><i class="ph ph-whatsapp-logo"></i><span>WhatsApp</span></a>
                 <a href="parceiros.html" class="nav-item"><i class="ph ph-handshake"></i><span>Parceiros</span></a>
             </nav>
@@ -59,83 +59,83 @@
                     <button class="settings-btn" id="themeBtn" aria-label="Alternar tema">
                         <i class="ph ph-moon"></i>
                     </button>
-                    <a class="settings-btn" href="asaas-config.html" aria-label="Configurações ASAAS">
+                    <a class="settings-btn" href="asaas-config.html" aria-label="Configuracoes ASAAS">
                         <i class="ph ph-gear-six"></i>
                     </a>
-                    <button class="logout-btn" id="logoutBtn">Sair</button>
+                    <button class="settings-btn" id="refreshBtn" aria-label="Atualizar pagamentos">
+                        <i class="ph ph-arrow-clockwise"></i>
+                    </button>
                 </div>
             </header>
 
-            <main class="desconto-main">
-                <section class="desconto-head">
+            <main class="invoice-main">
+                <section class="invoice-head card">
                     <div>
-                        <h1>Cálculo de Desconto</h1>
-                        <p id="descontoStatusText">Carregando propostas...</p>
+                        <h1>Faturas Emitidas</h1>
+                        <p>Painel financeiro com acompanhamento de recebimento em tempo real.</p>
                     </div>
-                    <div class="desconto-head-actions">
-                        <a class="btn-primary-solid" href="nova-proposta.html">
-                            <i class="ph ph-file-plus"></i>
-                            Nova Proposta
-                        </a>
-                        <button class="btn-secondary" id="refreshBtn" type="button">
-                            <i class="ph ph-arrows-clockwise"></i>
-                            Atualizar
-                        </button>
-                    </div>
+                    <p class="invoice-updated" id="updatedAtLabel">Atualizando...</p>
                 </section>
 
-                <section class="desconto-module card">
-                    <section class="list-toolbar">
-                        <div class="search-input-wrap">
-                            <i class="ph ph-magnifying-glass"></i>
-                            <input id="searchInput" type="text" placeholder="Buscar por cliente ou código">
-                        </div>
-                        <select id="statusFilter" aria-label="Filtrar status">
-                            <option value="all">Todos os status</option>
-                            <option value="aberta">Aberta</option>
-                            <option value="fechada">Fechada</option>
-                            <option value="perdida">Perdida</option>
-                        </select>
-                    </section>
+                <section class="status-grid">
+                    <article class="status-card total">
+                        <p class="status-label">Total Faturas</p>
+                        <p class="status-value" id="scoreTotal">0</p>
+                        <p class="status-meta">Emitidas no mes atual</p>
+                    </article>
+                    <article class="status-card value">
+                        <p class="status-label">Valor Total (R$)</p>
+                        <p class="status-value" id="scoreValor">R$ 0,00</p>
+                        <p class="status-meta">Somatorio de cobrancas</p>
+                    </article>
+                    <article class="status-card paid">
+                        <p class="status-label">Faturas Pagas</p>
+                        <p class="status-value" id="scorePagas">0</p>
+                        <p class="status-meta">Pagamentos confirmados</p>
+                    </article>
+                    <article class="status-card rate">
+                        <p class="status-label">Taxa de Recebimento</p>
+                        <p class="status-value" id="scoreTaxa">0%</p>
+                        <p class="status-meta">Pagas x total emitido</p>
+                    </article>
+                </section>
 
-                    <div class="list-summary" id="resultsSummary">0 propostas</div>
-
+                <section class="card invoice-table-card">
+                    <div class="table-head-row">
+                        <p class="table-title">Cobrancas</p>
+                        <p class="table-subtitle" id="counterLabel">0 itens</p>
+                    </div>
                     <div class="table-wrap">
-                        <table class="proposals-table">
+                        <table class="invoice-table">
                             <thead>
                                 <tr>
-                                    <th>Código</th>
-                                    <th>Cliente</th>
-                                    <th>CNPJ/CPF</th>
-                                    <th>Data</th>
+                                    <th>UC</th>
+                                    <th>Nome</th>
+                                    <th>CPF / CNPJ</th>
+                                    <th>Referencia</th>
+                                    <th>Valor</th>
+                                    <th>Emissao</th>
                                     <th>Status</th>
-                                    <th>Ações</th>
+                                    <th class="actions-col">Acoes</th>
                                 </tr>
                             </thead>
-                            <tbody id="proposalsTableBody">
+                            <tbody id="invoiceTableBody">
                                 <tr>
-                                    <td colspan="6" class="empty-row">Carregando propostas...</td>
+                                    <td colspan="8" class="empty-row">Carregando faturas emitidas...</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
                 </section>
-
-                <section class="validation-bar hidden" id="validationBar"></section>
             </main>
         </div>
     </div>
 
     <script type="module" src="access-control.js"></script>
-    <script type="module" src="calcular-desconto.js"></script>
+    <script type="module" src="faturas-emitidas.js"></script>
 </body>
 
 </html>
-
-
-
-
-
 
 
 

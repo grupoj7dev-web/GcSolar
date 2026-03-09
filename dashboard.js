@@ -1,4 +1,4 @@
-﻿import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import {
   getAuth,
   getIdTokenResult,
@@ -7,7 +7,10 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import {
   collection,
+  deleteDoc,
+  doc,
   getDocs,
+  getDocsFromServer,
   getFirestore,
   limit,
   query,
@@ -27,6 +30,11 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const COLL_EMITIDAS = "gcredito_faturas_emitidas";
+const COLL_VALIDACAO = "gcredito_faturas_validacao";
+const COLL_INVOICE_DATA = "invoice_data";
+const COLL_INVOICE_DATA_ALT = "gcredito_invoice_data";
+const LOCAL_DELETED_EMITIDAS_KEY = "gcsolar_emitidas_deleted_ids";
 
 const appShell = document.getElementById("appShell");
 const toggleBtn = document.getElementById("toggleSidebar");
@@ -57,6 +65,7 @@ const recentInvoicesBody = document.getElementById("recentInvoicesBody");
 
 let dashboardLoaded = false;
 let selectedPeriod = "month";
+let currentScope = null;
 let cache = {
   emitidas: [],
   validacao: [],
@@ -187,6 +196,10 @@ function toNumber(value) {
   return Number.isFinite(n) ? n : 0;
 }
 
+function onlyDigits(value) {
+  return String(value || "").replace(/\D+/g, "");
+}
+
 function brl(value) {
   return value.toLocaleString("pt-BR", {
     style: "currency",
@@ -214,6 +227,26 @@ function cleanText(value) {
   return String(value);
 }
 
+function resolveUc(item) {
+  return cleanText(item.uc || item.consumer_unit || item.installationId);
+}
+
+function resolveDocumento(item) {
+  return cleanText(item.documento || item.document || item.cnpj_cpf || item.cpfCnpj);
+}
+
+function resolveReferencia(item) {
+  return cleanText(item.referencia || item.month_reference || item.mes_referencia);
+}
+
+function resolveNome(item) {
+  return cleanText(item.subscriber_name || item.nome_cliente || item.legal_name || item.nome);
+}
+
+function resolveValor(item) {
+  return toNumber(item.invoice_value || item.valor_total || item.valor);
+}
+
 function isActiveStatus(statusValue) {
   if (!statusValue) return true;
   const s = String(statusValue).toLowerCase().trim();
@@ -223,8 +256,24 @@ function isActiveStatus(statusValue) {
 }
 
 async function loadCollection(name) {
-  const snap = await getDocs(collection(db, name));
+  let snap;
+  try {
+    snap = await getDocsFromServer(collection(db, name));
+  } catch (_) {
+    snap = await getDocs(collection(db, name));
+  }
   return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+}
+
+function getLocallyDeletedEmitidasIds() {
+  try {
+    const raw = localStorage.getItem(LOCAL_DELETED_EMITIDAS_KEY) || "[]";
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return new Set();
+    return new Set(arr.map((x) => String(x || "").trim()).filter(Boolean));
+  } catch (_) {
+    return new Set();
+  }
 }
 
 async function getUserScope(user) {
@@ -295,7 +344,12 @@ function renderByPeriod(period) {
   const assinantesAtivos = cache.subscribers.filter((x) => isActiveStatus(x.status)).length;
   const geradorasAtivas = cache.generators.filter((x) => isActiveStatus(x.status)).length;
 
-  const pendentes = validacaoPeriodo.length;
+  const pendentes = validacaoPeriodo.filter((item) => {
+    const status = String(item.status_validacao || item.status || "").toLowerCase().trim();
+    if (status.includes("aprov")) return false;
+    if (status.includes("rejeit")) return false;
+    return true;
+  }).length;
   const processadas = processadasPeriodo.length;
   const emitidas = emitidasPeriodo.length;
   const pagas = emitidasPeriodo.filter(
@@ -367,11 +421,11 @@ function renderRecentInvoices(emitidasPeriodo) {
   }
 
   const rows = ordered.slice(0, 12).map((item) => {
-    const uc = cleanText(item.uc || item.consumer_unit);
-    const nome = cleanText(item.subscriber_name || item.nome_cliente || item.legal_name);
-    const documento = cleanText(item.documento || item.document || item.cnpj_cpf);
-    const referencia = cleanText(item.referencia || item.month_reference);
-    const valor = brl(toNumber(item.invoice_value || item.valor_total));
+    const uc = resolveUc(item);
+    const nome = resolveNome(item);
+    const documento = resolveDocumento(item);
+    const referencia = resolveReferencia(item);
+    const valor = brl(resolveValor(item));
     const emissao = formatDate(item.data_emissao || item.created_at || item.createdAt);
     const status = statusInfo(item.status_pagamento);
     const viewUrl = item.fatura_url || "#";
@@ -391,6 +445,7 @@ function renderRecentInvoices(emitidasPeriodo) {
           <div class="actions-menu hidden">
             <a href="${viewUrl}" target="_blank" rel="noopener noreferrer">Visualizar</a>
             <a href="${viewUrl}" ${downloadAttr}>Baixar</a>
+            <button type="button" data-action="delete-invoice" data-id="${item.id}">Excluir</button>
           </div>
         </td>
       </tr>
@@ -400,10 +455,91 @@ function renderRecentInvoices(emitidasPeriodo) {
   recentInvoicesBody.innerHTML = rows.join("");
 }
 
+function findEmitidaById(id) {
+  return cache.emitidas.find((x) => String(x.id) === String(id)) || null;
+}
+
+async function deleteInvoiceCascade(record) {
+  const ok = window.confirm("Excluir esta fatura em cascata (emitidas, validacao e invoice_data)?");
+  if (!ok) return;
+
+  const sameValue = (a, b) => String(a || "").trim() && String(a || "").trim() === String(b || "").trim();
+  const sameDigits = (a, b) => {
+    const da = onlyDigits(a);
+    const db = onlyDigits(b);
+    return !!da && da === db;
+  };
+  const sameMoney = (a, b) => Math.abs(Number(a || 0) - Number(b || 0)) < 0.01;
+
+  const targetAsaasRef = String(record.asaas_external_reference || "").trim();
+  const targetOrigem = String(record.origem_validacao_id || record.validacao_id || "").trim();
+  const targetEmitidaRef = String(record.fatura_emitida_ref || "").trim();
+  const targetPixId = String(record.asaas_pix_charge_id || record.pix_id || "").trim();
+  const targetBolId = String(record.asaas_boleto_charge_id || "").trim();
+  const targetUcRaw = String(resolveUc(record) || "").trim();
+  const targetRefRaw = String(resolveReferencia(record) || "").trim();
+  const targetDocRaw = String(resolveDocumento(record) || "").trim();
+  const targetUc = targetUcRaw === "-" ? "" : targetUcRaw;
+  const targetRef = targetRefRaw === "-" ? "" : targetRefRaw;
+  const targetDoc = targetDocRaw === "-" ? "" : targetDocRaw;
+  const targetNome = String(resolveNome(record) || "").trim().toLowerCase();
+  const targetValor = Number(resolveValor(record) || 0);
+  const targetTenant = String(record.tenantId || record.tenant_id || currentScope?.tenantId || "");
+
+  const shouldDeleteByIdentity = (x) => {
+    const itemTenant = String(x.tenantId || x.tenant_id || "");
+    const tenantCompatible = !itemTenant || !targetTenant || itemTenant === targetTenant;
+
+    if (sameValue(x.id, record.id)) return true;
+    if (targetOrigem && sameValue(x.id, targetOrigem)) return true;
+    if (targetEmitidaRef && sameValue(x.id, targetEmitidaRef)) return true;
+    if (targetAsaasRef && sameValue(x.asaas_external_reference, targetAsaasRef)) return true;
+    if (targetOrigem && sameValue(x.origem_validacao_id || x.validacao_id || x.fatura_emitida_ref, targetOrigem)) return true;
+    if (sameValue(x.fatura_emitida_ref, record.id)) return true;
+    if (targetPixId && sameValue(x.asaas_pix_charge_id || x.pix_id, targetPixId)) return true;
+    if (targetBolId && sameValue(x.asaas_boleto_charge_id, targetBolId)) return true;
+
+    const sameUc = targetUc && String(resolveUc(x) || "").trim() === targetUc;
+    const sameRef = targetRef && String(resolveReferencia(x) || "").trim() === targetRef;
+    const sameDoc = targetDoc && sameDigits(resolveDocumento(x), targetDoc);
+    const sameNome = targetNome && String(resolveNome(x) || "").trim().toLowerCase() === targetNome;
+    const sameValorDoc = sameMoney(resolveValor(x), targetValor);
+
+    if (tenantCompatible && sameUc && sameRef && sameDoc && sameNome && sameValorDoc) return true;
+    if (tenantCompatible && sameUc && sameRef && sameDoc && sameValorDoc) return true;
+    if (tenantCompatible && sameUc && sameRef) return true;
+    return false;
+  };
+
+  const cascadeCollections = [
+    COLL_EMITIDAS,
+    COLL_VALIDACAO,
+    COLL_INVOICE_DATA,
+    COLL_INVOICE_DATA_ALT,
+  ];
+
+  for (const collectionName of cascadeCollections) {
+    const snap = await getDocs(collection(db, collectionName));
+    const matches = snap.docs
+      .map((d) => ({ id: d.id, ...d.data() }))
+      .filter(shouldDeleteByIdentity);
+    for (const item of matches) {
+      try {
+        await deleteDoc(doc(db, collectionName, item.id));
+      } catch (err) {
+        console.warn(`[DASHBOARD][DELETE] Falha ao remover ${collectionName}/${item.id}`, err);
+      }
+    }
+  }
+
+  await loadDashboardData(auth.currentUser);
+}
+
 async function loadDashboardData(user) {
   setLoadingState();
   try {
     const scope = await getUserScope(user);
+    currentScope = scope;
 
     const [emitidas, validacao, invoiceData, subscribers, generators] = await Promise.all([
       loadCollection("gcredito_faturas_emitidas"),
@@ -422,9 +558,10 @@ async function loadDashboardData(user) {
     const scopedInvoiceData = invoiceData.filter(
       (x) => belongsToScope(x, scope) || subscriberIds.has(String(x.subscriber_id || ""))
     );
+    const deletedEmitidasIds = getLocallyDeletedEmitidasIds();
     const scopedEmitidas = emitidas.filter(
       (x) => belongsToScope(x, scope) || subscriberIds.has(String(x.subscriber_id || ""))
-    );
+    ).filter((x) => !deletedEmitidasIds.has(String(x.id)));
     const scopedValidacao = validacao.filter(
       (x) => belongsToScope(x, scope) || subscriberIds.has(String(x.subscriber_id || ""))
     );
@@ -454,6 +591,20 @@ periodFilters.addEventListener("click", (event) => {
 });
 
 document.addEventListener("click", (event) => {
+  const deleteBtn = event.target.closest("[data-action='delete-invoice'][data-id]");
+  if (deleteBtn) {
+    event.preventDefault();
+    const id = deleteBtn.dataset.id;
+    const record = findEmitidaById(id);
+    if (record) {
+      deleteInvoiceCascade(record).catch((error) => {
+        console.error(error);
+        window.alert("Falha ao excluir fatura no dashboard.");
+      });
+    }
+    return;
+  }
+
   const toggle = event.target.closest("[data-action-toggle]");
   const allMenus = document.querySelectorAll(".actions-menu");
 
@@ -472,19 +623,20 @@ document.addEventListener("click", (event) => {
 });
 
 onAuthStateChanged(auth, async (user) => {
+  try {
+    console.log("[GC-AUTH]", {
+      ts: new Date().toISOString(),
+      module: "dashboard",
+      event: "auth-state",
+      userPresent: !!user,
+      uid: user?.uid || null,
+    });
+  } catch (_) { }
   if (!user) {
     window.location.href = "login.html";
     return;
   }
-
-  const token = await getIdTokenResult(user, true);
-  const role = token.claims.role;
-  const isSuperAdmin = token.claims.superadmin === true || role === "superadmin";
-
-  if (!isSuperAdmin) {
-    window.location.href = "index.html";
-    return;
-  }
+  await getIdTokenResult(user, true);
 
   applySidebarState();
   initTheme();

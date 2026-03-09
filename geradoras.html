@@ -1,11 +1,11 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GC Solar | Geradoras</title>
-    <meta name="description" content="Gestão de geradoras de energia solar.">
+    <meta name="description" content="Gestao de geradoras de energia solar.">
     <script>
         (function () {
             try {
@@ -18,7 +18,9 @@
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Montserrat:wght@600;700&display=swap"
+        rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <link rel="stylesheet" href="dashboard.css">
     <link rel="stylesheet" href="geradoras.css">
@@ -36,17 +38,17 @@
 
             <nav class="sidebar-nav">
                 <a href="dashboard.html" class="nav-item"><i class="ph ph-squares-four"></i><span>Dashboard</span></a>
-                <a href="#" class="nav-item"><i class="ph ph-currency-circle-dollar"></i><span>Financeiro</span></a>
                 <a href="assinantes.html" class="nav-item"><i class="ph ph-users-three"></i><span>Assinantes</span></a>
+                <a href="indicar-assinante.html" class="nav-item"><i class="ph ph-user-plus"></i><span>Indicar Assinante</span></a>
                 <a href="cadastrar-rateio.html" class="nav-item"><i class="ph ph-share-network"></i><span>Cadastrar Rateio</span></a>
                 <a href="calcular-desconto.html" class="nav-item"><i class="ph ph-percent"></i><span>Calcular Desconto</span></a>
                 <a href="geradoras.html" class="nav-item active"><i class="ph ph-solar-panel"></i><span>Geradoras</span></a>
-                <a href="#" class="nav-item"><i class="ph ph-file-plus"></i><span>Fatura Manual</span></a>
-                <a href="#" class="nav-item"><i class="ph ph-file-text"></i><span>Procuração</span></a>
-                <a href="#" class="nav-item"><i class="ph ph-seal-warning"></i><span>Faturas em Validação</span></a>
-                <a href="#" class="nav-item"><i class="ph ph-receipt"></i><span>Faturas Emitidas</span></a>
-                <a href="#" class="nav-item"><i class="ph ph-whatsapp-logo"></i><span>WhatsApp</span></a>
-                <a href="#" class="nav-item"><i class="ph ph-handshake"></i><span>Parceiros</span></a>
+                <a href="fatura-manual.html" class="nav-item"><i class="ph ph-file-plus"></i><span>Fatura Manual</span></a>
+                <a href="procuracao.html" class="nav-item"><i class="ph ph-file-text"></i><span>Procuração</span></a>
+                <a href="faturas-validacao.html" class="nav-item"><i class="ph ph-seal-warning"></i><span>Faturas em Validacao</span></a>
+                <a href="faturas-emitidas.html" class="nav-item"><i class="ph ph-receipt"></i><span>Faturas Emitidas</span></a>
+                <a href="whatsapp.html" class="nav-item"><i class="ph ph-whatsapp-logo"></i><span>WhatsApp</span></a>
+                <a href="parceiros.html" class="nav-item"><i class="ph ph-handshake"></i><span>Parceiros</span></a>
             </nav>
         </aside>
 
@@ -59,68 +61,123 @@
                     <button class="settings-btn" id="themeBtn" aria-label="Alternar tema">
                         <i class="ph ph-moon"></i>
                     </button>
-                    <button class="settings-btn" id="settingsBtn" aria-label="Configurações">
+                    <a class="settings-btn" href="asaas-config.html" aria-label="Configuracoes ASAAS">
                         <i class="ph ph-gear-six"></i>
-                    </button>
+                    </a>
                     <button class="logout-btn" id="logoutBtn">Sair</button>
                 </div>
             </header>
 
-            <main class="geradoras-main">
-                <section class="hero-banner card">
-                    <div class="hero-text">
+            <main class="subscribers-main">
+                <section class="subscribers-head">
+                    <div>
                         <h1>Geradoras</h1>
-                        <p>Gerencie suas usinas geradoras de energia solar</p>
-                        <div class="hero-tags">
-                            <span id="heroTotalTag" class="hero-tag">0 geradoras</span>
-                            <span id="heroActiveTag" class="hero-tag active">0 ativas</span>
+                        <p id="generatorsUpdatedAt">Gestao de usinas geradoras de energia solar</p>
+                    </div>
+                    <div class="head-actions">
+                        <button class="btn-secondary" id="exportBtn" type="button">
+                            <i class="ph ph-file-arrow-down"></i>
+                            Exportar Lista
+                        </button>
+                        <a class="btn-primary-solid" href="geradora-wizard.html">
+                            <i class="ph ph-plus"></i>
+                            Nova Geradora
+                        </a>
+                    </div>
+                </section>
+
+                <section class="stats-grid">
+                    <article class="stat-card">
+                        <p class="stat-label">Total de Geradoras</p>
+                        <p class="stat-value" id="kpiTotal">0</p>
+                        <p class="stat-meta" id="kpiTotalMeta">0 ativas</p>
+                    </article>
+                    <article class="stat-card">
+                        <p class="stat-label">Capacidade Total</p>
+                        <p class="stat-value" id="kpiCapacity">0 kWp</p>
+                        <p class="stat-meta">Potencia instalada agregada</p>
+                    </article>
+                    <article class="stat-card">
+                        <p class="stat-label">Geração Mensal</p>
+                        <p class="stat-value" id="kpiMonthly">0 kWh/mês</p>
+                        <p class="stat-meta">Projeção consolidada</p>
+                    </article>
+                    <article class="stat-card">
+                        <p class="stat-label">Status Geral</p>
+                        <p class="stat-value" id="kpiStatus">0%</p>
+                        <p class="stat-meta">Usinas operacionais</p>
+                    </article>
+                </section>
+
+                <section class="search-panel card" id="listPanel">
+                    <div class="search-row">
+                        <div class="search-input-wrap">
+                            <i class="ph ph-magnifying-glass"></i>
+                            <input type="text" id="searchInput"
+                                placeholder="Buscar por proprietario, concessionaria, cidade, status ou documento">
+                        </div>
+                        <div class="view-switch" role="tablist" aria-label="Modo de visualizacao">
+                            <button class="view-btn active" id="viewCardsBtn" type="button" aria-selected="true">
+                                <i class="ph ph-squares-four"></i>
+                                Cards
+                            </button>
+                            <button class="view-btn" id="viewTableBtn" type="button" aria-selected="false">
+                                <i class="ph ph-list-bullets"></i>
+                                Tabela
+                            </button>
                         </div>
                     </div>
-                    <a class="hero-btn" href="geradora-wizard.html">
-                        <i class="ph ph-plus-circle"></i>
-                        Nova Geradora
-                    </a>
-                </section>
 
-                <section class="kpi-grid">
-                    <article class="kpi-card green">
-                        <p>Total de Geradoras</p>
-                        <strong id="kpiTotal">0</strong>
-                        <small id="kpiTotalMeta">0 ativas</small>
-                    </article>
-                    <article class="kpi-card blue">
-                        <p>Capacidade Total</p>
-                        <strong id="kpiCapacity">0 kWp</strong>
-                        <small>Potência instalada agregada</small>
-                    </article>
-                    <article class="kpi-card amber">
-                        <p>Geração Mensal</p>
-                        <strong id="kpiMonthly">0 kWh/mês</strong>
-                        <small>Projeção consolidada</small>
-                    </article>
-                    <article class="kpi-card purple">
-                        <p>Status Geral</p>
-                        <strong id="kpiStatus">0%</strong>
-                        <small>Usinas operacionais</small>
-                    </article>
-                </section>
-
-                <section class="list-head card">
-                    <div>
-                        <h2>Lista de Geradoras</h2>
-                        <p id="listCountText">0 cadastradas</p>
+                    <div class="results-summary">
+                        <span id="heroTotalTag">0 geradoras</span>
+                        <span id="heroActiveTag">0 ativas</span>
                     </div>
-                    <button class="export-btn" id="exportBtn" type="button">
-                        <i class="ph ph-file-arrow-down"></i>
-                        Exportar Lista
-                    </button>
-                </section>
 
-                <section id="cardsGrid" class="cards-grid">
-                    <article class="empty-state card">Carregando geradoras...</article>
-                </section>
+                    <div class="generators-cards-view" id="generatorsCardsView">
+                        <article class="cards-list-hero">
+                            <div class="cards-list-hero-icon">
+                                <i class="ph ph-solar-panel"></i>
+                            </div>
+                            <div class="cards-list-hero-content">
+                                <div class="cards-list-hero-top">
+                                    <h2>Lista de Geradoras</h2>
+                                    <span class="cards-list-hero-count" id="listCountText">0 cadastradas</span>
+                                </div>
+                                <p>Acompanhe todas as geradoras cadastradas no sistema</p>
+                            </div>
+                        </article>
 
-                <section class="validation-bar hidden" id="validationBar"></section>
+                        <section id="cardsGrid" class="subscribers-cards-grid">
+                            <article class="empty-state card">Carregando geradoras...</article>
+                        </section>
+                    </div>
+
+                    <div id="generatorsTableView" class="hidden">
+                        <div class="table-wrap generators-table-wrap">
+                            <table class="generators-table">
+                                <thead>
+                                    <tr>
+                                        <th>Proprietario</th>
+                                        <th>Concessionaria</th>
+                                        <th>Localizacao</th>
+                                        <th>Status</th>
+                                        <th>Usinas</th>
+                                        <th>Capacidade</th>
+                                        <th>Geração Mensal</th>
+                                        <th class="actions-col">Acoes</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="generatorsTableBody">
+                                    <tr>
+                                        <td colspan="8" class="empty-row">Carregando geradoras...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <section class="validation-bar hidden" id="validationBar"></section>
+                </section>
             </main>
         </div>
     </div>
@@ -139,7 +196,7 @@
             </header>
             <div class="detail-body">
                 <section class="detail-section">
-                    <h4>Documentos e Configurações</h4>
+                    <h4>Documentos e Configuracoes</h4>
                     <pre id="detailMainJson" class="detail-pre"></pre>
                 </section>
                 <section class="detail-section">
@@ -147,7 +204,7 @@
                     <pre id="detailPlantsJson" class="detail-pre"></pre>
                 </section>
                 <section class="detail-section">
-                    <h4>Endereço e Recebedor/Banco</h4>
+                    <h4>Endereco e Recebedor/Banco</h4>
                     <pre id="detailPaymentJson" class="detail-pre"></pre>
                 </section>
             </div>
@@ -160,7 +217,18 @@
         </article>
     </div>
 
+    <script type="module" src="access-control.js"></script>
     <script type="module" src="geradoras.js"></script>
 </body>
 
 </html>
+
+
+
+
+
+
+
+
+
+

@@ -38,17 +38,17 @@
 
             <nav class="sidebar-nav">
                 <a href="dashboard.html" class="nav-item"><i class="ph ph-squares-four"></i><span>Dashboard</span></a>
-                <a href="#" class="nav-item"><i class="ph ph-currency-circle-dollar"></i><span>Financeiro</span></a>
                 <a href="assinantes.html" class="nav-item active"><i class="ph ph-users-three"></i><span>Assinantes</span></a>
+                <a href="indicar-assinante.html" class="nav-item"><i class="ph ph-user-plus"></i><span>Indicar Assinante</span></a>
                 <a href="cadastrar-rateio.html" class="nav-item"><i class="ph ph-share-network"></i><span>Cadastrar Rateio</span></a>
                 <a href="calcular-desconto.html" class="nav-item"><i class="ph ph-percent"></i><span>Calcular Desconto</span></a>
                 <a href="geradoras.html" class="nav-item"><i class="ph ph-solar-panel"></i><span>Geradoras</span></a>
-                <a href="#" class="nav-item"><i class="ph ph-file-plus"></i><span>Fatura Manual</span></a>
-                <a href="#" class="nav-item"><i class="ph ph-file-text"></i><span>Procuração</span></a>
-                <a href="#" class="nav-item"><i class="ph ph-seal-warning"></i><span>Faturas em Validação</span></a>
-                <a href="#" class="nav-item"><i class="ph ph-receipt"></i><span>Faturas Emitidas</span></a>
-                <a href="#" class="nav-item"><i class="ph ph-whatsapp-logo"></i><span>WhatsApp</span></a>
-                <a href="#" class="nav-item"><i class="ph ph-handshake"></i><span>Parceiros</span></a>
+                <a href="fatura-manual.html" class="nav-item"><i class="ph ph-file-plus"></i><span>Fatura Manual</span></a>
+                <a href="procuracao.html" class="nav-item"><i class="ph ph-file-text"></i><span>Procuração</span></a>
+                <a href="faturas-validacao.html" class="nav-item"><i class="ph ph-seal-warning"></i><span>Faturas em Validacao</span></a>
+                <a href="faturas-emitidas.html" class="nav-item"><i class="ph ph-receipt"></i><span>Faturas Emitidas</span></a>
+                <a href="whatsapp.html" class="nav-item"><i class="ph ph-whatsapp-logo"></i><span>WhatsApp</span></a>
+                <a href="parceiros.html" class="nav-item"><i class="ph ph-handshake"></i><span>Parceiros</span></a>
             </nav>
         </aside>
 
@@ -61,9 +61,9 @@
                     <button class="settings-btn" id="themeBtn" aria-label="Alternar tema">
                         <i class="ph ph-moon"></i>
                     </button>
-                    <button class="settings-btn" id="settingsBtn" aria-label="Configurações">
+                    <a class="settings-btn" href="asaas-config.html" aria-label="Configurações ASAAS">
                         <i class="ph ph-gear-six"></i>
-                    </button>
+                    </a>
                     <button class="logout-btn" id="logoutBtn">Sair</button>
                 </div>
             </header>
@@ -141,6 +141,14 @@
                             <button type="button" class="quick-filter-btn" data-status-filter="pending"
                                 aria-selected="false">
                                 Pendentes
+                            </button>
+                            <button type="button" class="quick-filter-btn" data-status-filter="awaiting_signature"
+                                aria-selected="false">
+                                Aguardando assinatura
+                            </button>
+                            <button type="button" class="quick-filter-btn" data-status-filter="awaiting_rateio"
+                                aria-selected="false">
+                                Aguardando rateio
                             </button>
                             <button type="button" class="quick-filter-btn" data-status-filter="inactive"
                                 aria-selected="false">
@@ -295,9 +303,39 @@
         </div>
     </div>
 
+    <div class="modal-overlay hidden" id="dossierModal" role="dialog" aria-modal="true" aria-labelledby="dossierTitle">
+        <div class="modal-card">
+            <div class="modal-head">
+                <div>
+                    <h3 id="dossierTitle">Dossiê Completo</h3>
+                    <p id="dossierStatusText">Em análise</p>
+                </div>
+                <button type="button" class="modal-close-btn" id="dossierCloseBtn" aria-label="Fechar dossiê">
+                    <i class="ph ph-x"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="dossierBody"></div>
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" id="dossierCancelBtn">Fechar</button>
+                <button type="button" class="btn-danger" id="dossierRejectBtn">Rejeitar</button>
+                <button type="button" class="btn-primary-solid" id="dossierApproveBtn">Aprovar</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="access-control.js"></script>
     <script type="module" src="assinantes.js"></script>
 </body>
 
 </html>
+
+
+
+
+
+
+
+
+
 
 

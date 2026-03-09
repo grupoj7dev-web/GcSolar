@@ -1,12 +1,12 @@
-﻿:root {
+:root {
     --bg: #eef2ef;
     --text: #0f1d15;
     --muted: #44584d;
     --surface: #ffffff;
     --surface-soft: #f1f6f2;
     --surface-hover: #ecf4ee;
-    --sidebar: #166534;
-    --sidebar-dark: #14532d;
+    --sidebar: #0f4a2d;
+    --sidebar-dark: #0a2f1e;
     --sidebar-text: #ffffff;
     --topbar-bg: #ffffff;
     --topbar-btn-bg: #ffffff;
@@ -24,8 +24,8 @@
     --surface: #16211a;
     --surface-soft: #1c2b22;
     --surface-hover: #24362b;
-    --sidebar: #101b14;
-    --sidebar-dark: #0b140f;
+    --sidebar: #0b1410;
+    --sidebar-dark: #070d09;
     --sidebar-text: #deebe1;
     --topbar-bg: #121f18;
     --topbar-btn-bg: #1a2a21;
@@ -52,29 +52,31 @@ body {
 .app-shell {
     min-height: 100vh;
     display: grid;
-    grid-template-columns: 270px 1fr;
+    grid-template-columns: 300px 1fr;
     transition: grid-template-columns 0.25s ease;
 }
 
 .sidebar {
     background: linear-gradient(180deg, var(--sidebar), var(--sidebar-dark));
     color: var(--sidebar-text);
-    padding: 1rem 0.8rem;
+    padding: 0.85rem 0.75rem;
     overflow-x: hidden;
     overflow-y: auto;
     position: sticky;
     top: 0;
     height: 100vh;
-    border-right: 1px solid rgba(255, 255, 255, 0.12);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.06), 10px 0 24px rgba(0, 0, 0, 0.18);
 }
 
 .sidebar-header {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0.2rem 0.4rem 0.9rem;
-    margin-bottom: 0.65rem;
-    min-height: 82px;
+    padding: 0.2rem 0.3rem 0.65rem;
+    margin-bottom: 0.6rem;
+    min-height: 76px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.14);
 }
 
 .sidebar-logo-link {
@@ -82,14 +84,14 @@ body {
     align-items: center;
     justify-content: center;
     text-decoration: none;
-    width: 180px;
-    height: 76px;
+    width: 182px;
+    height: 68px;
     position: relative;
 }
 
 .sidebar-logo {
-    width: 172px;
-    height: 76px;
+    width: 176px;
+    height: 68px;
     display: block;
     object-fit: contain;
     transition: opacity 0.18s ease, transform 0.18s ease;
@@ -104,8 +106,9 @@ body {
 }
 
 .sidebar-nav {
-    display: grid;
-    gap: 0.3rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.28rem;
 }
 
 .nav-item {
@@ -113,27 +116,35 @@ body {
     text-decoration: none;
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.7rem 0.65rem;
-    border-radius: 10px;
-    font-size: 0.95rem;
-    font-weight: 500;
+    gap: 0.72rem;
+    padding: 0.62rem 0.65rem;
+    border-radius: 12px;
+    font-size: 0.94rem;
+    font-weight: 600;
     white-space: nowrap;
+    line-height: 1.15;
+    border: 1px solid transparent;
+    transition: all 0.18s ease;
 }
 
 .nav-item i {
-    font-size: 1.25rem;
+    font-size: 1.2rem;
     color: #fff;
     min-width: 22px;
     text-align: center;
+    opacity: 0.95;
 }
 
 .nav-item:hover {
     background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.18);
+    transform: translateX(1px);
 }
 
 .nav-item.active {
-    background: rgba(255, 255, 255, 0.2);
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.14));
+    border-color: rgba(255, 255, 255, 0.22);
+    box-shadow: inset 3px 0 0 #4ade80;
 }
 
 [data-theme="dark"] .nav-item:hover {
@@ -188,6 +199,10 @@ body {
     height: 38px;
     border-radius: 8px;
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
 }
 
 .settings-btn i {
@@ -488,8 +503,25 @@ body {
     border-radius: 7px;
 }
 
+.actions-menu button {
+    width: 100%;
+    display: block;
+    text-align: left;
+    font-size: 0.86rem;
+    color: #b91c1c;
+    background: transparent;
+    border: 0;
+    padding: 0.5rem 0.58rem;
+    border-radius: 7px;
+    cursor: pointer;
+}
+
 .actions-menu a:hover {
     background: var(--surface-hover);
+}
+
+.actions-menu button:hover {
+    background: #fee2e2;
 }
 
 .hidden {
@@ -503,7 +535,7 @@ body {
 }
 
 .app-shell.sidebar-collapsed {
-    grid-template-columns: 86px 1fr;
+    grid-template-columns: 96px 1fr;
 }
 
 .app-shell.sidebar-collapsed .nav-item span {
@@ -535,7 +567,7 @@ body {
 
 .app-shell.sidebar-collapsed .sidebar-logo-link {
     width: 100%;
-    height: 44px;
+    height: 52px;
     justify-content: center;
     align-items: center;
     overflow: visible;
@@ -544,7 +576,7 @@ body {
 
 .app-shell.sidebar-collapsed .nav-item {
     justify-content: center;
-    padding-inline: 0.5rem;
+    padding-inline: 0.55rem;
 }
 
 .app-shell.sidebar-collapsed .nav-item i {
@@ -559,8 +591,9 @@ body {
     .sidebar {
         position: fixed;
         inset: 0 auto 0 0;
-        width: 270px;
+        width: 300px;
         height: 100vh;
+        overflow-y: auto;
         transform: translateX(-100%);
         transition: transform 0.25s ease;
         z-index: 30;

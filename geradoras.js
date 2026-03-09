@@ -44,6 +44,12 @@ const kpiMonthly = document.getElementById("kpiMonthly");
 const kpiStatus = document.getElementById("kpiStatus");
 const listCountText = document.getElementById("listCountText");
 const cardsGrid = document.getElementById("cardsGrid");
+const searchInput = document.getElementById("searchInput");
+const viewCardsBtn = document.getElementById("viewCardsBtn");
+const viewTableBtn = document.getElementById("viewTableBtn");
+const generatorsCardsView = document.getElementById("generatorsCardsView");
+const generatorsTableView = document.getElementById("generatorsTableView");
+const generatorsTableBody = document.getElementById("generatorsTableBody");
 const exportBtn = document.getElementById("exportBtn");
 const validationBar = document.getElementById("validationBar");
 
@@ -61,6 +67,8 @@ const themeKey = "gcsolar_theme";
 let scope = null;
 let generatorsList = [];
 let selectedForDetail = null;
+let currentView = "cards";
+let searchTerm = "";
 
 function isMobile() {
   return window.matchMedia("(max-width: 960px)").matches;
@@ -137,7 +145,7 @@ function resolveOwner(item) {
     owner.name ||
     owner.nome ||
     item.owner_name ||
-    "Geradora sem proprietário"
+    "Geradora sem propriet??rio"
   );
 }
 
@@ -196,6 +204,60 @@ function renderKpis() {
   kpiCapacity.textContent = `${oneDecimal(capacity)} kWp`;
   kpiMonthly.textContent = `${num(monthly)} kWh/mês`;
   kpiStatus.textContent = `${oneDecimal(percentActive)}%`;
+}
+
+function tableTemplate(item) {
+  return `
+    <tr>
+      <td>${item.ownerName}</td>
+      <td>${item.concessionaria}</td>
+      <td>${item.location}</td>
+      <td><span class="status-badge ${item.isActive ? "" : "inactive"}">${item.statusLabel}</span></td>
+      <td>${num(item.usinas)}</td>
+      <td>${oneDecimal(item.capacityKwp)} kWp</td>
+      <td>${num(item.monthlyKwh)} kWh</td>
+      <td class="actions-col">
+        <div class="table-action-wrap">
+          <button class="table-action-btn view" type="button" data-view="${item.key}">
+            <i class="ph ph-eye"></i>
+            Ver
+          </button>
+          <a class="table-action-btn edit" href="geradora-wizard.html?id=${item.docId}&source=${item.source}">
+            <i class="ph ph-pencil-simple"></i>
+            Editar
+          </a>
+        </div>
+      </td>
+    </tr>
+  `;
+}
+
+function filterGenerators() {
+  const term = normalizeText(searchTerm).toLowerCase();
+  if (!term) return generatorsList;
+
+  return generatorsList.filter((item) => {
+    const haystack = [
+      item.ownerName,
+      item.concessionaria,
+      item.location,
+      item.statusLabel,
+      item.raw?.owner?.document,
+      item.raw?.owner?.cpfCnpj,
+      item.raw?.owner?.cnpj,
+      item.raw?.owner?.cpf,
+    ]
+      .map((x) => String(x || "").toLowerCase())
+      .join(" ");
+    return haystack.includes(term);
+  });
+}
+
+function renderSummary(list) {
+  const total = list.length;
+  const active = list.filter((x) => x.isActive).length;
+  heroTotalTag.textContent = `${total} geradoras`;
+  heroActiveTag.textContent = `${active} ativas`;
   listCountText.textContent = `${num(total)} cadastradas`;
 }
 
@@ -225,7 +287,7 @@ function generatorCardTemplate(item) {
       </section>
 
       <section class="generation-highlight">
-        <span>Geração Mensal</span>
+        <span>Gera????o Mensal</span>
         <strong>${num(item.monthlyKwh)} kWh</strong>
       </section>
 
@@ -243,19 +305,45 @@ function generatorCardTemplate(item) {
   `;
 }
 
-function renderCards() {
-  if (!generatorsList.length) {
+function renderCards(list) {
+  if (!list.length) {
     cardsGrid.innerHTML = '<article class="empty-state card">Nenhuma geradora encontrada.</article>';
     return;
   }
-  cardsGrid.innerHTML = generatorsList.map(generatorCardTemplate).join("");
+  cardsGrid.innerHTML = list.map(generatorCardTemplate).join("");
+}
+
+function renderTable(list) {
+  if (!list.length) {
+    generatorsTableBody.innerHTML = '<tr><td colspan="8" class="empty-row">Nenhuma geradora encontrada.</td></tr>';
+    return;
+  }
+  generatorsTableBody.innerHTML = list.map(tableTemplate).join("");
+}
+
+function updateView() {
+  const cardsActive = currentView === "cards";
+  generatorsCardsView.classList.toggle("hidden", !cardsActive);
+  generatorsTableView.classList.toggle("hidden", cardsActive);
+  viewCardsBtn.classList.toggle("active", cardsActive);
+  viewTableBtn.classList.toggle("active", !cardsActive);
+  viewCardsBtn.setAttribute("aria-selected", String(cardsActive));
+  viewTableBtn.setAttribute("aria-selected", String(!cardsActive));
+}
+
+function renderList() {
+  const filtered = filterGenerators();
+  renderSummary(filtered);
+  renderCards(filtered);
+  renderTable(filtered);
+  updateView();
 }
 
 function openDetailModal(item) {
   selectedForDetail = item;
   const raw = item.raw || {};
   detailTitle.textContent = item.ownerName;
-  detailSubtitle.textContent = `${item.concessionaria} • ${item.location} • ${item.statusLabel}`;
+  detailSubtitle.textContent = `${item.concessionaria} ??? ${item.location} ??? ${item.statusLabel}`;
 
   detailMainJson.textContent = JSON.stringify(
     {
@@ -319,9 +407,9 @@ async function deleteSelectedGenerator() {
     await deleteDoc(doc(db, selectedForDetail.source, selectedForDetail.docId));
     generatorsList = generatorsList.filter((x) => x.key !== selectedForDetail.key);
     renderKpis();
-    renderCards();
+    renderList();
     closeDetailModal();
-    showValidation("Geradora excluída com sucesso.", "success");
+    showValidation("Geradora exclu??da com sucesso.", "success");
   } catch (error) {
     console.error(error);
     showValidation("Falha ao excluir geradora.", "error");
@@ -356,6 +444,7 @@ async function getUserScope(user) {
 async function loadGenerators() {
   hideValidation();
   cardsGrid.innerHTML = '<article class="empty-state card">Carregando geradoras...</article>';
+  generatorsTableBody.innerHTML = '<tr><td colspan="8" class="empty-row">Carregando geradoras...</td></tr>';
 
   const [gcreditoSnap, legacySnap] = await Promise.all([
     getDocs(collection(db, "gcredito_generators")),
@@ -371,7 +460,7 @@ async function loadGenerators() {
   ].sort((a, b) => `${a.ownerName} ${a.location}`.localeCompare(`${b.ownerName} ${b.location}`, "pt-BR"));
 
   renderKpis();
-  renderCards();
+  renderList();
 }
 
 toggleSidebarBtn.addEventListener("click", () => {
@@ -409,6 +498,15 @@ cardsGrid.addEventListener("click", (event) => {
   openDetailModal(found);
 });
 
+generatorsTableBody.addEventListener("click", (event) => {
+  const btn = event.target.closest("[data-view]");
+  if (!btn) return;
+  const key = btn.dataset.view;
+  const found = generatorsList.find((x) => x.key === key);
+  if (!found) return;
+  openDetailModal(found);
+});
+
 detailModal.addEventListener("click", (event) => {
   const shouldClose = event.target.closest("[data-close-modal]");
   if (shouldClose) closeDetailModal();
@@ -416,6 +514,21 @@ detailModal.addEventListener("click", (event) => {
 
 exportBtn.addEventListener("click", exportCsv);
 deleteGeneratorBtn.addEventListener("click", deleteSelectedGenerator);
+
+searchInput?.addEventListener("input", (event) => {
+  searchTerm = event.target.value || "";
+  renderList();
+});
+
+viewCardsBtn?.addEventListener("click", () => {
+  currentView = "cards";
+  updateView();
+});
+
+viewTableBtn?.addEventListener("click", () => {
+  currentView = "table";
+  updateView();
+});
 
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
@@ -442,3 +555,4 @@ onAuthStateChanged(auth, async (user) => {
     showValidation("Falha ao carregar geradoras.", "error");
   }
 });
+
