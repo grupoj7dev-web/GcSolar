@@ -1,0 +1,160 @@
+.procuracao-main {
+    width: 100%;
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 1.25rem;
+    display: grid;
+    gap: 0.9rem;
+}
+
+.head h1 {
+    margin: 0;
+    font-family: "Montserrat", sans-serif;
+    font-size: 1.55rem;
+}
+
+.head p {
+    margin-top: 0.22rem;
+    color: var(--muted);
+}
+
+.template-info {
+    margin-top: 0.35rem;
+    font-size: 0.84rem;
+    font-weight: 700;
+}
+
+.upload-card,
+.form-card {
+    display: grid;
+    gap: 0.8rem;
+}
+
+.upload-card h2 {
+    margin: 0;
+    font-size: 1rem;
+    font-family: "Montserrat", sans-serif;
+}
+
+.row {
+    display: grid;
+    gap: 0.7rem;
+}
+
+.row.one {
+    grid-template-columns: 1fr;
+}
+
+.row.two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.row.three {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+label {
+    display: grid;
+    gap: 0.34rem;
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+input,
+select {
+    width: 100%;
+    min-height: 42px;
+    border-radius: 10px;
+    border: 1px solid var(--table-border);
+    background: var(--surface);
+    color: var(--text);
+    padding: 0.52rem 0.68rem;
+    font-size: 0.92rem;
+    outline: none;
+}
+
+input:focus,
+select:focus {
+    border-color: #34d399;
+    box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.14);
+}
+
+input[type="file"] {
+    padding: 0.36rem;
+}
+
+input[type="file"]::file-selector-button {
+    border: 1px solid #86efac;
+    background: #ecfdf3;
+    color: #166534;
+    border-radius: 8px;
+    padding: 0.42rem 0.62rem;
+    margin-right: 0.6rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.actions {
+    margin-top: 0.35rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.7rem;
+}
+
+.btn-secondary {
+    border-radius: 11px;
+    border: 1px solid var(--table-border);
+    padding: 0.62rem 0.95rem;
+    font-size: 0.87rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    text-decoration: none;
+    background: var(--surface);
+    color: var(--text);
+    transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.btn-secondary:hover,
+.btn-primary-solid:hover {
+    transform: translateY(-1px);
+}
+
+#gerarPdfBtn {
+    border: 0;
+    border-radius: 12px;
+    padding: 0.72rem 1.08rem;
+    min-height: 44px;
+    font-size: 0.9rem;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    background: linear-gradient(135deg, #15803d, #22c55e 58%, #34d399);
+    color: #ffffff;
+    box-shadow: 0 12px 24px rgba(22, 101, 52, 0.28);
+}
+
+#gerarPdfBtn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.status-text {
+    font-size: 0.84rem;
+    color: var(--muted);
+}
+
+.hidden {
+    display: none !important;
+}
+
+@media (max-width: 900px) {
+    .row.two,
+    .row.three {
+        grid-template-columns: 1fr;
+    }
+}

@@ -1,0 +1,24 @@
+services:
+  landing:
+    image: nginx:1.27-alpine
+    volumes:
+      - type: bind
+        source: ${GC_SOLAR_APP_DIR:-/root/gcsolar-app}
+        target: /usr/share/nginx/html
+        read_only: true
+    networks:
+      - Admin
+    deploy:
+      restart_policy:
+        condition: on-failure
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=Admin"
+        - "traefik.http.routers.gcsolar-app.rule=Host(`app.gc.solar`)"
+        - "traefik.http.routers.gcsolar-app.entrypoints=websecure"
+        - "traefik.http.routers.gcsolar-app.tls.certresolver=letsencryptresolver"
+        - "traefik.http.services.gcsolar-app.loadbalancer.server.port=80"
+
+networks:
+  Admin:
+    external: true
