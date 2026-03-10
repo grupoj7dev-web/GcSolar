@@ -604,6 +604,20 @@ async function uploadOptional(file, key) {
   const ext = String(file.name || "").toLowerCase();
   if (![".pdf", ".doc", ".docx", ".jpg", ".jpeg", ".png"].some((x) => ext.endsWith(x))) throw new Error(`Formato inválido: ${file.name}`);
   if (file.size > 10 * 1024 * 1024) throw new Error(`Arquivo acima de 10MB: ${file.name}`);
+  const isLocalHost =
+    window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+
+  if (!isLocalHost) {
+    const form = new FormData();
+    form.append("file", file);
+    const response = await fetch("/api/uploads/doc", { method: "POST", body: form });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok || body?.error) {
+      throw new Error(body?.error || `Falha no upload do arquivo ${file.name}`);
+    }
+    const url = body.url ? (body.url.startsWith("http") ? body.url : `${window.location.origin}${body.url}`) : "";
+    return { url, path: body.path || url, name: file.name, size: file.size, type: file.type, source: "backend" };
+  }
   const safe = String(file.name || "arquivo").replace(/\s+/g, "-").replace(/[^a-zA-Z0-9._-]/g, "") || "arquivo";
   const paths = [
     `assinantes_pendentes/${state.scope.tenantId}/${state.scope.uid}/cadastro_assinante/${Date.now()}_${key}_${safe}`,
