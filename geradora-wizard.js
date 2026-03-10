@@ -656,34 +656,6 @@ function bind() {
 
   document.querySelectorAll('input[name="ownerType"]').forEach((x) => x.addEventListener("change", () => { syncOwnerView(); syncFirstPlant(); syncPortal(true); review(); }));
 
-  id("lookupOwnerCpfBtn").addEventListener("click", async () => {
-    const cpf = digits(id("ownerCpf").value); if (cpf.length !== 11) return show("CPF inválido para consulta.", "warn");
-    const q = query(collection(db, "gcredito_generators"), where("owner.cpfCnpj", "==", cpf), limit(1)); const s = await getDocs(q);
-    if (s.empty) return show("Nenhum dado encontrado para esse CPF.", "warn");
-    const o = s.docs[0].data()?.owner || {};
-    if (o.name) id("ownerNamePf").value = o.name;
-    if (o.birthDate) id("ownerBirthPf").value = o.birthDate;
-    if (o.phone) id("ownerPhonePf").value = o.phone;
-    if (o.email) id("ownerEmailPf").value = o.email;
-    syncFirstPlant(); syncPortal(true); show("Dados do CPF preenchidos.", "success");
-  });
-
-  id("lookupOwnerCnpjBtn").addEventListener("click", async () => {
-    const cnpj = digits(id("ownerCnpj").value); if (cnpj.length !== 14) return show("CNPJ inválido para consulta.", "warn");
-    const d = await lookupCnpj(cnpj); if (!d) return show("Não foi possível consultar CNPJ.", "warn");
-    id("ownerRazaoSocial").value = d.razao; id("ownerNomeFantasia").value = d.fantasia; if (!id("ownerNamePj").value) id("ownerNamePj").value = d.razao;
-    if (d.email) id("ownerEmailPj").value = d.email; if (d.phone) id("ownerPhonePj").value = mask(d.phone, "phone");
-    const a = readAddress("ownerAddress"); setAddress("ownerAddress", { ...a, cep: a.cep || d.cep, street: a.street || d.street, number: a.number || d.number, district: a.district || d.district, city: a.city || d.city, state: a.state || d.state, complement: a.complement || d.complement });
-    syncFirstPlant(); syncPortal(true); show("Dados do CNPJ preenchidos.", "success");
-  });
-
-  id("lookupAdminCpfBtn").addEventListener("click", async () => {
-    const cpf = digits(id("adminCpf").value); if (cpf.length !== 11) return show("CPF do admin inválido.", "warn");
-    const q = query(collection(db, "gcredito_generators"), where("administrator.cpf", "==", cpf), limit(1)); const s = await getDocs(q);
-    if (s.empty) return show("Nenhum dado encontrado para esse CPF de admin.", "warn");
-    const a = s.docs[0].data()?.administrator || {}; if (a.name) id("adminName").value = a.name; if (a.birthDate) id("adminBirth").value = a.birthDate; if (a.phone) id("adminPhone").value = a.phone; if (a.email) id("adminEmail").value = a.email;
-    show("Dados do administrador preenchidos.", "success");
-  });
 
   document.querySelectorAll("[data-address-lookup]").forEach((b) => b.addEventListener("click", () => fillByCep(b.dataset.addressLookup, readAddress(b.dataset.addressLookup).cep)));
 
