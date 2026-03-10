@@ -1,0 +1,145 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GC Solar | Faturas Emitidas</title>
+    <meta name="description" content="Painel financeiro das faturas emitidas.">
+    <script>
+        (function () {
+            try {
+                var saved = localStorage.getItem("gcsolar_theme");
+                var dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+                var theme = saved || (dark ? "dark" : "light");
+                document.documentElement.setAttribute("data-theme", theme);
+            } catch (e) { }
+        })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" href="dashboard.css">
+    <link rel="stylesheet" href="faturas-emitidas.css">
+</head>
+
+<body>
+    <div class="app-shell" id="appShell">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="dashboard.html" class="sidebar-logo-link" aria-label="Ir para dashboard">
+                    <img src="logo6.png" alt="GC Solar" class="sidebar-logo sidebar-logo-full">
+                    <img src="gc_icon_final.png" alt="GC" class="sidebar-logo sidebar-logo-gc">
+                </a>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item"><i class="ph ph-squares-four"></i><span>Dashboard</span></a>
+                <a href="assinantes.html" class="nav-item"><i class="ph ph-users-three"></i><span>Assinantes</span></a>
+                <a href="indicar-assinante.html" class="nav-item"><i class="ph ph-user-plus"></i><span>Pré-assinante</span></a>
+                <a href="cadastrar-rateio.html" class="nav-item"><i class="ph ph-share-network"></i><span>Cadastrar Rateio</span></a>
+                <a href="calcular-desconto.html" class="nav-item"><i class="ph ph-percent"></i><span>Calcular Desconto</span></a>
+                <a href="geradoras.html" class="nav-item"><i class="ph ph-solar-panel"></i><span>Geradoras</span></a>
+                <a href="fatura-manual.html" class="nav-item"><i class="ph ph-file-plus"></i><span>Fatura Manual</span></a>
+                <a href="procuracao.html" class="nav-item"><i class="ph ph-file-text"></i><span>Procuração</span></a>
+                <a href="faturas-validacao.html" class="nav-item"><i class="ph ph-seal-warning"></i><span>Faturas em Validacao</span></a>
+                <a href="faturas-emitidas.html" class="nav-item active"><i class="ph ph-receipt"></i><span>Faturas Emitidas</span></a>
+                <a href="whatsapp.html" class="nav-item"><i class="ph ph-whatsapp-logo"></i><span>WhatsApp</span></a>
+                <a href="parceiros.html" class="nav-item"><i class="ph ph-handshake"></i><span>Parceiros</span></a>
+            </nav>
+        </aside>
+
+        <div class="content-wrap">
+            <header class="topbar">
+                <button class="toggle-btn" id="toggleSidebar" aria-label="Recolher menu lateral">
+                    <i class="ph ph-list"></i>
+                </button>
+                <div class="topbar-actions">
+                    <button class="settings-btn" id="themeBtn" aria-label="Alternar tema">
+                        <i class="ph ph-moon"></i>
+                    </button>
+                    <a class="settings-btn" href="asaas-config.html" aria-label="Configurações ASAAS">
+                        <i class="ph ph-gear-six"></i>
+                    </a>
+                    <button class="settings-btn" id="refreshBtn" aria-label="Atualizar pagamentos">
+                        <i class="ph ph-arrow-clockwise"></i>
+                    </button>
+                </div>
+            </header>
+
+            <main class="invoice-main">
+                <section class="invoice-head card">
+                    <div>
+                        <h1>Faturas Emitidas</h1>
+                        <p>Painel financeiro com acompanhamento de recebimento em tempo real.</p>
+                    </div>
+                    <p class="invoice-updated" id="updatedAtLabel">Atualizando...</p>
+                </section>
+
+                <section class="status-grid">
+                    <article class="status-card total">
+                        <p class="status-label">Total Faturas</p>
+                        <p class="status-value" id="scoreTotal">0</p>
+                        <p class="status-meta">Emitidas no mes atual</p>
+                    </article>
+                    <article class="status-card value">
+                        <p class="status-label">Valor Total (R$)</p>
+                        <p class="status-value" id="scoreValor">R$ 0,00</p>
+                        <p class="status-meta">Somatorio de cobrancas</p>
+                    </article>
+                    <article class="status-card paid">
+                        <p class="status-label">Faturas Pagas</p>
+                        <p class="status-value" id="scorePagas">0</p>
+                        <p class="status-meta">Pagamentos confirmados</p>
+                    </article>
+                    <article class="status-card rate">
+                        <p class="status-label">Taxa de Recebimento</p>
+                        <p class="status-value" id="scoreTaxa">0%</p>
+                        <p class="status-meta">Pagas x total emitido</p>
+                    </article>
+                </section>
+
+                <section class="card invoice-table-card">
+                    <div class="table-head-row">
+                        <p class="table-title">Cobranças</p>
+                        <p class="table-subtitle" id="counterLabel">0 itens</p>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="invoice-table">
+                            <thead>
+                                <tr>
+                                    <th>UC</th>
+                                    <th>Nome</th>
+                                    <th>CPF / CNPJ</th>
+                                    <th>Referencia</th>
+                                    <th>Valor</th>
+                                    <th>Emissao</th>
+                                    <th>Status</th>
+                                    <th class="actions-col">Acoes</th>
+                                </tr>
+                            </thead>
+                            <tbody id="invoiceTableBody">
+                                <tr>
+                                    <td colspan="8" class="empty-row">Carregando faturas emitidas...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script type="module" src="access-control.js"></script>
+    <script type="module" src="faturas-emitidas.js"></script>
+</body>
+
+</html>
+
+
+
+
+
+
+

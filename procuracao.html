@@ -1,0 +1,124 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GC Solar | Procuracoes</title>
+    <meta name="description" content="Lista de procuracoes geradas.">
+    <script>
+        (function () {
+            try {
+                var saved = localStorage.getItem("gcsolar_theme");
+                var dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+                var theme = saved || (dark ? "dark" : "light");
+                document.documentElement.setAttribute("data-theme", theme);
+            } catch (e) { }
+        })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" href="dashboard.css">
+    <link rel="stylesheet" href="procuracao-list.css">
+</head>
+
+<body>
+    <div class="app-shell" id="appShell">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="dashboard.html" class="sidebar-logo-link" aria-label="Ir para dashboard">
+                    <img src="logo6.png" alt="GC Solar" class="sidebar-logo sidebar-logo-full">
+                    <img src="gc_icon_final.png" alt="GC" class="sidebar-logo sidebar-logo-gc">
+                </a>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item"><i class="ph ph-squares-four"></i><span>Dashboard</span></a>
+                <a href="assinantes.html" class="nav-item"><i class="ph ph-users-three"></i><span>Assinantes</span></a>
+                <a href="indicar-assinante.html" class="nav-item"><i class="ph ph-user-plus"></i><span>Pré-assinante</span></a>
+                <a href="cadastrar-rateio.html" class="nav-item"><i class="ph ph-share-network"></i><span>Cadastrar Rateio</span></a>
+                <a href="calcular-desconto.html" class="nav-item"><i class="ph ph-percent"></i><span>Calcular Desconto</span></a>
+                <a href="geradoras.html" class="nav-item"><i class="ph ph-solar-panel"></i><span>Geradoras</span></a>
+                <a href="fatura-manual.html" class="nav-item"><i class="ph ph-file-plus"></i><span>Fatura Manual</span></a>
+                <a href="procuracao.html" class="nav-item active"><i class="ph ph-file-text"></i><span>Procuração</span></a>
+                <a href="faturas-validacao.html" class="nav-item"><i class="ph ph-seal-warning"></i><span>Faturas em Validacao</span></a>
+                <a href="faturas-emitidas.html" class="nav-item"><i class="ph ph-receipt"></i><span>Faturas Emitidas</span></a>
+                <a href="whatsapp.html" class="nav-item"><i class="ph ph-whatsapp-logo"></i><span>WhatsApp</span></a>
+                <a href="parceiros.html" class="nav-item"><i class="ph ph-handshake"></i><span>Parceiros</span></a>
+            </nav>
+        </aside>
+
+        <div class="content-wrap">
+            <header class="topbar">
+                <button class="toggle-btn" id="toggleSidebar" aria-label="Recolher menu lateral">
+                    <i class="ph ph-list"></i>
+                </button>
+                <div class="topbar-actions">
+                    <button class="settings-btn" id="themeBtn" aria-label="Alternar tema">
+                        <i class="ph ph-moon"></i>
+                    </button>
+                    <a class="settings-btn" href="asaas-config.html" aria-label="Configurações ASAAS">
+                        <i class="ph ph-gear-six"></i>
+                    </a>
+                </div>
+            </header>
+
+            <main class="proc-main">
+                <section class="proc-head card">
+                    <div class="proc-head-main">
+                        <span class="proc-head-icon"><i class="ph ph-file-text"></i></span>
+                        <div>
+                            <h1>Procuracoes</h1>
+                            <p>Acompanhe documentos gerados, baixe copias e crie novas procuracoes.</p>
+                        </div>
+                    </div>
+                    <a class="btn-primary-solid" href="procuracao-nova.html">
+                        <i class="ph ph-plus-circle"></i>
+                        Nova procuracao
+                    </a>
+                </section>
+
+                <section class="card">
+                    <div class="results-summary">
+                        <span id="totalLabel">0 procuracoes</span>
+                    </div>
+
+                    <div class="table-wrap">
+                        <table class="proc-table">
+                            <thead>
+                                <tr>
+                                    <th>Outorgante</th>
+                                    <th>Tipo</th>
+                                    <th>Documento</th>
+                                    <th>Local/Data</th>
+                                    <th>Criada em</th>
+                                    <th class="actions-col">Acoes</th>
+                                </tr>
+                            </thead>
+                            <tbody id="procTableBody">
+                                <tr>
+                                    <td colspan="6" class="empty-row">Nenhuma procuracao gerada ainda.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script type="module" src="access-control.js"></script>
+    <script type="module" src="procuracao-list.js"></script>
+</body>
+
+</html>
+
+
+
+
+
+
+
+

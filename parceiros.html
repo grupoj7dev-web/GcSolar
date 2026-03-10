@@ -1,0 +1,201 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GC Solar | Parceiros</title>
+    <meta name="description" content="Gestão de parceiros e permissões de acesso.">
+    <script>
+        (function () {
+            try {
+                var saved = localStorage.getItem("gcsolar_theme");
+                var dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+                var theme = saved || (dark ? "dark" : "light");
+                document.documentElement.setAttribute("data-theme", theme);
+            } catch (e) { }
+        })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Montserrat:wght@600;700&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" href="dashboard.css">
+    <link rel="stylesheet" href="parceiros.css">
+</head>
+
+<body>
+    <div class="app-shell" id="appShell">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="dashboard.html" class="sidebar-logo-link" aria-label="Ir para dashboard">
+                    <img src="logo6.png" alt="GC Solar" class="sidebar-logo sidebar-logo-full">
+                    <img src="gc_icon_final.png" alt="GC" class="sidebar-logo sidebar-logo-gc">
+                </a>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item"><i class="ph ph-squares-four"></i><span>Dashboard</span></a>
+                <a href="assinantes.html" class="nav-item"><i class="ph ph-users-three"></i><span>Assinantes</span></a>
+                <a href="indicar-assinante.html" class="nav-item"><i class="ph ph-user-plus"></i><span>Pré-assinante</span></a>
+                <a href="cadastrar-rateio.html" class="nav-item"><i class="ph ph-share-network"></i><span>Cadastrar Rateio</span></a>
+                <a href="calcular-desconto.html" class="nav-item"><i class="ph ph-percent"></i><span>Calcular Desconto</span></a>
+                <a href="geradoras.html" class="nav-item"><i class="ph ph-solar-panel"></i><span>Geradoras</span></a>
+                <a href="fatura-manual.html" class="nav-item"><i class="ph ph-file-plus"></i><span>Fatura Manual</span></a>
+                <a href="procuracao.html" class="nav-item"><i class="ph ph-file-text"></i><span>Procuração</span></a>
+                <a href="faturas-validacao.html" class="nav-item"><i class="ph ph-seal-warning"></i><span>Faturas em Validacao</span></a>
+                <a href="faturas-emitidas.html" class="nav-item"><i class="ph ph-receipt"></i><span>Faturas Emitidas</span></a>
+                <a href="whatsapp.html" class="nav-item"><i class="ph ph-whatsapp-logo"></i><span>WhatsApp</span></a>
+                <a href="parceiros.html" class="nav-item active"><i class="ph ph-handshake"></i><span>Parceiros</span></a>
+            </nav>
+        </aside>
+
+        <div class="content-wrap">
+            <header class="topbar">
+                <button class="toggle-btn" id="toggleSidebar" aria-label="Recolher menu lateral">
+                    <i class="ph ph-list"></i>
+                </button>
+                <div class="topbar-actions">
+                    <button class="settings-btn" id="themeBtn" aria-label="Alternar tema">
+                        <i class="ph ph-moon"></i>
+                    </button>
+                    <button class="logout-btn" id="logoutBtn">Sair</button>
+                </div>
+            </header>
+
+            <main class="partners-main">
+                <section class="card partners-head">
+                    <div>
+                        <h1>Parceiros</h1>
+                        <p>Gerencie quem pode acessar o sistema e quais módulos cada parceiro pode usar.</p>
+                    </div>
+                    <div class="head-actions">
+                        <button class="btn btn-primary" id="newPartnerBtn" type="button">
+                            <i class="ph ph-user-plus"></i>
+                            Novo parceiro
+                        </button>
+                        <button class="btn btn-ghost" id="reloadBtn" type="button">
+                            <i class="ph ph-arrow-clockwise"></i>
+                            Atualizar
+                        </button>
+                    </div>
+                </section>
+
+                <section class="card table-card">
+                    <p class="status" id="statusText">Carregando...</p>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>E-mail</th>
+                                    <th>Telefone</th>
+                                    <th>Status</th>
+                                    <th>Acoes</th>
+                                </tr>
+                            </thead>
+                            <tbody id="partnersTableBody">
+                                <tr>
+                                    <td colspan="5" class="empty">Carregando parceiros...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <div class="modal hidden" id="partnerModal">
+        <div class="modal-backdrop" data-close-modal="1"></div>
+        <div class="modal-card">
+            <div class="modal-head">
+                <h2 id="formTitle">Novo parceiro</h2>
+                <button class="icon-btn" id="closeModalBtn" type="button" aria-label="Fechar">
+                    <i class="ph ph-x"></i>
+                </button>
+            </div>
+
+            <form id="partnerForm">
+                <input type="hidden" id="partnerId">
+                <input type="hidden" id="originalEmail">
+
+                <div class="form-grid">
+                    <label class="field">
+                        <span>Nome</span>
+                        <input id="nomeInput" type="text" required>
+                    </label>
+                    <label class="field">
+                        <span>E-mail</span>
+                        <input id="emailInput" type="email" required>
+                    </label>
+                    <label class="field">
+                        <span>Telefone</span>
+                        <input id="telefoneInput" type="text" required>
+                    </label>
+                    <label class="field">
+                        <span>Status</span>
+                        <select id="statusInput">
+                            <option value="ativo">Ativo</option>
+                            <option value="bloqueado">Bloqueado</option>
+                            <option value="inativo">Inativo</option>
+                        </select>
+                    </label>
+                </div>
+
+                <label class="field" id="passwordField">
+                    <span>Senha de acesso</span>
+                    <input id="passwordInput" type="password" minlength="6" placeholder="Minimo 6 caracteres">
+                </label>
+
+                <fieldset class="permissions">
+                    <legend>Modulos permitidos</legend>
+                    <div class="permissions-grid">
+                        <label><input type="checkbox" data-perm="dashboard"> Dashboard</label>
+                        <label><input type="checkbox" data-perm="assinantes"> Assinantes</label>
+                        <label><input type="checkbox" data-perm="indicarAssinante"> Pré-assinante</label>
+                        <label><input type="checkbox" data-perm="rateio"> Rateio e Desconto</label>
+                        <label><input type="checkbox" data-perm="geradoras"> Geradoras</label>
+                        <label><input type="checkbox" data-perm="faturas"> Faturas</label>
+                        <label><input type="checkbox" data-perm="procuracao"> Procuração</label>
+                        <label><input type="checkbox" data-perm="whatsapp"> WhatsApp</label>
+                        <label><input type="checkbox" data-perm="representantes"> Parceiros</label>
+                    </div>
+                </fieldset>
+
+                <section class="commission-box" id="commissionBox">
+                    <h3>Comissao de indicacao</h3>
+                    <p>Obrigatorio quando "Pré-assinante" estiver liberado.</p>
+                    <div class="form-grid">
+                        <label class="field">
+                            <span>Comissao (%)</span>
+                            <input id="commissionPercentageInput" type="number" min="0" max="100" step="0.01">
+                        </label>
+                        <label class="field">
+                            <span>Prazo da comissao (meses)</span>
+                            <input id="commissionMonthsInput" type="number" min="1" step="1">
+                        </label>
+                    </div>
+                </section>
+
+                <div class="actions">
+                    <button type="submit" class="btn btn-primary" id="saveBtn">
+                        <i class="ph ph-floppy-disk"></i>
+                        Salvar
+                    </button>
+                    <button type="button" class="btn btn-ghost" id="cancelBtn">
+                        Cancelar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="access-control.js"></script>
+    <script type="module" src="parceiros.js"></script>
+</body>
+
+</html>
+

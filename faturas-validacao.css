@@ -1,0 +1,288 @@
+.invoice-main {
+    width: 100%;
+    max-width: 1380px;
+    margin: 0 auto;
+    padding: 1.15rem;
+    display: grid;
+    gap: 0.85rem;
+    align-content: start;
+}
+
+.invoice-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.8rem;
+    background: var(--surface);
+    border-radius: 14px;
+    padding: 1rem 1.1rem;
+}
+
+.invoice-head h1 {
+    margin: 0;
+    font-family: "Montserrat", sans-serif;
+    font-size: 1.45rem;
+}
+
+.invoice-head p {
+    margin-top: 0.2rem;
+    color: var(--muted);
+}
+
+.invoice-updated {
+    font-size: 0.8rem;
+    font-weight: 700;
+    border: 1px solid var(--table-border);
+    border-radius: 999px;
+    padding: 0.3rem 0.62rem;
+    background: var(--surface-soft);
+}
+
+.status-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.status-card {
+    border-radius: 12px;
+    border: 1px solid var(--table-border);
+    padding: 0.92rem;
+    background: var(--surface);
+}
+
+.status-label {
+    font-size: 0.84rem;
+    color: var(--muted);
+    font-weight: 600;
+    margin-bottom: 0.45rem;
+}
+
+.status-value {
+    font-family: "Montserrat", sans-serif;
+    font-size: 1.55rem;
+    color: var(--text);
+    margin-bottom: 0.3rem;
+}
+
+.status-meta {
+    color: var(--muted);
+    font-size: 0.8rem;
+}
+
+.status-card.pending {
+    border-left: 4px solid #f59e0b;
+}
+
+.status-card.approved {
+    border-left: 4px solid #16a34a;
+}
+
+.status-card.rejected {
+    border-left: 4px solid #ef4444;
+}
+
+.status-card.rate {
+    border-left: 4px solid #0ea5e9;
+}
+
+.invoice-table-card {
+    border-radius: 14px;
+    padding: 0.92rem 1rem;
+}
+
+.table-head-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.58rem;
+}
+
+.table-title {
+    font-family: "Montserrat", sans-serif;
+    font-size: 1.02rem;
+}
+
+.table-subtitle {
+    color: var(--muted);
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.table-wrap {
+    overflow: visible;
+    border: 1px solid var(--table-border);
+    border-radius: 11px;
+    background: var(--surface);
+}
+
+.invoice-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.invoice-table thead th {
+    text-align: left;
+    padding: 0.68rem 0.7rem;
+    font-size: 0.75rem;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--table-border);
+    background: linear-gradient(90deg, rgba(34, 197, 94, 0.07), rgba(34, 197, 94, 0.02));
+}
+
+.invoice-table tbody td {
+    padding: 0.66rem 0.7rem;
+    border-bottom: 1px solid var(--table-border);
+    font-size: 0.88rem;
+    color: var(--text);
+}
+
+.invoice-table tbody tr:hover {
+    background: var(--surface-hover);
+}
+
+.status-pill {
+    border-radius: 999px;
+    border: 1px solid var(--table-border);
+    background: var(--surface-soft);
+    color: var(--text);
+    font-size: 0.73rem;
+    font-weight: 700;
+    padding: 0.2rem 0.55rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.22rem;
+}
+
+.status-pill.pending {
+    border-color: #fdba74;
+    color: #9a3412;
+    background: #ffedd5;
+}
+
+.status-pill.approved {
+    border-color: #86efac;
+    color: #166534;
+    background: #dcfce7;
+}
+
+.status-pill.rejected {
+    border-color: #fca5a5;
+    color: #b91c1c;
+    background: #fee2e2;
+}
+
+.actions-col {
+    width: 86px;
+}
+
+.actions-cell {
+    position: relative;
+}
+
+.actions-btn {
+    border: 1px solid var(--table-border);
+    background: var(--surface);
+    color: var(--text);
+    border-radius: 9px;
+    padding: 0.32rem 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+}
+
+.actions-menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 4px);
+    z-index: 20;
+    min-width: 178px;
+    border-radius: 10px;
+    border: 1px solid var(--table-border);
+    background: var(--surface);
+    box-shadow: 0 14px 24px rgba(7, 13, 10, 0.18);
+    padding: 0.22rem;
+    display: grid;
+    gap: 0.18rem;
+}
+
+.actions-menu.hidden {
+    display: none;
+}
+
+.menu-item {
+    width: 100%;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text);
+    border-radius: 8px;
+    padding: 0.42rem 0.5rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: left;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.menu-item:hover {
+    background: var(--surface-hover);
+    border-color: var(--table-border);
+}
+
+.menu-item.view {
+    color: #1d4ed8;
+}
+
+.menu-item.download {
+    color: #166534;
+}
+
+.menu-item.approve {
+    color: #166534;
+}
+
+.menu-item.reject,
+.menu-item.delete {
+    color: #b91c1c;
+}
+
+.empty-row {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.92rem;
+    padding: 1rem 0.8rem !important;
+}
+
+@media (max-width: 1200px) {
+    .status-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .actions-col { width: 86px; }
+}
+
+@media (max-width: 900px) {
+    .invoice-main {
+        padding: 0.85rem;
+    }
+
+    .invoice-head {
+        flex-direction: column;
+    }
+
+    .status-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.invoice-table tbody tr.just-sent { background: #ecfdf5; outline: 2px solid #34d399; outline-offset: -2px; }
+.invoice-table tbody tr.just-sent td { font-weight: 600; }

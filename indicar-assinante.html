@@ -1,0 +1,406 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GC Solar | Pré-assinante</title>
+    <meta name="description" content="Cadastro comercial de indicacao de assinante.">
+    <script>
+        (function () {
+            try {
+                var saved = localStorage.getItem("gcsolar_theme");
+                var dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+                var theme = saved || (dark ? "dark" : "light");
+                document.documentElement.setAttribute("data-theme", theme);
+            } catch (e) { }
+        })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Montserrat:wght@600;700&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" href="dashboard.css">
+    <link rel="stylesheet" href="indicar-assinante.css">
+</head>
+
+<body>
+    <div class="app-shell" id="appShell">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="dashboard.html" class="sidebar-logo-link" aria-label="Ir para dashboard">
+                    <img src="logo6.png" alt="GC Solar" class="sidebar-logo sidebar-logo-full">
+                    <img src="gc_icon_final.png" alt="GC" class="sidebar-logo sidebar-logo-gc">
+                </a>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item"><i class="ph ph-squares-four"></i><span>Dashboard</span></a>
+                <a href="assinantes.html" class="nav-item"><i class="ph ph-users-three"></i><span>Assinantes</span></a>
+                <a href="indicar-assinante.html" class="nav-item active"><i class="ph ph-user-plus"></i><span>Pré-assinante</span></a>
+                <a href="cadastrar-rateio.html" class="nav-item"><i class="ph ph-share-network"></i><span>Cadastrar Rateio</span></a>
+                <a href="calcular-desconto.html" class="nav-item"><i class="ph ph-percent"></i><span>Calcular Desconto</span></a>
+                <a href="geradoras.html" class="nav-item"><i class="ph ph-solar-panel"></i><span>Geradoras</span></a>
+                <a href="fatura-manual.html" class="nav-item"><i class="ph ph-file-plus"></i><span>Fatura Manual</span></a>
+                <a href="procuracao.html" class="nav-item"><i class="ph ph-file-text"></i><span>Procuração</span></a>
+                <a href="faturas-validacao.html" class="nav-item"><i class="ph ph-seal-warning"></i><span>Faturas em Validacao</span></a>
+                <a href="faturas-emitidas.html" class="nav-item"><i class="ph ph-receipt"></i><span>Faturas Emitidas</span></a>
+                <a href="whatsapp.html" class="nav-item"><i class="ph ph-whatsapp-logo"></i><span>WhatsApp</span></a>
+                <a href="parceiros.html" class="nav-item"><i class="ph ph-handshake"></i><span>Parceiros</span></a>
+            </nav>
+        </aside>
+
+        <div class="content-wrap">
+            <header class="topbar">
+                <button class="toggle-btn" id="toggleSidebar" aria-label="Recolher menu lateral">
+                    <i class="ph ph-list"></i>
+                </button>
+                <div class="topbar-actions">
+                    <button class="settings-btn" id="themeBtn" aria-label="Alternar tema">
+                        <i class="ph ph-moon"></i>
+                    </button>
+                    <a class="settings-btn" href="asaas-config.html" aria-label="Configurações ASAAS">
+                        <i class="ph ph-gear-six"></i>
+                    </a>
+                </div>
+            </header>
+
+            <main class="ind-main">
+                <section class="card hero-card">
+                    <div>
+                        <p class="hero-label">Fluxo comercial</p>
+                        <h1>Pré-assinante</h1>
+                        <p class="hero-sub">Cadastre dados, envie documentos e salve como aguardando aprovacao em uma unica jornada.</p>
+                    </div>
+                    <p class="hero-updated" id="updatedText">Pronto para novo cadastro</p>
+                </section>
+
+                <section class="card list-card" id="listSection">
+                    <div class="list-head">
+                        <div>
+                            <h2>Assinantes Indicados</h2>
+                            <p>Veja as indicações salvas e acompanhe o status.</p>
+                        </div>
+                        <button type="button" class="btn-primary-solid" id="novaIndicacaoTopBtn">
+                            <i class="ph ph-user-plus"></i>
+                            Nova indicação
+                        </button>
+                    </div>
+
+                    <div class="table-wrap">
+                        <table class="ind-table">
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Documento</th>
+                                    <th>UC</th>
+                                    <th id="vendedorHead" class="hidden">Vendedor</th>
+                                    <th>Status</th>
+                                    <th>Criado em</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="indicacoesTableBody">
+                                <tr>
+                                    <td colspan="6" class="empty-row">Carregando indicações...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="card wizard-card hidden" id="wizardCard">
+                    <div class="wizard-topbar">
+                        <button type="button" class="btn-secondary" id="voltarListaTopBtn">
+                            <i class="ph ph-arrow-left"></i>
+                            Voltar para lista
+                        </button>
+                    </div>
+                    <div class="steps-row">
+                        <div class="step-chip active" id="stepChip1"><span>1</span> Dados</div>
+                        <div class="step-chip" id="stepChip2"><span>2</span> Documentos</div>
+                        <div class="step-chip" id="stepChip3"><span>3</span> Concluido</div>
+                    </div>
+
+                    <form id="indicacaoForm" novalidate>
+                        <section id="step1" class="step-panel">
+                            <div class="panel-head">
+                                <h2>Fase 1 - Dados do cliente</h2>
+                                <p>Preencha informacoes comerciais e de titularidade da UC.</p>
+                            </div>
+
+                            <div class="section-block">
+                                <h3>Tipo de cliente</h3>
+                                <div class="type-toggle" role="tablist" aria-label="Tipo de cliente">
+                                    <button type="button" class="type-card active" data-person-type="fisica">
+                                        <i class="ph ph-user"></i>
+                                        <span>Pessoa Física</span>
+                                    </button>
+                                    <button type="button" class="type-card" data-person-type="juridica">
+                                        <i class="ph ph-buildings"></i>
+                                        <span>Pessoa Jurídica</span>
+                                    </button>
+                                </div>
+                                <input type="hidden" id="tipoPessoa" value="fisica">
+                            </div>
+
+                            <div id="pfFields" class="form-grid">
+                                <label class="field field-span-2">
+                                    <span>Nome completo</span>
+                                    <input id="nomeCompleto" type="text" autocomplete="name">
+                                </label>
+                                <label class="field">
+                                    <span>CPF</span>
+                                    <input id="cpf" type="text" inputmode="numeric" placeholder="000.000.000-00">
+                                </label>
+                                <label class="field">
+                                    <span>Data de nascimento</span>
+                                    <input id="dataNascimento" type="date">
+                                </label>
+                            </div>
+
+                            <div id="pjFields" class="form-grid hidden">
+                                <label class="field">
+                                    <span>Razao social</span>
+                                    <input id="razaoSocial" type="text">
+                                </label>
+                                <label class="field">
+                                    <span>Nome fantasia</span>
+                                    <input id="nomeFantasia" type="text">
+                                </label>
+                                <label class="field">
+                                    <span>CNPJ</span>
+                                    <input id="cnpj" type="text" inputmode="numeric" placeholder="00.000.000/0000-00">
+                                </label>
+                                <label class="field">
+                                    <span>Socio/representante</span>
+                                    <input id="nomeRepresentante" type="text">
+                                </label>
+                                <label class="field">
+                                    <span>Data de fundacao</span>
+                                    <input id="dataFundacao" type="date">
+                                </label>
+                            </div>
+
+                            <div class="section-block">
+                                <h3>Contato</h3>
+                                <div class="form-grid">
+                                    <label class="field">
+                                        <span>E-mail</span>
+                                        <input id="email" type="email" autocomplete="email" required>
+                                    </label>
+                                    <label class="field">
+                                        <span>Telefone / WhatsApp</span>
+                                        <input id="telefone" type="text" inputmode="tel" required>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="section-block">
+                                <h3>Dados da geracao</h3>
+                                <div class="form-grid">
+                                    <label class="field">
+                                        <span>Numero da UC</span>
+                                        <input id="uc" type="text" inputmode="numeric" required>
+                                    </label>
+                                    <label class="field">
+                                        <span>Consumo medio (kWh)</span>
+                                        <input id="consumoMedio" type="number" min="0" step="0.01" required>
+                                    </label>
+                                    <label class="field">
+                                        <span>Desconto aplicado (%)</span>
+                                        <input id="desconto" type="number" min="0" max="100" step="0.01" required>
+                                    </label>
+                                </div>
+                                <div class="checks-row">
+                                    <label class="check-item">
+                                        <input id="isencaoImpostos" type="checkbox">
+                                        <span>Isencao de impostos</span>
+                                    </label>
+                                    <label class="check-item">
+                                        <input id="isencaoFioB" type="checkbox">
+                                        <span>Isencao de fio B</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="section-block">
+                                <h3>Endereço da instalacao</h3>
+                                <div class="form-grid">
+                                    <label class="field">
+                                        <span>CEP</span>
+                                        <div class="inline-field">
+                                            <input id="cep" type="text" inputmode="numeric" placeholder="00000-000" required>
+                                            <button type="button" class="btn-secondary" id="buscarCepBtn">Buscar CEP</button>
+                                        </div>
+                                    </label>
+                                    <label class="field field-span-2">
+                                        <span>Logradouro</span>
+                                        <input id="logradouro" type="text" required>
+                                    </label>
+                                    <label class="field">
+                                        <span>Numero</span>
+                                        <input id="numero" type="text" required>
+                                    </label>
+                                    <label class="field">
+                                        <span>Complemento</span>
+                                        <input id="complemento" type="text">
+                                    </label>
+                                    <label class="field">
+                                        <span>Bairro</span>
+                                        <input id="bairro" type="text" required>
+                                    </label>
+                                    <label class="field">
+                                        <span>Cidade</span>
+                                        <input id="cidade" type="text" required>
+                                    </label>
+                                    <label class="field">
+                                        <span>Estado</span>
+                                        <input id="estado" type="text" maxlength="2" required>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="section-block">
+                                <h3>Titularidade da UC</h3>
+                                <div class="radio-row" role="radiogroup" aria-label="Conta no nome do contratante">
+                                    <label class="radio-item">
+                                        <input type="radio" name="contaNoNome" value="sim" checked>
+                                        <span>Sim, a conta esta no nome do contratante</span>
+                                    </label>
+                                    <label class="radio-item">
+                                        <input type="radio" name="contaNoNome" value="nao">
+                                        <span>Não, está no nome de terceiro</span>
+                                    </label>
+                                </div>
+
+                                <div id="terceiroFields" class="form-grid hidden">
+                                    <label class="field field-span-2">
+                                        <span>Nome do terceiro</span>
+                                        <input id="nomeDonoConta" type="text">
+                                    </label>
+                                    <label class="field">
+                                        <span>CPF/CNPJ do terceiro</span>
+                                        <input id="cpfCnpjDonoConta" type="text" inputmode="numeric">
+                                    </label>
+                                    <label class="field">
+                                        <span>Nascimento/fundacao do terceiro</span>
+                                        <input id="dataNascimentoDonoConta" type="date">
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="section-block">
+                                <h3>Modalidade de contrato</h3>
+                                <div class="radio-row">
+                                    <label class="radio-item">
+                                        <input type="radio" name="modalidade" value="nao_mudar_titularidade" checked>
+                                        <span>Não mudar titularidade (geração compartilhada)</span>
+                                    </label>
+                                    <label class="radio-item">
+                                        <input type="radio" name="modalidade" value="mudar_titularidade">
+                                        <span>Mudar titularidade (autoconsumo remoto)</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="actions-row">
+                                <button type="button" class="btn-primary-solid" id="continuarBtn">
+                                    Continuar para documentos
+                                    <i class="ph ph-arrow-right"></i>
+                                </button>
+                            </div>
+                        </section>
+
+                        <section id="step2" class="step-panel hidden">
+                            <div class="panel-head">
+                                <h2>Fase 2 - Upload de documentos</h2>
+                                <p>Envie os arquivos obrigatórios para concluir a indicacao.</p>
+                            </div>
+
+                            <div class="summary-bar" id="summaryBar"></div>
+
+                            <div class="upload-grid">
+                                <label class="upload-card">
+                                    <span>Conta de energia (obrigatório)</span>
+                                    <input id="docContaEnergia" type="file" accept=".pdf,image/*" required>
+                                </label>
+                                <label class="upload-card">
+                                    <span>Documento (CNH/RG) do responsavel (obrigatório)</span>
+                                    <input id="docIdentificacao" type="file" accept=".pdf,image/*" required>
+                                </label>
+                                <label class="upload-card" id="contratoSocialCard">
+                                    <span>Contrato social (obrigatório para PJ)</span>
+                                    <input id="docContratoSocial" type="file" accept=".pdf,image/*">
+                                </label>
+                                <label class="upload-card" id="docTerceiroCard">
+                                    <span>Documento do terceiro (obrigatório se conta for de terceiro)</span>
+                                    <input id="docTerceiro" type="file" accept=".pdf,image/*">
+                                </label>
+                            </div>
+
+                            <div class="actions-row split">
+                                <button type="button" class="btn-secondary" id="voltarBtn">
+                                    <i class="ph ph-arrow-left"></i>
+                                    Voltar
+                                </button>
+                                <div class="actions-inline">
+                                    <button type="submit" class="btn-primary-solid" id="salvarBtn">
+                                        Salvar como aguardando aprovacao
+                                    </button>
+                                </div>
+                            </div>
+                        </section>
+                    </form>
+
+                    <section id="successPanel" class="success-panel hidden">
+                        <div class="success-icon"><i class="ph ph-seal-check"></i></div>
+                        <h2>Indicacao recebida com sucesso</h2>
+                        <p>Os dados e documentos foram enviados para analise. O cliente ficou com status <strong>Aguardando Aprovacao</strong>.</p>
+                        <div class="actions-row center">
+                            <button type="button" class="btn-secondary" id="novaIndicacaoBtn">Nova indicacao</button>
+                            <button type="button" class="btn-secondary" id="voltarListaBtn">Voltar para lista</button>
+                            <a href="assinantes.html" class="btn-primary-solid">Ir para Assinantes</a>
+                        </div>
+                    </section>
+
+                    <p class="status-msg" id="statusMsg"></p>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <div class="modal-overlay hidden" id="indicacaoModal" role="dialog" aria-modal="true" aria-labelledby="indicacaoModalTitle">
+        <div class="modal-card">
+            <div class="modal-head">
+                <div>
+                    <h3 id="indicacaoModalTitle">Dossiê do Pré-assinante</h3>
+                    <p id="indicacaoModalStatus">Em análise</p>
+                </div>
+                <button type="button" class="modal-close-btn" id="indicacaoModalCloseBtn" aria-label="Fechar dossiê">
+                    <i class="ph ph-x"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="indicacaoModalBody"></div>
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" id="indicacaoModalCancelBtn">Fechar</button>
+                <button type="button" class="btn-primary-solid hidden" id="indicacaoRateioBtn">Concluir rateio</button>
+                <button type="button" class="btn-danger" id="indicacaoRejectBtn">Rejeitar</button>
+                <button type="button" class="btn-primary-solid" id="indicacaoApproveBtn">Aprovar</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="access-control.js"></script>
+    <script type="module" src="indicar-assinante.js"></script>
+</body>
+
+</html>
+
+
+
+
+
+
