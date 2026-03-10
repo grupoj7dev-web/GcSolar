@@ -24,13 +24,14 @@ const source = params.get("source") || "gcredito_generators";
 const TOTAL_STEPS = 7;
 
 const wizardForm = document.getElementById("wizardForm");
-const steps = Array.from(document.querySelectorAll(".step"));
-const panes = Array.from(document.querySelectorAll(".pane"));
+const panes = Array.from(document.querySelectorAll(".step-pane"));
+const stepDots = document.getElementById("stepDots");
 const prevBtn = document.getElementById("prevBtn");
 const nextBtn = document.getElementById("nextBtn");
 const saveBtn = document.getElementById("saveBtn");
 const validationBar = document.getElementById("validationBar");
 const stepLabel = document.getElementById("stepLabel");
+const stepTitle = document.getElementById("stepTitle");
 const plantsList = document.getElementById("plantsList");
 const uploadGrid = document.getElementById("uploadGrid");
 const reviewJson = document.getElementById("reviewJson");
@@ -54,6 +55,26 @@ const FACTOR = { GO: 145, MT: 145, MG: 140, SP: 132, BA: 145, PR: 128, RS: 122, 
 const state = { plants: [], documents: {} };
 let scope = null;
 let currentStep = 1;
+
+const stepTitles = [
+  "Proprietário",
+  "Administrador PJ",
+  "Usinas",
+  "Distribuidora",
+  "Bancário",
+  "Anexos",
+  "Revisão",
+];
+
+const stepTimeline = [
+  { label: "Proprietário", icon: "ph-user" },
+  { label: "Adm. PJ", icon: "ph-buildings" },
+  { label: "Usinas", icon: "ph-solar-panel" },
+  { label: "Distribuidora", icon: "ph-plug" },
+  { label: "Bancário", icon: "ph-bank" },
+  { label: "Anexos", icon: "ph-file-text" },
+  { label: "Revisão", icon: "ph-check-circle" },
+];
 
 function isMobile() {
   return window.matchMedia("(max-width: 960px)").matches;
@@ -528,12 +549,33 @@ function payload(withMeta = true) {
 function review() { reviewJson.textContent = JSON.stringify(payload(false), null, 2); }
 
 function stepUI() {
-  steps.forEach((x) => x.classList.toggle("active", Number(x.dataset.step) === currentStep));
-  panes.forEach((x) => x.classList.toggle("active", Number(x.dataset.pane) === currentStep));
-  prevBtn.disabled = currentStep <= 1;
-  nextBtn.disabled = currentStep >= TOTAL_STEPS;
-  saveBtn.classList.toggle("hidden", currentStep !== TOTAL_STEPS);
+  panes.forEach((p) => {
+    const active = Number(p.dataset.step) === currentStep;
+    p.classList.toggle("hidden", !active);
+    p.classList.toggle("is-active", active);
+  });
   stepLabel.textContent = `Etapa ${currentStep} de ${TOTAL_STEPS}`;
+  if (stepTitle) stepTitle.textContent = stepTitles[currentStep - 1] || "";
+  prevBtn.disabled = currentStep <= 1;
+  nextBtn.classList.toggle("hidden", currentStep >= TOTAL_STEPS);
+  saveBtn.classList.toggle("hidden", currentStep < TOTAL_STEPS);
+
+  const progress = ((currentStep - 1) / (stepTitles.length - 1)) * 100;
+  if (stepDots) {
+    stepDots.style.setProperty("--timeline-progress", `${Math.max(0, Math.min(100, progress))}%`);
+    stepDots.innerHTML = stepTimeline.map((meta, i) => {
+      const n = i + 1;
+      const stateClass = n < currentStep ? "done" : n === currentStep ? "current" : "upcoming";
+      const indicator = n < currentStep ? "<i class='ph ph-check'></i>" : `<i class='ph ${meta.icon}'></i>`;
+      return `
+        <button type='button' class='step-dot ${stateClass}' data-dot-step='${n}' aria-label='Etapa ${n}: ${meta.label}'>
+          <span class='step-dot-index'>${indicator}</span>
+          <span class='step-dot-label'>${meta.label}</span>
+        </button>
+      `;
+    }).join("");
+  }
+
   if (currentStep === TOTAL_STEPS) review();
 }
 
@@ -602,10 +644,13 @@ function bind() {
   id("addPlantBtn").addEventListener("click", () => { state.plants.push(createPlant()); recalc(state.plants.length - 1); renderPlants(); });
   id("syncFirstPlantBtn").addEventListener("click", () => { syncFirstPlant(true); show("Primeira usina sincronizada.", "success"); });
 
-  steps.forEach((b) => b.addEventListener("click", () => {
-    const t = Number(b.dataset.step); if (t > currentStep) { const m = validate(currentStep); if (m) return show(m); }
+  stepDots?.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-dot-step]");
+    if (!b) return;
+    const t = Number(b.dataset.dotStep);
+    if (t > currentStep) { const m = validate(currentStep); if (m) return show(m); }
     currentStep = t; stepUI();
-  }));
+  });
   prevBtn.addEventListener("click", () => { if (currentStep > 1) currentStep -= 1; stepUI(); });
   nextBtn.addEventListener("click", () => { const m = validate(currentStep); if (m) return show(m); if (currentStep < TOTAL_STEPS) currentStep += 1; stepUI(); });
 

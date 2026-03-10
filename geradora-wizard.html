@@ -65,7 +65,7 @@
         </div>
       </header>
 
-      <main class="generator-wizard-main">
+      <main class="subscriber-wizard-main generator-wizard-main">
         <section class="wizard-head card">
           <div>
             <a class="back-link" href="geradoras.html"><i class="ph ph-arrow-left"></i> Voltar para geradoras</a>
@@ -74,21 +74,19 @@
           </div>
           <div class="head-badge">
             <span id="stepLabel">Etapa 1 de 7</span>
+            <strong id="stepTitle">Proprietário</strong>
           </div>
         </section>
 
-        <nav class="stepper card" id="stepperNav">
-          <button type="button" class="step active" data-step="1">1. Proprietário</button>
-          <button type="button" class="step" data-step="2">2. Adm. PJ</button>
-          <button type="button" class="step" data-step="3">3. Usinas</button>
-          <button type="button" class="step" data-step="4">4. Distribuidora</button>
-          <button type="button" class="step" data-step="5">5. Bancário</button>
-          <button type="button" class="step" data-step="6">6. Anexos</button>
-          <button type="button" class="step" data-step="7">7. Revisão</button>
-        </nav>
+        <section class="card progress-card">
+          <div class="timeline-shell">
+            <p class="timeline-title">Linha do tempo do cadastro</p>
+            <div class="step-dots" id="stepDots"></div>
+          </div>
+        </section>
 
-        <form id="wizardForm" class="wizard-card card" novalidate>
-      <section class="pane active" data-pane="1">
+        <form id="wizardForm" class="wizard-form card" novalidate>
+      <section class="step-pane step-pane--concessionaria" data-step="1">
         <h2>Concessionária e Dados do Proprietário</h2>
 
         <div class="section-block">
@@ -188,7 +186,7 @@
         <label class="field"><span>Observações</span><textarea id="ownerObservations" rows="3"></textarea></label>
       </section>
 
-      <section class="pane" data-pane="2">
+      <section class="step-pane hidden" data-step="2">
         <h2>Administrador da Pessoa Jurídica (Opcional)</h2>
         <p class="inline-note">Esta etapa aparece apenas para pessoa jurídica e é opcional.</p>
 
@@ -226,7 +224,7 @@
         </div>
       </section>
 
-      <section class="pane" data-pane="3">
+      <section class="step-pane hidden" data-step="3">
         <h2>Dados das Usinas</h2>
         <div class="action-row">
           <button class="btn-secondary" type="button" id="addPlantBtn"><i class="ph ph-plus"></i> Adicionar Usina</button>
@@ -235,7 +233,7 @@
         <div id="plantsList" class="plants-list"></div>
       </section>
 
-      <section class="pane" data-pane="4">
+      <section class="step-pane hidden" data-step="4">
         <h2>Acesso à Distribuidora (Portal)</h2>
         <p class="inline-note">Preenchimento automático usando CPF/CNPJ do proprietário e UC da primeira usina.</p>
         <div class="grid cols-3">
@@ -245,7 +243,7 @@
         </div>
       </section>
 
-      <section class="pane" data-pane="5">
+      <section class="step-pane hidden" data-step="5">
         <h2>Dados para Recebimento</h2>
         <div class="grid cols-3">
           <label class="field"><span>Banco *</span><input id="payBanco" required></label>
@@ -257,13 +255,13 @@
         </div>
       </section>
 
-      <section class="pane" data-pane="6">
+      <section class="step-pane hidden" data-step="6">
         <h2>Anexos e Documentos</h2>
         <p class="inline-note">Upload assíncrono para Firebase Storage (`gcredito/generators/temp/{user_id}/...`). Formatos: PDF, JPG, PNG. Máx: 10MB.</p>
         <div class="upload-grid" id="uploadGrid"></div>
       </section>
 
-      <section class="pane" data-pane="7">
+      <section class="step-pane hidden" data-step="7">
         <h2>Revisão</h2>
         <pre id="reviewJson"></pre>
       </section>
@@ -299,4 +297,5 @@
 </script></body>
 
 </html>
+
 
