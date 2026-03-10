@@ -299,6 +299,22 @@ function fillPrimaryToFirstUcIfMissing() {
   });
 }
 
+function fillPrimaryToAccountsIfMissing() {
+  if (!state.accounts.length) return;
+  const person = holderType() === "person";
+  const primaryAddress = person ? readAddress("personAddress") : readAddress("companyAddress");
+  if (!validateAddress(primaryAddress)) return;
+
+  state.accounts.forEach((account) => {
+    if (!account.address) account.address = { cep: "", street: "", number: "", complement: "", district: "", city: "", state: "" };
+    const current = account.address || {};
+    if (validateAddress(current)) return;
+    Object.keys(primaryAddress).forEach((key) => {
+      if (!clean(current[key])) current[key] = primaryAddress[key];
+    });
+  });
+}
+
 function renderAccounts() {
   if (!state.accounts.length) state.accounts = [createAccount()];
   const canRemove = state.accounts.length > 1;
@@ -523,7 +539,10 @@ function validateAddress(addr) {
 }
 
 function validateStep(step) {
-  if (step >= 4) fillPrimaryToFirstUcIfMissing();
+  if (step >= 4) {
+    fillPrimaryToFirstUcIfMissing();
+    fillPrimaryToAccountsIfMissing();
+  }
   if (step === 1 && !clean(id("concessionaria").value)) return "Selecione a concessionaria.";
   if (step === 3) {
     if (holderType() === "person") {
@@ -551,6 +570,7 @@ function validateStep(step) {
   if (step === 4) {
     syncAccountsFromDom();
     if (!state.accounts.length) return "Adicione ao menos uma UC.";
+    fillPrimaryToAccountsIfMissing();
     for (const a of state.accounts) {
       if (!clean(a.personType)) return "Tipo de pessoa da conta obrigatório.";
       if (onlyDigits(a.doc).length < 11) return "CPF/CNPJ da conta inválido.";
@@ -818,18 +838,29 @@ function bindEvents() {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     fillPrimaryToFirstUcIfMissing();
+    fillPrimaryToAccountsIfMissing();
     for (let s = 1; s <= 8; s += 1) { const err = validateStep(s); if (err) { state.step = s; updateStepUI(); return alert(err); } }
     id("saveWizardBtn").disabled = true;
     id("saveWizardBtn").textContent = "Salvando...";
     try {
       const payload = buildPayload();
+      const uploadErrors = [];
+      const uploadSafe = async (file, key, label) => {
+        try {
+          return await uploadOptional(file, key);
+        } catch (err) {
+          const reason = err?.message || String(err);
+          uploadErrors.push(`${label || file?.name || key}: ${reason}`);
+          return null;
+        }
+      };
       payload.documents = {
-        contract: await uploadOptional(id("fileContractRequired")?.files?.[0], "doc_contract"),
-        energyBill: await uploadOptional(id("fileEnergyBillRequired")?.files?.[0], "doc_energy_bill"),
-        cnh: await uploadOptional(id("fileCnh")?.files?.[0], "doc_cnh_rg"),
-        contractSocial: await uploadOptional(id("fileContractSocial")?.files?.[0], "doc_contrato_social"),
-        procuracao: await uploadOptional(id("fileProcuracao")?.files?.[0], "doc_procuracao"),
-        transferProtocol: await uploadOptional(id("fileTransferProtocol")?.files?.[0], "doc_transfer_protocol"),
+        contract: await uploadSafe(id("fileContractRequired")?.files?.[0], "doc_contract", "Contrato"),
+        energyBill: await uploadSafe(id("fileEnergyBillRequired")?.files?.[0], "doc_energy_bill", "Conta de energia"),
+        cnh: await uploadSafe(id("fileCnh")?.files?.[0], "doc_cnh_rg", "CNH/RG"),
+        contractSocial: await uploadSafe(id("fileContractSocial")?.files?.[0], "doc_contrato_social", "Contrato social"),
+        procuracao: await uploadSafe(id("fileProcuracao")?.files?.[0], "doc_procuracao", "Procuração"),
+        transferProtocol: await uploadSafe(id("fileTransferProtocol")?.files?.[0], "doc_transfer_protocol", "Protocolo de transferência"),
       };
       if (payload.transfer.enabled) {
         payload.transfer.protocol = payload.documents.transferProtocol || null;
@@ -840,7 +871,11 @@ function bindEvents() {
       if (editingId) await updateDoc(doc(db, COLL, editingId), payload);
       else { payload.created_at = serverTimestamp(); await addDoc(collection(db, COLL), payload); }
       clearDraft();
-      alert("Assinante salvo com sucesso.");
+      if (uploadErrors.length) {
+        alert(`Assinante salvo, mas alguns anexos falharam:\n- ${uploadErrors.join("\n- ")}`);
+      } else {
+        alert("Assinante salvo com sucesso.");
+      }
       window.location.href = "assinantes.html";
     } catch (err) { console.error(err); alert(`Falha ao salvar: ${err.message || "erro inesperado"}`); }
     finally { id("saveWizardBtn").disabled = false; id("saveWizardBtn").textContent = "Salvar Assinante"; }
