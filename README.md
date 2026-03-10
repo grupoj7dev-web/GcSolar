@@ -1,4 +1,4 @@
-﻿# gcsolar-landing-page
+# gcsolar-landing-page
 
 Landing page institucional da GC Solar.
 

@@ -1,6 +1,6 @@
 # Guia Git (GcSolar)
 
-Este guia explica o fluxo básico para atualizar o projeto com segurança.
+Este guia explica o fluxo bÃ¡sico para atualizar o projeto com seguranÃ§a.
 
 ## 1) Verificar status
 
@@ -8,7 +8,7 @@ Este guia explica o fluxo básico para atualizar o projeto com segurança.
 git status -sb
 ```
 
-## 2) Ver diferenças
+## 2) Ver diferenÃ§as
 
 ```
 git diff
@@ -23,7 +23,7 @@ git add caminho/do/arquivo
 ## 4) Commit
 
 ```
-git commit -m "descrição curta e objetiva"
+git commit -m "descriÃ§Ã£o curta e objetiva"
 ```
 
 ## 5) Enviar para o GitHub
@@ -32,18 +32,18 @@ git commit -m "descrição curta e objetiva"
 git push origin main
 ```
 
-## Observações de segurança
+## ObservaÃ§Ãµes de seguranÃ§a
 
-- Não salve tokens ou senhas em arquivos `.md`.
-- Se precisar de autenticação, use o login via `gh auth login` ou variáveis de ambiente temporárias.
+- NÃ£o salve tokens ou senhas em arquivos `.md`.
+- Se precisar de autenticaÃ§Ã£o, use o login via `gh auth login` ou variÃ¡veis de ambiente temporÃ¡rias.
 
-## Submódulo/Repo interno (referenciacores)
+## SubmÃ³dulo/Repo interno (referenciacores)
 
-Se você alterar o conteúdo de `referenciacores`, confirme se o commit foi feito naquele repositório e depois atualize o ponteiro no repositório principal.
+Se vocÃª alterar o conteÃºdo de `referenciacores`, confirme se o commit foi feito naquele repositÃ³rio e depois atualize o ponteiro no repositÃ³rio principal.
 
 ```
 cd referenciacores
-# faça commit e push
+# faÃ§a commit e push
 cd ..
 # atualize o ponteiro no repo principal
 ```
