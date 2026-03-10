@@ -47,6 +47,8 @@ const updatedText = document.getElementById("updatedText");
 const statusMsg = document.getElementById("statusMsg");
 const listSection = document.getElementById("listSection");
 const wizardCard = document.getElementById("wizardCard");
+const kanbanSection = document.getElementById("kanbanSection");
+const kanbanBoard = document.getElementById("kanbanBoard");
 const indicacoesTableBody = document.getElementById("indicacoesTableBody");
 const vendedorHead = document.getElementById("vendedorHead");
 const novaIndicacaoTopBtn = document.getElementById("novaIndicacaoTopBtn");
@@ -67,6 +69,8 @@ const indicacaoStatusApplyBtn = document.getElementById("indicacaoStatusApplyBtn
 const statusFilters = document.getElementById("statusFilters");
 const searchIndicacoes = document.getElementById("searchIndicacoes");
 const clearFiltersBtn = document.getElementById("clearFiltersBtn");
+const viewListBtn = document.getElementById("viewListBtn");
+const viewKanbanBtn = document.getElementById("viewKanbanBtn");
 
 const step1Panel = document.getElementById("step1");
 const step2Panel = document.getElementById("step2");
@@ -149,6 +153,7 @@ let sellerByUid = new Map();
 let activeIndicacaoModalId = "";
 let activeStatusFilter = "all";
 let searchTerm = "";
+let viewMode = "list";
 
 const FLOW_META = {
   aguardando_aprovacao: {
@@ -261,11 +266,19 @@ function existingDocUrl(key) {
 function showListMode() {
   listSection?.classList.remove("hidden");
   wizardCard?.classList.add("hidden");
+  kanbanSection?.classList.add("hidden");
 }
 
 function showCadastroMode() {
   listSection?.classList.add("hidden");
   wizardCard?.classList.remove("hidden");
+  kanbanSection?.classList.add("hidden");
+}
+
+function showKanbanMode() {
+  listSection?.classList.add("hidden");
+  wizardCard?.classList.add("hidden");
+  kanbanSection?.classList.remove("hidden");
 }
 
 function getContaNoNome() {
@@ -567,6 +580,58 @@ function renderIndicacoesList() {
     `;
     })
     .join("");
+}
+
+function renderKanbanBoard() {
+  if (!kanbanBoard) return;
+  const filtered = filteredIndicacoes();
+  const grouped = filtered.reduce((acc, item) => {
+    const key = normalizeIndicacaoStatus(item.status || item.statusLabel);
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(item);
+    return acc;
+  }, {});
+
+  const columns = [
+    { key: "aguardando_aprovacao", label: FLOW_META.aguardando_aprovacao.label },
+    { key: "pendente_rateio", label: FLOW_META.pendente_rateio.label },
+    { key: "pendente_assinatura", label: FLOW_META.pendente_assinatura.label },
+    { key: "ativo", label: FLOW_META.ativo.label },
+    { key: "rejeitado", label: FLOW_META.rejeitado.label },
+  ];
+
+  kanbanBoard.innerHTML = columns.map((col) => {
+    const items = grouped[col.key] || [];
+    return `
+      <div class="kanban-col" data-status-col="${col.key}">
+        <h3>${escapeHtml(col.label)} <span class="kanban-count">${items.length}</span></h3>
+        <div class="kanban-cards">
+          ${items.length ? items.map((item) => {
+            const nome = cleanText(item.nome || item.razaoSocial || item.nomeFantasia || "-");
+            const doc = onlyDigits(item.cpfCnpj || item.cpf || item.cnpj || "-");
+            const uc = onlyDigits(item.uc || "-");
+            return `
+              <article class="kanban-card-item">
+                <strong>${escapeHtml(nome || "-")}</strong>
+                <div class="kanban-meta">
+                  <span>Doc: ${escapeHtml(doc || "-")}</span>
+                  <span>UC: ${escapeHtml(uc || "-")}</span>
+                </div>
+                <div class="kanban-actions">
+                  <button type="button" class="btn-secondary" data-view-id="${escapeHtml(item.id)}">Ver</button>
+                  <button type="button" class="btn-secondary" data-edit-id="${escapeHtml(item.id)}">Editar</button>
+                  ${col.key === "aguardando_aprovacao" ? `<button type="button" class="btn-primary-solid" data-act="approve" data-id="${escapeHtml(item.id)}">Aprovar</button>` : ""}
+                  ${col.key === "aguardando_aprovacao" ? `<button type="button" class="btn-danger" data-act="reject" data-id="${escapeHtml(item.id)}">Rejeitar</button>` : ""}
+                  ${col.key === "pendente_rateio" ? `<button type="button" class="btn-primary-solid" data-act="rateio" data-id="${escapeHtml(item.id)}">Assinatura pendente</button>` : ""}
+                  ${col.key === "pendente_assinatura" ? `<button type="button" class="btn-primary-solid" data-act="assinar" data-id="${escapeHtml(item.id)}">Concluir assinatura</button>` : ""}
+                </div>
+              </article>
+            `;
+          }).join("") : `<p class="empty-row">Sem itens</p>`}
+        </div>
+      </div>
+    `;
+  }).join("");
 }
 
 function resetToNewIndicacaoForm(message) {
@@ -1075,6 +1140,7 @@ async function loadIndicacoesList() {
 
     buildStatusFilters();
     renderIndicacoesList();
+    renderKanbanBoard();
     setUpdated("lista");
   } catch (error) {
     console.error(error);
@@ -1716,6 +1782,47 @@ function bindEvents() {
 
   });
 
+  kanbanBoard?.addEventListener("click", async (event) => {
+    const viewBtn = event.target.closest("[data-view-id]");
+    if (viewBtn) {
+      const id = String(viewBtn.getAttribute("data-view-id") || "");
+      const item = indicacoesCache.find((x) => String(x.id) === id);
+      if (item) openIndicacaoModal(item);
+      return;
+    }
+    const editBtn = event.target.closest("[data-edit-id]");
+    if (editBtn) {
+      const id = String(editBtn.getAttribute("data-edit-id") || "");
+      const item = indicacoesCache.find((x) => String(x.id) === id);
+      if (item) populateFormForEdit(item);
+      return;
+    }
+    const actBtn = event.target.closest("[data-act]");
+    if (!actBtn) return;
+    const id = String(actBtn.getAttribute("data-id") || "");
+    const item = indicacoesCache.find((x) => String(x.id) === id);
+    if (!item) return;
+    const act = actBtn.getAttribute("data-act");
+    if (act === "approve") {
+      const ok = window.confirm(`Aprovar o pré-assinante "${item.nome || item.razaoSocial || "-"}"?`);
+      if (!ok) return;
+      await approveIndicacao(item);
+    } else if (act === "reject") {
+      const ok = window.confirm(`Rejeitar o pré-assinante "${item.nome || item.razaoSocial || "-"}"?`);
+      if (!ok) return;
+      await rejectIndicacao(item);
+    } else if (act === "rateio") {
+      const ok = window.confirm(`Marcar "${item.nome || item.razaoSocial || "-"}" como faltando assinatura?`);
+      if (!ok) return;
+      await completeIndicacaoRateio(item);
+    } else if (act === "assinar") {
+      const ok = window.confirm(`Concluir assinatura de "${item.nome || item.razaoSocial || "-"}"?`);
+      if (!ok) return;
+      await completeIndicacaoAssinatura(item);
+    }
+    await loadIndicacoesList();
+  });
+
   indicacaoModalCloseBtn?.addEventListener("click", closeIndicacaoModal);
   indicacaoModalCancelBtn?.addEventListener("click", closeIndicacaoModal);
   indicacaoModal?.addEventListener("click", (event) => {
@@ -1728,11 +1835,13 @@ function bindEvents() {
     activeStatusFilter = btn.dataset.status || "all";
     buildStatusFilters();
     renderIndicacoesList();
+    renderKanbanBoard();
   });
 
   searchIndicacoes?.addEventListener("input", () => {
     searchTerm = String(searchIndicacoes.value || "").trim().toLowerCase();
     renderIndicacoesList();
+    renderKanbanBoard();
   });
 
   clearFiltersBtn?.addEventListener("click", () => {
@@ -1741,6 +1850,22 @@ function bindEvents() {
     if (searchIndicacoes) searchIndicacoes.value = "";
     buildStatusFilters();
     renderIndicacoesList();
+    renderKanbanBoard();
+  });
+
+  viewListBtn?.addEventListener("click", () => {
+    viewMode = "list";
+    viewListBtn.classList.add("active");
+    viewKanbanBtn?.classList.remove("active");
+    showListMode();
+  });
+
+  viewKanbanBtn?.addEventListener("click", () => {
+    viewMode = "kanban";
+    viewKanbanBtn.classList.add("active");
+    viewListBtn?.classList.remove("active");
+    showKanbanMode();
+    renderKanbanBoard();
   });
 
   indicacaoStatusApplyBtn?.addEventListener("click", async () => {

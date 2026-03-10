@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GC Solar | Pré-assinante</title>
+    <title>GC Solar | Pr&#65533;-assinante</title>
     <meta name="description" content="Cadastro comercial de indicacao de assinante.">
     <script>
         (function () {
@@ -39,12 +39,12 @@
             <nav class="sidebar-nav">
                 <a href="dashboard.html" class="nav-item"><i class="ph ph-squares-four"></i><span>Dashboard</span></a>
                 <a href="assinantes.html" class="nav-item"><i class="ph ph-users-three"></i><span>Assinantes</span></a>
-                <a href="indicar-assinante.html" class="nav-item active"><i class="ph ph-user-plus"></i><span>Pré-assinante</span></a>
+                <a href="indicar-assinante.html" class="nav-item active"><i class="ph ph-user-plus"></i><span>Pr&#65533;-assinante</span></a>
                 <a href="cadastrar-rateio.html" class="nav-item"><i class="ph ph-share-network"></i><span>Cadastrar Rateio</span></a>
                 <a href="calcular-desconto.html" class="nav-item"><i class="ph ph-percent"></i><span>Calcular Desconto</span></a>
                 <a href="geradoras.html" class="nav-item"><i class="ph ph-solar-panel"></i><span>Geradoras</span></a>
                 <a href="fatura-manual.html" class="nav-item"><i class="ph ph-file-plus"></i><span>Fatura Manual</span></a>
-                <a href="procuracao.html" class="nav-item"><i class="ph ph-file-text"></i><span>Procuração</span></a>
+                <a href="procuracao.html" class="nav-item"><i class="ph ph-file-text"></i><span>Procura&#65533;&#65533;o</span></a>
                 <a href="faturas-validacao.html" class="nav-item"><i class="ph ph-seal-warning"></i><span>Faturas em Validacao</span></a>
                 <a href="faturas-emitidas.html" class="nav-item"><i class="ph ph-receipt"></i><span>Faturas Emitidas</span></a>
                 <a href="whatsapp.html" class="nav-item"><i class="ph ph-whatsapp-logo"></i><span>WhatsApp</span></a>
@@ -61,7 +61,7 @@
                     <button class="settings-btn" id="themeBtn" aria-label="Alternar tema">
                         <i class="ph ph-moon"></i>
                     </button>
-                    <a class="settings-btn" href="asaas-config.html" aria-label="Configurações ASAAS">
+                    <a class="settings-btn" href="asaas-config.html" aria-label="Configura&#65533;&#65533;es ASAAS">
                         <i class="ph ph-gear-six"></i>
                     </a>
                 </div>
@@ -71,7 +71,7 @@
                 <section class="card hero-card">
                     <div>
                         <p class="hero-label">Fluxo comercial</p>
-                        <h1>Pré-assinante</h1>
+                        <h1>Pr&#65533;-assinante</h1>
                         <p class="hero-sub">Cadastre dados, envie documentos e salve como aguardando aprovacao em uma unica jornada.</p>
                     </div>
                     <p class="hero-updated" id="updatedText">Pronto para novo cadastro</p>
@@ -81,12 +81,18 @@
                     <div class="list-head">
                         <div>
                             <h2>Assinantes Indicados</h2>
-                            <p>Veja as indicações salvas e acompanhe o status.</p>
+                            <p>Veja as indica&#65533;&#65533;es salvas e acompanhe o status.</p>
                         </div>
-                        <button type="button" class="btn-primary-solid" id="novaIndicacaoTopBtn">
-                            <i class="ph ph-user-plus"></i>
-                            Nova indicação
-                        </button>
+                        <div class="list-actions-row">
+                            <div class="view-toggle" role="tablist" aria-label="Modo de visualiza&#65533;&#65533;o">
+                                <button type="button" class="view-toggle-btn active" id="viewListBtn">Lista</button>
+                                <button type="button" class="view-toggle-btn" id="viewKanbanBtn">Kanban</button>
+                            </div>
+                            <button type="button" class="btn-primary-solid" id="novaIndicacaoTopBtn">
+                                <i class="ph ph-user-plus"></i>
+                                Nova indica&#65533;&#65533;o
+                            </button>
+                        </div>
                     </div>
 
                     <div class="status-toolbar">
@@ -107,16 +113,20 @@
                                     <th id="vendedorHead" class="hidden">Vendedor</th>
                                     <th>Status</th>
                                     <th>Criado em</th>
-                                    <th>Ações</th>
+                                    <th>A&#65533;&#65533;es</th>
                                 </tr>
                             </thead>
                             <tbody id="indicacoesTableBody">
                                 <tr>
-                                    <td colspan="6" class="empty-row">Carregando indicações...</td>
+                                    <td colspan="6" class="empty-row">Carregando indica&#65533;&#65533;es...</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
+                </section>
+
+                <section class="card kanban-card hidden" id="kanbanSection">
+                    <div class="kanban-board" id="kanbanBoard"></div>
                 </section>
 
                 <section class="card wizard-card hidden" id="wizardCard">
@@ -144,11 +154,11 @@
                                 <div class="type-toggle" role="tablist" aria-label="Tipo de cliente">
                                     <button type="button" class="type-card active" data-person-type="fisica">
                                         <i class="ph ph-user"></i>
-                                        <span>Pessoa Física</span>
+                                        <span>Pessoa F&#65533;sica</span>
                                     </button>
                                     <button type="button" class="type-card" data-person-type="juridica">
                                         <i class="ph ph-buildings"></i>
-                                        <span>Pessoa Jurídica</span>
+                                        <span>Pessoa Jur&#65533;dica</span>
                                     </button>
                                 </div>
                                 <input type="hidden" id="tipoPessoa" value="fisica">
@@ -235,7 +245,7 @@
                             </div>
 
                             <div class="section-block">
-                                <h3>Endereço da instalacao</h3>
+                                <h3>Endere&#65533;o da instalacao</h3>
                                 <div class="form-grid">
                                     <label class="field">
                                         <span>CEP</span>
@@ -280,7 +290,7 @@
                                     </label>
                                     <label class="radio-item">
                                         <input type="radio" name="contaNoNome" value="nao">
-                                        <span>Não, está no nome de terceiro</span>
+                                        <span>N&#65533;o, est&#65533; no nome de terceiro</span>
                                     </label>
                                 </div>
 
@@ -305,7 +315,7 @@
                                 <div class="radio-row">
                                     <label class="radio-item">
                                         <input type="radio" name="modalidade" value="nao_mudar_titularidade" checked>
-                                        <span>Não mudar titularidade (geração compartilhada)</span>
+                                        <span>N&#65533;o mudar titularidade (gera&#65533;&#65533;o compartilhada)</span>
                                     </label>
                                     <label class="radio-item">
                                         <input type="radio" name="modalidade" value="mudar_titularidade">
@@ -325,26 +335,26 @@
                         <section id="step2" class="step-panel hidden">
                             <div class="panel-head">
                                 <h2>Fase 2 - Upload de documentos</h2>
-                                <p>Envie os arquivos obrigatórios para concluir a indicacao.</p>
+                                <p>Envie os arquivos obrigat&#65533;rios para concluir a indicacao.</p>
                             </div>
 
                             <div class="summary-bar" id="summaryBar"></div>
 
                             <div class="upload-grid">
                                 <label class="upload-card">
-                                    <span>Conta de energia (obrigatório)</span>
+                                    <span>Conta de energia (obrigat&#65533;rio)</span>
                                     <input id="docContaEnergia" type="file" accept=".pdf,image/*" required>
                                 </label>
                                 <label class="upload-card">
-                                    <span>Documento (CNH/RG) do responsavel (obrigatório)</span>
+                                    <span>Documento (CNH/RG) do responsavel (obrigat&#65533;rio)</span>
                                     <input id="docIdentificacao" type="file" accept=".pdf,image/*" required>
                                 </label>
                                 <label class="upload-card" id="contratoSocialCard">
-                                    <span>Contrato social (obrigatório para PJ)</span>
+                                    <span>Contrato social (obrigat&#65533;rio para PJ)</span>
                                     <input id="docContratoSocial" type="file" accept=".pdf,image/*">
                                 </label>
                                 <label class="upload-card" id="docTerceiroCard">
-                                    <span>Documento do terceiro (obrigatório se conta for de terceiro)</span>
+                                    <span>Documento do terceiro (obrigat&#65533;rio se conta for de terceiro)</span>
                                     <input id="docTerceiro" type="file" accept=".pdf,image/*">
                                 </label>
                             </div>
@@ -384,10 +394,10 @@
         <div class="modal-card">
             <div class="modal-head">
                 <div>
-                    <h3 id="indicacaoModalTitle">Dossiê do Pré-assinante</h3>
-                    <p id="indicacaoModalStatus">Em análise</p>
+                    <h3 id="indicacaoModalTitle">Dossi&#65533; do Pr&#65533;-assinante</h3>
+                    <p id="indicacaoModalStatus">Em an&#65533;lise</p>
                 </div>
-                <button type="button" class="modal-close-btn" id="indicacaoModalCloseBtn" aria-label="Fechar dossiê">
+                <button type="button" class="modal-close-btn" id="indicacaoModalCloseBtn" aria-label="Fechar dossi&#65533;">
                     <i class="ph ph-x"></i>
                 </button>
             </div>
@@ -395,7 +405,7 @@
             <div class="modal-actions">
                 <div class="status-update">
                     <select id="indicacaoStatusSelect">
-                        <option value="aguardando_aprovacao">Aguardando aprovação</option>
+                        <option value="aguardando_aprovacao">Aguardando aprova&#65533;&#65533;o</option>
                         <option value="pendente_rateio">Pendente para rateio</option>
                         <option value="pendente_assinatura">Faltando assinatura</option>
                         <option value="ativo">Virou assinante</option>
@@ -416,6 +426,7 @@
     <script type="module" src="indicar-assinante.js"></script></body>
 
 </html>
+
 
 
 
