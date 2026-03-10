@@ -672,6 +672,10 @@ function bind() {
     review();
   });
 
+  const ownerCep = document.querySelector('[data-address="ownerAddress"] [data-address-field="cep"]');
+  ownerCep?.addEventListener("blur", () => fillByCep("ownerAddress", ownerCep.value));
+  ownerCep?.addEventListener("change", () => fillByCep("ownerAddress", ownerCep.value));
+
   plantsList.addEventListener("click", async (e) => {
     const b = e.target.closest("button[data-act]"); if (!b) return;
     const i = Number(b.dataset.i); const p = state.plants[i]; const act = b.dataset.act;
