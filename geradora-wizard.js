@@ -657,7 +657,6 @@ function bind() {
   document.querySelectorAll('input[name="ownerType"]').forEach((x) => x.addEventListener("change", () => { syncOwnerView(); syncFirstPlant(); syncPortal(true); review(); }));
 
 
-  document.querySelectorAll("[data-address-lookup]").forEach((b) => b.addEventListener("click", () => fillByCep(b.dataset.addressLookup, readAddress(b.dataset.addressLookup).cep)));
 
   wizardForm.addEventListener("input", (e) => {
     hide();

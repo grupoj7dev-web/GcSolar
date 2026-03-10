@@ -155,13 +155,10 @@
 
         <div class="section-block">
           <h3>Endere&#231;o do Propriet&#225;rio</h3>
-          <div class="grid cols-4" data-address="ownerAddress">
+          <div class="grid cols-2" data-address="ownerAddress">
             <label class="field">
               <span>CEP *</span>
-              <div class="inline-field">
-                <input data-address-field="cep" data-mask="cep" required>
-                <button type="button" class="btn-secondary" data-address-lookup="ownerAddress">Buscar</button>
-              </div>
+              <input data-address-field="cep" data-mask="cep" required>
             </label>
             <label class="field span-2"><span>Endere&#231;o *</span><input data-address-field="street" required></label>
             <label class="field"><span>N&#250;mero *</span><input data-address-field="number" required></label>
@@ -189,13 +186,10 @@
           </div>
 
           <h3>Endere&#231;o Residencial do Administrador</h3>
-          <div class="grid cols-4" data-address="adminAddress">
+          <div class="grid cols-2" data-address="adminAddress">
             <label class="field">
               <span>CEP</span>
-              <div class="inline-field">
-                <input data-address-field="cep" data-mask="cep">
-                <button type="button" class="btn-secondary" data-address-lookup="adminAddress">Buscar</button>
-              </div>
+              <input data-address-field="cep" data-mask="cep">
             </label>
             <label class="field span-2"><span>Endere&#231;o</span><input data-address-field="street"></label>
             <label class="field"><span>N&#250;mero</span><input data-address-field="number"></label>
@@ -219,7 +213,7 @@
       <section class="step-pane hidden" data-step="4">
         <h2>Acesso &#224; Distribuidora (Portal)</h2>
         <p class="inline-note">Preenchimento autom&#225;tico usando CPF/CNPJ do propriet&#225;rio e UC da primeira usina.</p>
-        <div class="grid cols-3">
+        <div class="grid cols-2">
           <label class="field"><span>Unidade Consumidora (UC) *</span><input id="portalUc" required></label>
           <label class="field"><span>CPF/CNPJ *</span><input id="portalDoc" data-mask="cpfcnpj" required></label>
           <label class="field"><span>Data de Nascimento</span><input id="portalBirth" type="date"></label>
@@ -228,7 +222,7 @@
 
       <section class="step-pane hidden" data-step="5">
         <h2>Dados para Recebimento</h2>
-        <div class="grid cols-3">
+        <div class="grid cols-2">
           <label class="field"><span>Banco *</span><input id="payBanco" required></label>
           <label class="field"><span>Ag&#234;ncia *</span><input id="payAgencia" required></label>
           <label class="field"><span>Conta *</span><input id="payConta" required></label>
@@ -265,6 +259,8 @@
   <script type="module" src="geradora-wizard.js?v=4"></script></body>
 
 </html>
+
+
 
 
 

@@ -122,7 +122,7 @@
           <section class="step-pane hidden" data-step="3">
             <div id="personStepBlock">
               <h2>Dados Pessoais</h2>
-              <div class="grid cols-3">
+              <div class="grid cols-2">
                 <label class="field"><span>CPF *</span><input id="personCpf" data-mask="cpf" required></label>
                 <label class="field"><span>N&#250;mero Parceiro de Neg&#243;cio *</span><input id="personPartner" required></label>
                 <label class="field"><span>Nome Completo *</span><input id="personName" required></label>
@@ -134,7 +134,7 @@
               </div>
 
               <h3>Endere&#231;o Residencial</h3>
-              <div class="grid cols-4" data-address="personAddress">
+              <div class="grid cols-2" data-address="personAddress">
                 <label class="field"><span>CEP *</span><input data-address-field="cep" data-mask="cep" required></label>
                 <label class="field span-2"><span>Endere&#231;o *</span><input data-address-field="street" required></label>
                 <label class="field"><span>Numero *</span><input data-address-field="number" required></label>
@@ -154,7 +154,7 @@
 
             <div id="companyStepBlock" class="hidden">
               <h2>Dados da Empresa</h2>
-              <div class="grid cols-3">
+              <div class="grid cols-2">
                 <label class="field"><span>CNPJ *</span><input id="companyCnpj" data-mask="cnpj"></label>
                 <label class="field"><span>N&#250;mero do S&#243;cio</span><input id="companyPartnerSocio"></label>
                 <label class="field"><span>Raz&#227;o Social *</span><input id="companyRazao"></label>
@@ -165,7 +165,7 @@
               <label class="field"><span>Observa&#231;&#245;es</span><textarea id="companyObs" rows="3"></textarea></label>
 
               <h3>Endere&#231;o da Empresa</h3>
-              <div class="grid cols-4" data-address="companyAddress">
+              <div class="grid cols-2" data-address="companyAddress">
                 <label class="field"><span>CEP *</span><input data-address-field="cep" data-mask="cep"></label>
                 <label class="field span-2"><span>Endere&#231;o *</span><input data-address-field="street"></label>
                 <label class="field"><span>Numero *</span><input data-address-field="number"></label>
@@ -181,7 +181,7 @@
 
               <div id="companyAdminBlock">
                 <h3>Dados do Administrador</h3>
-                <div class="grid cols-3">
+                <div class="grid cols-2">
                   <label class="field"><span>CPF do Administrador *</span><input id="adminCpf" data-mask="cpf"></label>
                   <label class="field"><span>Nome Completo *</span><input id="adminName"></label>
                   <label class="field"><span>Data de Nascimento *</span><input id="adminBirth" type="date"></label>
@@ -192,7 +192,7 @@
                 </div>
 
                 <h3>Endere&#231;o do Administrador</h3>
-                <div class="grid cols-4" data-address="adminAddress">
+                <div class="grid cols-2" data-address="adminAddress">
                   <label class="field"><span>CEP *</span><input data-address-field="cep" data-mask="cep"></label>
                   <label class="field span-2"><span>Endere&#231;o *</span><input data-address-field="street"></label>
                   <label class="field"><span>Numero *</span><input data-address-field="number"></label>
@@ -221,7 +221,7 @@
               <label class="radio-card compact-radio"><input type="radio" name="transferRequired" id="transferRequiredYes" value="yes"><span>Sim</span></label>
             </div>
             <div id="transferDetails" class="hidden">
-              <div class="grid cols-3">
+              <div class="grid cols-2">
                 <label class="field"><span>Tipo de Titular *</span><select id="transferHolderType"><option value="person">Pessoa F&#237;sica</option><option value="company">Pessoa Jur&#237;dica</option></select></label>
                 <label class="field"><span>CPF ou CNPJ *</span><input id="transferDoc" data-mask="cpfcnpj"></label>
                 <label class="field"><span>Nome *</span><input id="transferName"></label>
@@ -247,7 +247,7 @@
                 </div>
               </div>
 
-              <div class="grid cols-3 plan-grid">
+              <div class="grid cols-2 plan-grid">
                 <label class="field"><span>Plano Selecionado *</span><select id="planSelected"><option value="">Selecione</option><option value="basico">B&#225;sico</option><option value="intermediario">Intermediario</option><option value="premium">Premium</option></select></label>
                 <label class="field"><span>Data de Ades&#227;o *</span><input id="planAdhesionDate" type="date"></label>
                 <label class="field"><span>kWh Informado pelo Vendedor *</span><input id="planSellerKwh" type="number" min="0" step="0.01"></label>
@@ -397,6 +397,7 @@
   <script type="module" src="access-control.js"></script>
     <script type="module" src="assinante-cadastro.js?v=20260310b"></script></body>
 </html>
+
 
 
 
