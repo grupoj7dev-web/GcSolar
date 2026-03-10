@@ -27,6 +27,29 @@
   margin: 0;
 }
 
+.plant-head .action-row {
+  gap: 0.4rem;
+}
+
+.plant-card .section-block.soft {
+  border-style: solid;
+  background: #f7faf8;
+}
+
+.plant-card .section-block.soft h4 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  color: #0f3b25;
+}
+
+.plant-card .field span {
+  font-size: 0.75rem;
+}
+
+.plant-card .dynamic-item {
+  background: #ffffff;
+}
+
 .dynamic-item {
   border: 1px dashed #cfd9d2;
   border-radius: 10px;

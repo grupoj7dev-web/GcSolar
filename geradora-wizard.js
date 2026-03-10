@@ -270,39 +270,39 @@ function plantCard(p, i) {
   return `
   <article class="plant-card">
     <header class="plant-head"><h3>Usina ${i + 1}</h3><div class="action-row"><button type="button" class="btn-secondary" data-act="dup" data-i="${i}">Duplicar</button><button type="button" class="btn-secondary danger" data-act="del" data-i="${i}">Remover</button></div></header>
-    <div class="section-block soft"><h4>Dados Básicos</h4><div class="grid cols-4">
+    <div class="section-block soft"><h4>Dados Básicos</h4><div class="grid cols-2">
       <label class="field"><span>Apelido *</span><input data-pf="basic.nickname" data-i="${i}" value="${clean(p.basic.nickname)}"></label>
       <label class="field"><span>UC *</span><input data-pf="basic.uc" data-i="${i}" value="${clean(p.basic.uc)}"></label>
       <label class="field"><span>Tipo *</span><select data-pf="basic.type" data-i="${i}"><option value="micro" ${p.basic.type === "micro" ? "selected" : ""}>Micro</option><option value="mini" ${p.basic.type === "mini" ? "selected" : ""}>Mini</option></select></label>
       <label class="field"><span>Modalidade *</span><select data-pf="basic.mode" data-i="${i}"><option value="autoconsumo" ${p.basic.mode === "autoconsumo" ? "selected" : ""}>Autoconsumo</option><option value="geracao_compartilhada" ${p.basic.mode === "geracao_compartilhada" ? "selected" : ""}>Geração Compartilhada</option><option value="mista" ${p.basic.mode === "mista" ? "selected" : ""}>Autoconsumo + Compartilhada</option></select></label>
     </div><div class="badge-row">${ucBadge}</div></div>
-    <div class="section-block soft"><h4>Titular da Usina</h4><div class="grid cols-4">
+    <div class="section-block soft"><h4>Titular da Usina</h4><div class="grid cols-2">
       <label class="field"><span>Tipo *</span><select data-pf="holder.type" data-i="${i}"><option value="person" ${p.holder.type === "person" ? "selected" : ""}>PF</option><option value="company" ${p.holder.type === "company" ? "selected" : ""}>PJ</option></select></label>
       <label class="field"><span>CPF/CNPJ *</span><input data-pf="holder.document" data-mask="cpfcnpj" data-i="${i}" value="${clean(p.holder.document)}"></label>
       <label class="field"><span>Parceiro *</span><input data-pf="holder.partner" data-i="${i}" value="${clean(p.holder.partner)}"></label>
-      <label class="field"><span>Nome *</span><input data-pf="holder.name" data-i="${i}" value="${clean(p.holder.name)}"></label>
+      <label class="field span-2"><span>Nome *</span><input data-pf="holder.name" data-i="${i}" value="${clean(p.holder.name)}"></label>
       <label class="field"><span>Nascimento ${p.holder.type === "person" ? "*" : ""}</span><input type="date" data-pf="holder.birth" data-i="${i}" value="${clean(p.holder.birth)}"></label>
     </div></div>
-    <div class="section-block soft"><h4>Endereço da Usina</h4><div class="grid cols-4">
-      <label class="field"><span>CEP *</span><div class="inline-field"><input data-pa="cep" data-mask="cep" data-i="${i}" value="${clean(p.address.cep)}"><button type="button" class="btn-secondary" data-act="cep" data-i="${i}">Buscar</button></div></label>
+    <div class="section-block soft"><h4>Endereço da Usina</h4><div class="grid cols-2">
+      <label class="field"><span>CEP *</span><input data-pa="cep" data-mask="cep" data-i="${i}" value="${clean(p.address.cep)}"></label>
       <label class="field span-2"><span>Rua *</span><input data-pa="street" data-i="${i}" value="${clean(p.address.street)}"></label>
-      <label class="field"><span>Numero *</span><input data-pa="number" data-i="${i}" value="${clean(p.address.number)}"></label>
+      <label class="field"><span>Número *</span><div class="number-row"><input data-pa="number" data-i="${i}" value="${clean(p.address.number)}"><label class="sn-check"><input type="checkbox" data-plant-sn="${i}"><span>SN</span></label></div></label>
       <label class="field"><span>Complemento</span><input data-pa="complement" data-i="${i}" value="${clean(p.address.complement)}"></label>
       <label class="field"><span>Bairro *</span><input data-pa="district" data-i="${i}" value="${clean(p.address.district)}"></label>
       <label class="field"><span>Cidade *</span><input data-pa="city" data-i="${i}" value="${clean(p.address.city)}"></label>
       <label class="field"><span>Estado *</span><input data-pa="state" data-i="${i}" value="${clean(p.address.state)}"></label>
     </div></div>
-    <div class="section-block soft"><h4>Instalacao Fotovoltaica</h4><div class="grid cols-4">
+    <div class="section-block soft"><h4>Instalacao Fotovoltaica</h4><div class="grid cols-2">
       <label class="field"><span>Marca Modulo *</span><input data-pf="installation.moduleBrand" data-i="${i}" value="${clean(p.installation.moduleBrand)}"></label>
       <label class="field"><span>Potencia Modulo (W) *</span><input type="number" data-pf="installation.modulePowerW" data-i="${i}" value="${num(p.installation.modulePowerW)}"></label>
       <label class="field"><span>Qtd Modulos *</span><input type="number" data-pf="installation.moduleQty" data-i="${i}" value="${num(p.installation.moduleQty)}"></label>
       <label class="field"><span>Potencia Total (kWp)</span><div class="inline-field"><input type="number" data-pf="installation.totalKwp" data-i="${i}" value="${num(p.installation.totalKwp)}"><button type="button" class="btn-secondary" data-act="auto" data-i="${i}">Auto</button></div></label>
     </div><div class="badge-row">${num(p.installation.modulePowerW) === 580 ? '<span class="mini-badge ok">Sugerido 2024</span>' : ''} ${invBadge} <span class="mini-badge ok">Estimado: ${num(p.installation.projected).toLocaleString("pt-BR")} kWh/mes</span></div></div>
     <div class="section-block soft"><div class="dynamic-head"><h4>Inversores</h4><button type="button" class="btn-secondary" data-act="addInv" data-i="${i}">Adicionar</button></div>
-      ${(p.installation.inverters || []).map((inv, ii) => `<div class="grid cols-4 dynamic-item"><label class="field"><span>Marca *</span><input data-if="brand" data-i="${i}" data-ii="${ii}" value="${clean(inv.brand)}"></label><label class="field"><span>Potencia (kW) *</span><input type="number" data-if="powerKw" data-i="${i}" data-ii="${ii}" value="${num(inv.powerKw)}"></label><label class="field"><span>Quantidade *</span><input type="number" data-if="qty" data-i="${i}" data-ii="${ii}" value="${num(inv.qty)}"></label><div class="field control-field"><span>Acao</span><button type="button" class="btn-secondary danger" data-act="rmInv" data-i="${i}" data-ii="${ii}">Remover</button></div></div>`).join("")}
+      ${(p.installation.inverters || []).map((inv, ii) => `<div class="grid cols-2 dynamic-item"><label class="field"><span>Marca *</span><input data-if="brand" data-i="${i}" data-ii="${ii}" value="${clean(inv.brand)}"></label><label class="field"><span>Potencia (kW) *</span><input type="number" data-if="powerKw" data-i="${i}" data-ii="${ii}" value="${num(inv.powerKw)}"></label><label class="field"><span>Quantidade *</span><input type="number" data-if="qty" data-i="${i}" data-ii="${ii}" value="${num(inv.qty)}"></label><div class="field control-field span-2"><span>Acao</span><button type="button" class="btn-secondary danger" data-act="rmInv" data-i="${i}" data-ii="${ii}">Remover</button></div></div>`).join("")}
     </div>
     <div class="section-block soft"><div class="dynamic-head"><h4>Contatos</h4><button type="button" class="btn-secondary" data-act="addCt" data-i="${i}">Adicionar</button></div>
-      ${(p.contacts || []).map((c, ci) => `<div class="grid cols-4 dynamic-item"><label class="field"><span>Nome</span><input data-cf="name" data-i="${i}" data-ci="${ci}" value="${clean(c.name)}"></label><label class="field"><span>Telefone</span><input data-cf="phone" data-mask="phone" data-i="${i}" data-ci="${ci}" value="${clean(c.phone)}"></label><label class="field"><span>Funcao</span><input data-cf="role" data-i="${i}" data-ci="${ci}" value="${clean(c.role)}"></label><div class="field control-field"><span>Acao</span><button type="button" class="btn-secondary danger" data-act="rmCt" data-i="${i}" data-ci="${ci}">Remover</button></div></div>`).join("")}
+      ${(p.contacts || []).map((c, ci) => `<div class="grid cols-2 dynamic-item"><label class="field"><span>Nome</span><input data-cf="name" data-i="${i}" data-ci="${ci}" value="${clean(c.name)}"></label><label class="field"><span>Telefone</span><input data-cf="phone" data-mask="phone" data-i="${i}" data-ci="${ci}" value="${clean(c.phone)}"></label><label class="field"><span>Funcao</span><input data-cf="role" data-i="${i}" data-ci="${ci}" value="${clean(c.role)}"></label><div class="field control-field span-2"><span>Acao</span><button type="button" class="btn-secondary danger" data-act="rmCt" data-i="${i}" data-ci="${ci}">Remover</button></div></div>`).join("")}
     </div>
   </article>`;
 }
@@ -311,6 +311,30 @@ function renderPlants() {
   ensurePlant();
   plantsList.innerHTML = state.plants.map((p, i) => plantCard(p, i)).join("");
   bindMasks(plantsList);
+
+  plantsList.querySelectorAll("[data-plant-sn]").forEach((box) => {
+    const i = Number(box.dataset.plantSn);
+    const numberInput = plantsList.querySelector(`[data-pa="number"][data-i="${i}"]`);
+    if (!numberInput) return;
+    if (String(numberInput.value || "").toUpperCase() === "SN") {
+      box.checked = true;
+      numberInput.setAttribute("disabled", "disabled");
+    }
+    box.onchange = () => {
+      const p = state.plants[i];
+      if (!p) return;
+      if (box.checked) {
+        numberInput.value = "SN";
+        numberInput.setAttribute("disabled", "disabled");
+        p.address.number = "SN";
+      } else {
+        numberInput.removeAttribute("disabled");
+        if (String(numberInput.value || "").toUpperCase() === "SN") numberInput.value = "";
+        p.address.number = clean(numberInput.value);
+      }
+      renderPlants();
+    };
+  });
 }
 
 function setPath(obj, path, value) {
@@ -734,7 +758,32 @@ function bind() {
     if (act === "addCt" && p) { p.contacts.push({ name: "", phone: "", role: "" }); renderPlants(); return; }
     if (act === "rmCt" && p) { const ci = Number(b.dataset.ci); p.contacts = p.contacts.filter((_, x) => x !== ci); if (!p.contacts.length) p.contacts = [{ name: "", phone: "", role: "" }]; renderPlants(); return; }
     if (act === "auto" && p) { p.installation.manualTotal = false; recalc(i); renderPlants(); return; }
-    if (act === "cep" && p) { await fillByCep("plant", p.address.cep); const f = await (async () => { const c = digits(p.address.cep); if (c.length !== 8) return null; try { const r = await fetch(`https://viacep.com.br/ws/${c}/json/`); if (!r.ok) return null; const d = await r.json(); if (d.erro) return null; return d; } catch { return null; } })(); if (f) { p.address.cep = f.cep || p.address.cep; p.address.street = p.address.street || f.logradouro || ""; p.address.district = p.address.district || f.bairro || ""; p.address.city = p.address.city || f.localidade || ""; p.address.state = (p.address.state || f.uf || "").toUpperCase(); recalc(i); renderPlants(); } }
+  });
+
+  plantsList.addEventListener("input", (e) => {
+    const t = e.target;
+    if (!t.matches('[data-pa="cep"]')) return;
+    const i = Number(t.dataset.i);
+    if (!Number.isFinite(i)) return;
+    if (t._cepTimer) clearTimeout(t._cepTimer);
+    t._cepTimer = setTimeout(async () => {
+      const c = digits(t.value);
+      if (c.length !== 8) return;
+      try {
+        const r = await fetch(`https://viacep.com.br/ws/${c}/json/`);
+        if (!r.ok) return;
+        const d = await r.json();
+        if (d.erro) return;
+        const p = state.plants[i];
+        if (!p) return;
+        p.address.cep = d.cep || p.address.cep;
+        p.address.street = p.address.street || d.logradouro || "";
+        p.address.district = p.address.district || d.bairro || "";
+        p.address.city = p.address.city || d.localidade || "";
+        p.address.state = (p.address.state || d.uf || "").toUpperCase();
+        renderPlants();
+      } catch {}
+    }, 300);
   });
 
   plantsList.addEventListener("change", (e) => {
