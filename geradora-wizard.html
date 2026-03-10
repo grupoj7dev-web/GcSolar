@@ -21,7 +21,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="dashboard.css">
   <link rel="stylesheet" href="assinante-cadastro.css">
-  <link rel="stylesheet" href="geradora-wizard.css?v=4">
+  <link rel="stylesheet" href="geradora-wizard.css?v=5">
 </head>
 
 <body>
@@ -74,8 +74,8 @@
             <p id="wizardSubtitle">Fluxo completo com propriet&#225;rio, usinas, acesso &#224; distribuidora, financeiro e anexos.</p>
           </div>
           <div class="head-badge">
-            <span id="stepLabel">Etapa 1 de 7</span>
-            <strong id="stepTitle">Propriet&#225;rio</strong>
+            <span id="stepLabel">Etapa 1 de 9</span>
+            <strong id="stepTitle">Concession&#225;ria</strong>
           </div>
         </section>
 
@@ -88,7 +88,7 @@
 
         <form id="wizardForm" class="wizard-form card" novalidate>
       <section class="step-pane step-pane--concessionaria" data-step="1">
-        <h2>Concession&#225;ria e Dados do Propriet&#225;rio</h2>
+        <h2>Concession&#225;ria</h2>
 
         <div class="section-block">
           <div class="grid cols-2">
@@ -113,9 +113,12 @@
             </label>
           </div>
         </div>
+      </section>
+
+      <section class="step-pane hidden" data-step="2">
+        <h2>Tipo de Geradora</h2>
 
         <div class="section-block">
-          <h3>Tipo de Geradora</h3>
           <div class="radio-grid">
             <label class="radio-card">
               <input type="radio" name="ownerType" value="person" checked>
@@ -127,6 +130,10 @@
             </label>
           </div>
         </div>
+      </section>
+
+      <section class="step-pane hidden" data-step="3">
+        <h2>Dados do Propriet&#225;rio</h2>
 
         <div class="section-block" id="ownerPersonBlock">
           <h3>Propriet&#225;rio PF</h3>
@@ -172,7 +179,7 @@
         <label class="field"><span>Observa&#231;&#245;es</span><textarea id="ownerObservations" rows="3"></textarea></label>
       </section>
 
-      <section class="step-pane hidden" data-step="2">
+      <section class="step-pane hidden" data-step="4">
         <h2>Administrador da Pessoa Jur&#237;dica (Opcional)</h2>
         <p class="inline-note">Esta etapa aparece apenas para pessoa jur&#237;dica e &#233; opcional.</p>
 
@@ -201,7 +208,7 @@
         </div>
       </section>
 
-      <section class="step-pane hidden" data-step="3">
+      <section class="step-pane hidden" data-step="5">
         <h2>Dados das Usinas</h2>
         <div class="action-row">
           <button class="btn-secondary" type="button" id="addPlantBtn"><i class="ph ph-plus"></i> Adicionar Usina</button>
@@ -210,7 +217,7 @@
         <div id="plantsList" class="plants-list"></div>
       </section>
 
-      <section class="step-pane hidden" data-step="4">
+      <section class="step-pane hidden" data-step="6">
         <h2>Acesso &#224; Distribuidora (Portal)</h2>
         <p class="inline-note">Preenchimento autom&#225;tico usando CPF/CNPJ do propriet&#225;rio e UC da primeira usina.</p>
         <div class="grid cols-2">
@@ -220,7 +227,7 @@
         </div>
       </section>
 
-      <section class="step-pane hidden" data-step="5">
+      <section class="step-pane hidden" data-step="7">
         <h2>Dados para Recebimento</h2>
         <div class="grid cols-2">
           <label class="field"><span>Banco *</span><input id="payBanco" required></label>
@@ -232,13 +239,13 @@
         </div>
       </section>
 
-      <section class="step-pane hidden" data-step="6">
+      <section class="step-pane hidden" data-step="8">
         <h2>Anexos e Documentos</h2>
         <p class="inline-note">Upload ass&#237;ncrono para Firebase Storage (`gcredito/generators/temp/{user_id}/...`). Formatos: PDF, JPG, PNG. M&#225;x: 10MB.</p>
         <div class="upload-grid" id="uploadGrid"></div>
       </section>
 
-      <section class="step-pane hidden" data-step="7">
+      <section class="step-pane hidden" data-step="9">
         <h2>Revis&#227;o</h2>
         <pre id="reviewJson"></pre>
       </section>
@@ -256,7 +263,7 @@
   </div>
 
   <script type="module" src="access-control.js"></script>
-  <script type="module" src="geradora-wizard.js?v=4"></script></body>
+  <script type="module" src="geradora-wizard.js?v=5"></script></body>
 
 </html>
 

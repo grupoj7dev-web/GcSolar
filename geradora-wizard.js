@@ -21,7 +21,7 @@ const storage = getStorage(app);
 const params = new URLSearchParams(window.location.search);
 const editingId = params.get("id");
 const source = params.get("source") || "gcredito_generators";
-const TOTAL_STEPS = 7;
+const TOTAL_STEPS = 9;
 
 const wizardForm = document.getElementById("wizardForm");
 const panes = Array.from(document.querySelectorAll(".step-pane"));
@@ -57,6 +57,8 @@ let scope = null;
 let currentStep = 1;
 
 const stepTitles = [
+  "Concessionária",
+  "Tipo de Geradora",
   "Proprietário",
   "Administrador PJ",
   "Usinas",
@@ -67,6 +69,8 @@ const stepTitles = [
 ];
 
 const stepTimeline = [
+  { label: "Concessionária", icon: "ph-lightning" },
+  { label: "Tipo", icon: "ph-identification-card" },
   { label: "Proprietário", icon: "ph-user" },
   { label: "Adm. PJ", icon: "ph-buildings" },
   { label: "Usinas", icon: "ph-solar-panel" },
@@ -586,6 +590,9 @@ function validAddress(a) {
 function validate(step) {
   if (step === 1) {
     if (!clean(id("concessionaria").value)) return "Concessionária obrigatória.";
+  }
+
+  if (step === 3) {
     if (ownerType() === "person") {
       if (digits(id("ownerCpf").value).length !== 11) return "CPF inválido.";
       if (!clean(id("ownerPartnerNumberPf").value) || !clean(id("ownerNamePf").value) || !clean(id("ownerPhonePf").value) || !clean(id("ownerEmailPf").value)) return "Preencha os dados obrigatórios do proprietario PF.";
@@ -596,7 +603,7 @@ function validate(step) {
     if (!validAddress(readAddress("ownerAddress"))) return "Endereço do proprietario incompleto.";
   }
 
-  if (step === 3) {
+  if (step === 5) {
     if (!state.plants.length) return "Adicione ao menos uma usina.";
     for (let i = 0; i < state.plants.length; i += 1) {
       const p = state.plants[i]; recalc(i);
@@ -609,13 +616,13 @@ function validate(step) {
     }
   }
 
-  if (step === 4) {
+  if (step === 6) {
     if (!clean(id("portalUc").value) || digits(id("portalDoc").value).length < 11) return "Dados de acesso da distribuidora inválidos.";
   }
-  if (step === 5) {
+  if (step === 7) {
     if (!clean(id("payBanco").value) || !clean(id("payAgencia").value) || !clean(id("payConta").value)) return "Preencha banco, agencia e conta.";
   }
-  if (step === 6) {
+  if (step === 8) {
     for (const d of DOCS) if (d.req(ownerType()) && !state.documents[d.key]?.url) return `Documento obrigatório: ${d.label}`;
   }
   return "";
