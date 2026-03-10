@@ -58,8 +58,15 @@ const indicacaoModalStatus = document.getElementById("indicacaoModalStatus");
 const indicacaoModalCloseBtn = document.getElementById("indicacaoModalCloseBtn");
 const indicacaoModalCancelBtn = document.getElementById("indicacaoModalCancelBtn");
 const indicacaoRateioBtn = document.getElementById("indicacaoRateioBtn");
+const indicacaoAssinarBtn = document.getElementById("indicacaoAssinarBtn");
 const indicacaoApproveBtn = document.getElementById("indicacaoApproveBtn");
 const indicacaoRejectBtn = document.getElementById("indicacaoRejectBtn");
+const indicacaoStatusSelect = document.getElementById("indicacaoStatusSelect");
+const indicacaoStatusApplyBtn = document.getElementById("indicacaoStatusApplyBtn");
+
+const statusFilters = document.getElementById("statusFilters");
+const searchIndicacoes = document.getElementById("searchIndicacoes");
+const clearFiltersBtn = document.getElementById("clearFiltersBtn");
 
 const step1Panel = document.getElementById("step1");
 const step2Panel = document.getElementById("step2");
@@ -140,6 +147,8 @@ let partnerFingerprints = {
 };
 let sellerByUid = new Map();
 let activeIndicacaoModalId = "";
+let activeStatusFilter = "all";
+let searchTerm = "";
 
 const FLOW_META = {
   aguardando_aprovacao: {
@@ -156,6 +165,13 @@ const FLOW_META = {
     step: 2,
     helper: "Cadastro aprovado. Próximo passo: criar o rateio da UC.",
   },
+  pendente_assinatura: {
+    label: "Faltando assinatura",
+    pillClass: "signature",
+    badgeClass: "signature",
+    step: 3,
+    helper: "Rateio concluído. Aguardando assinatura do contrato.",
+  },
   rejeitado: {
     label: "Rejeitado",
     pillClass: "rejected",
@@ -167,7 +183,7 @@ const FLOW_META = {
     label: "Virou assinante",
     pillClass: "done",
     badgeClass: "approved",
-    step: 3,
+    step: 4,
     helper: "Fluxo concluído e cadastro já migrado para assinantes.",
   },
 };
@@ -355,11 +371,11 @@ function normalizeIndicacaoStatus(value) {
   const raw = String(value || "").toLowerCase();
   if (!raw) return "aguardando_aprovacao";
   if (raw.includes("rejeit")) return "rejeitado";
+  if (raw.includes("assinatura") || raw.includes("assinar")) return "pendente_assinatura";
+  if (raw.includes("aguardando")) return "aguardando_aprovacao";
   if (raw.includes("aguardando_aprov") || raw.includes("aprovacao")) return "aguardando_aprovacao";
   if (raw.includes("pendente_rateio") || raw.includes("rateio")) return "pendente_rateio";
-  if (raw.includes("assinado")) return "pendente_rateio";
-  if (raw.includes("contrato_enviado")) return "pendente_rateio";
-  if (raw.includes("assin")) return "pendente_rateio";
+  if (raw.includes("contrato_enviado")) return "pendente_assinatura";
   if (raw.includes("aprov")) return "pendente_rateio";
   if (raw.includes("ativo")) return "ativo";
   return "aguardando_aprovacao";
@@ -388,7 +404,8 @@ function buildFlowTimeline(item) {
   const steps = [
     { number: 1, title: "Triagem", desc: "Aprovar ou reprovar o pré-assinante." },
     { number: 2, title: "Rateio", desc: "Após aprovação, preparar o rateio da unidade." },
-    { number: 3, title: "Assinante", desc: "Concluir a migração para a base ativa." },
+    { number: 3, title: "Assinatura", desc: "Coletar assinatura do contrato." },
+    { number: 4, title: "Assinante", desc: "Concluir a migração para a base ativa." },
   ];
 
   return `
@@ -413,6 +430,48 @@ function buildFlowTimeline(item) {
       }).join("")}
     </section>
   `;
+}
+
+let activeStatusFilter = "all";
+let searchTerm = "";
+
+function buildStatusFilters() {
+  if (!statusFilters) return;
+  const counts = indicacoesCache.reduce((acc, item) => {
+    const key = normalizeIndicacaoStatus(item.status || item.statusLabel);
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+
+  const chips = [
+    { key: "all", label: "Todos", count: indicacoesCache.length },
+    { key: "aguardando_aprovacao", label: FLOW_META.aguardando_aprovacao.label, count: counts.aguardando_aprovacao || 0 },
+    { key: "pendente_rateio", label: FLOW_META.pendente_rateio.label, count: counts.pendente_rateio || 0 },
+    { key: "pendente_assinatura", label: FLOW_META.pendente_assinatura.label, count: counts.pendente_assinatura || 0 },
+    { key: "ativo", label: FLOW_META.ativo.label, count: counts.ativo || 0 },
+    { key: "rejeitado", label: FLOW_META.rejeitado.label, count: counts.rejeitado || 0 },
+  ];
+
+  statusFilters.innerHTML = chips
+    .map((chip) => `
+      <button type="button" class="status-chip ${activeStatusFilter === chip.key ? "active" : ""}" data-status="${chip.key}">
+        ${escapeHtml(chip.label)} <span>${chip.count}</span>
+      </button>
+    `)
+    .join("");
+}
+
+function filteredIndicacoes() {
+  return indicacoesCache.filter((item) => {
+    const key = normalizeIndicacaoStatus(item.status || item.statusLabel);
+    if (activeStatusFilter !== "all" && key !== activeStatusFilter) return false;
+    if (!searchTerm) return true;
+    const nome = cleanText(item.nome || item.razaoSocial || item.nomeFantasia || "");
+    const doc = onlyDigits(item.cpfCnpj || item.cpf || item.cnpj || "");
+    const uc = onlyDigits(item.uc || "");
+    const hay = `${nome} ${doc} ${uc}`.toLowerCase();
+    return hay.includes(searchTerm);
+  });
 }
 
 function getTableColspan() {
@@ -455,13 +514,19 @@ async function normalizeWesleyIndicacoes(docsList) {
 function renderIndicacoesList() {
   if (vendedorHead) vendedorHead.classList.toggle("hidden", !scope?.isSuperAdmin);
   if (!indicacoesTableBody) return;
+  const filtered = filteredIndicacoes();
   if (!indicacoesCache.length) {
     indicacoesTableBody.innerHTML =
       `<tr><td colspan="${getTableColspan()}" class="empty-row">Nenhuma indicação encontrada.</td></tr>`;
     return;
   }
+  if (!filtered.length) {
+    indicacoesTableBody.innerHTML =
+      `<tr><td colspan="${getTableColspan()}" class="empty-row">Nenhuma indicação encontrada para o filtro atual.</td></tr>`;
+    return;
+  }
 
-  indicacoesTableBody.innerHTML = indicacoesCache
+  indicacoesTableBody.innerHTML = filtered
     .map((item) => {
       const nome = cleanText(item.nome || item.razaoSocial || item.nomeFantasia || "-");
       const doc = onlyDigits(item.cpfCnpj || item.cpf || item.cnpj || "-");
@@ -752,6 +817,8 @@ function openIndicacaoModal(item) {
   indicacaoApproveBtn.classList.toggle("hidden", stage !== "aguardando_aprovacao");
   indicacaoRejectBtn.classList.toggle("hidden", stage !== "aguardando_aprovacao");
   indicacaoRateioBtn.classList.toggle("hidden", stage !== "pendente_rateio");
+  indicacaoAssinarBtn?.classList.toggle("hidden", stage !== "pendente_assinatura");
+  if (indicacaoStatusSelect) indicacaoStatusSelect.value = stage;
   indicacaoModal.classList.remove("hidden");
 }
 
@@ -828,11 +895,32 @@ async function rejectIndicacao(item) {
   });
 }
 
+async function updateIndicacaoStatus(item, statusKey) {
+  const meta = FLOW_META[statusKey] || FLOW_META.aguardando_aprovacao;
+  const nowIso = new Date().toISOString();
+  await updateDoc(doc(db, COLL_PENDING, item.id), {
+    status: statusKey,
+    statusLabel: meta.label,
+    updatedAt: serverTimestamp(),
+    updatedAtISO: nowIso,
+  });
+}
+
 async function completeIndicacaoRateio(item) {
+  const nowIso = new Date().toISOString();
+  await updateDoc(doc(db, COLL_PENDING, item.id), {
+    status: "pendente_assinatura",
+    statusLabel: "Faltando assinatura",
+    updatedAt: serverTimestamp(),
+    updatedAtISO: nowIso,
+  });
+}
+
+async function completeIndicacaoAssinatura(item) {
   const subscriberPayload = {
     ...buildSubscriberPayloadFromIndicacao(item),
     status: "active",
-    onboarding_stage: "rateio_concluido",
+    onboarding_stage: "assinatura_concluida",
     onboarding_origin_status: normalizeIndicacaoStatus(item.status || item.statusLabel),
     migrated_at: new Date().toISOString(),
   };
@@ -985,6 +1073,7 @@ async function loadIndicacoesList() {
 
     indicacoesCache = await normalizeWesleyIndicacoes(indicacoesCache);
 
+    buildStatusFilters();
     renderIndicacoesList();
     setUpdated("lista");
   } catch (error) {
@@ -1633,6 +1722,44 @@ function bindEvents() {
     if (event.target === indicacaoModal) closeIndicacaoModal();
   });
 
+  statusFilters?.addEventListener("click", (event) => {
+    const btn = event.target.closest("[data-status]");
+    if (!btn) return;
+    activeStatusFilter = btn.dataset.status || "all";
+    buildStatusFilters();
+    renderIndicacoesList();
+  });
+
+  searchIndicacoes?.addEventListener("input", () => {
+    searchTerm = String(searchIndicacoes.value || "").trim().toLowerCase();
+    renderIndicacoesList();
+  });
+
+  clearFiltersBtn?.addEventListener("click", () => {
+    activeStatusFilter = "all";
+    searchTerm = "";
+    if (searchIndicacoes) searchIndicacoes.value = "";
+    buildStatusFilters();
+    renderIndicacoesList();
+  });
+
+  indicacaoStatusApplyBtn?.addEventListener("click", async () => {
+    if (!activeIndicacaoModalId) return;
+    const item = indicacoesCache.find((x) => String(x.id) === activeIndicacaoModalId);
+    if (!item) return;
+    const nextStatus = indicacaoStatusSelect?.value || "aguardando_aprovacao";
+    if (nextStatus === "ativo") {
+      const ok = window.confirm(`Concluir assinatura de "${item.nome || item.razaoSocial || "-"}" e mover para assinantes?`);
+      if (!ok) return;
+      await completeIndicacaoAssinatura(item);
+    } else {
+      await updateIndicacaoStatus(item, nextStatus);
+    }
+    await loadIndicacoesList();
+    const updated = indicacoesCache.find((x) => String(x.id) === activeIndicacaoModalId);
+    if (updated) openIndicacaoModal(updated);
+  });
+
   indicacaoApproveBtn?.addEventListener("click", async () => {
     if (!activeIndicacaoModalId) return;
     const item = indicacoesCache.find((x) => String(x.id) === activeIndicacaoModalId);
@@ -1684,19 +1811,39 @@ function bindEvents() {
     if (!activeIndicacaoModalId) return;
     const item = indicacoesCache.find((x) => String(x.id) === activeIndicacaoModalId);
     if (!item || normalizeIndicacaoStatus(item.status || item.statusLabel) !== "pendente_rateio") return;
-    const ok = window.confirm(`Concluir o rateio de "${item.nome || item.razaoSocial || "-"}" e migrar para assinantes?`);
+    const ok = window.confirm(`Marcar "${item.nome || item.razaoSocial || "-"}" como pendente de assinatura?`);
     if (!ok) return;
     indicacaoRateioBtn.disabled = true;
     try {
       await completeIndicacaoRateio(item);
       closeIndicacaoModal();
       await loadIndicacoesList();
-      setStatus("Rateio concluído. O cadastro foi movido para assinantes.", "success");
+      setStatus("Status atualizado para faltando assinatura.", "success");
     } catch (error) {
       console.error(error);
       setStatus("Não foi possível concluir o rateio.", "error");
     } finally {
       indicacaoRateioBtn.disabled = false;
+    }
+  });
+
+  indicacaoAssinarBtn?.addEventListener("click", async () => {
+    if (!activeIndicacaoModalId) return;
+    const item = indicacoesCache.find((x) => String(x.id) === activeIndicacaoModalId);
+    if (!item || normalizeIndicacaoStatus(item.status || item.statusLabel) !== "pendente_assinatura") return;
+    const ok = window.confirm(`Concluir assinatura de "${item.nome || item.razaoSocial || "-"}" e mover para assinantes?`);
+    if (!ok) return;
+    indicacaoAssinarBtn.disabled = true;
+    try {
+      await completeIndicacaoAssinatura(item);
+      closeIndicacaoModal();
+      await loadIndicacoesList();
+      setStatus("Assinatura concluída. Cadastro movido para assinantes.", "success");
+    } catch (error) {
+      console.error(error);
+      setStatus("Não foi possível concluir a assinatura.", "error");
+    } finally {
+      indicacaoAssinarBtn.disabled = false;
     }
   });
 

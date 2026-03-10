@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
@@ -87,6 +87,14 @@
                             <i class="ph ph-user-plus"></i>
                             Nova indicação
                         </button>
+                    </div>
+
+                    <div class="status-toolbar">
+                        <div class="status-filters" id="statusFilters"></div>
+                        <div class="status-tools">
+                            <input id="searchIndicacoes" type="search" placeholder="Buscar por nome, documento ou UC">
+                            <button type="button" class="btn-secondary" id="clearFiltersBtn">Limpar filtros</button>
+                        </div>
                     </div>
 
                     <div class="table-wrap">
@@ -385,8 +393,19 @@
             </div>
             <div class="modal-body" id="indicacaoModalBody"></div>
             <div class="modal-actions">
+                <div class="status-update">
+                    <select id="indicacaoStatusSelect">
+                        <option value="aguardando_aprovacao">Aguardando aprovação</option>
+                        <option value="pendente_rateio">Pendente para rateio</option>
+                        <option value="pendente_assinatura">Faltando assinatura</option>
+                        <option value="ativo">Virou assinante</option>
+                        <option value="rejeitado">Rejeitado</option>
+                    </select>
+                    <button type="button" class="btn-secondary" id="indicacaoStatusApplyBtn">Aplicar status</button>
+                </div>
                 <button type="button" class="btn-secondary" id="indicacaoModalCancelBtn">Fechar</button>
-                <button type="button" class="btn-primary-solid hidden" id="indicacaoRateioBtn">Concluir rateio</button>
+                <button type="button" class="btn-primary-solid hidden" id="indicacaoRateioBtn">Marcar assinatura pendente</button>
+                <button type="button" class="btn-primary-solid hidden" id="indicacaoAssinarBtn">Concluir assinatura</button>
                 <button type="button" class="btn-danger" id="indicacaoRejectBtn">Rejeitar</button>
                 <button type="button" class="btn-primary-solid" id="indicacaoApproveBtn">Aprovar</button>
             </div>
@@ -394,24 +413,10 @@
     </div>
 
     <script type="module" src="access-control.js"></script>
-    <script type="module" src="indicar-assinante.js"></script>
-<script>
-  (function(d,t) {
-    var BASE_URL="https://crm.iasolar.io";
-    var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
-    g.src=BASE_URL+"/packs/js/sdk.js";
-    g.async = true;
-    s.parentNode.insertBefore(g,s);
-    g.onload=function(){
-      window.chatwootSDK.run({
-        websiteToken: 'pzehqfPmoUJqsmNUvKStcyWx',
-        baseUrl: BASE_URL
-      })
-    }
-  })(document,"script");
-</script></body>
+    <script type="module" src="indicar-assinante.js"></script></body>
 
 </html>
+
 
 
 
