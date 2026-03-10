@@ -79,6 +79,37 @@
   color: var(--cad-muted);
 }
 
+.number-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.number-row input {
+  flex: 1;
+}
+
+.sn-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 0.6rem;
+  height: 39px;
+  border: 1px solid var(--cad-border);
+  border-radius: 9px;
+  background: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--cad-text);
+  cursor: pointer;
+  user-select: none;
+}
+
+.sn-check input {
+  width: 16px;
+  height: 16px;
+}
+
 #reviewJson {
   margin: 0;
   border-radius: 12px;

@@ -21,7 +21,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="dashboard.css">
   <link rel="stylesheet" href="assinante-cadastro.css">
-  <link rel="stylesheet" href="geradora-wizard.css?v=5">
+  <link rel="stylesheet" href="geradora-wizard.css?v=6">
 </head>
 
 <body>
@@ -168,7 +168,16 @@
               <input data-address-field="cep" data-mask="cep" required>
             </label>
             <label class="field span-2"><span>Endere&#231;o *</span><input data-address-field="street" required></label>
-            <label class="field"><span>N&#250;mero *</span><input data-address-field="number" placeholder="N&#250;mero ou SN" required></label>
+            <label class="field">
+              <span>N&#250;mero *</span>
+              <div class="number-row">
+                <input data-address-field="number" required>
+                <label class="sn-check">
+                  <input type="checkbox" id="ownerAddressSn">
+                  <span>SN</span>
+                </label>
+              </div>
+            </label>
             <label class="field"><span>Complemento</span><input data-address-field="complement"></label>
             <label class="field"><span>Bairro *</span><input data-address-field="district" required></label>
             <label class="field"><span>Cidade *</span><input data-address-field="city" required></label>
@@ -263,7 +272,7 @@
   </div>
 
   <script type="module" src="access-control.js"></script>
-  <script type="module" src="geradora-wizard.js?v=5"></script></body>
+  <script type="module" src="geradora-wizard.js?v=6"></script></body>
 
 </html>
 

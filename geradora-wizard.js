@@ -182,6 +182,9 @@ function readAddress(key) {
     a[f] = clean(wrap.querySelector(`[data-address-field="${f}"]`)?.value || "");
   });
   a.state = a.state.toUpperCase();
+  if (key === "ownerAddress" && !a.number && document.getElementById("ownerAddressSn")?.checked) {
+    a.number = "SN";
+  }
   return a;
 }
 
@@ -584,7 +587,8 @@ function stepUI() {
 }
 
 function validAddress(a) {
-  return !!(clean(a.cep) && clean(a.street) && clean(a.number) && clean(a.district) && clean(a.city) && clean(a.state));
+  const numberOk = clean(a.number).toUpperCase() === "SN" || clean(a.number);
+  return !!(clean(a.cep) && clean(a.street) && numberOk && clean(a.district) && clean(a.city) && clean(a.state));
 }
 
 function validate(step) {
@@ -673,8 +677,28 @@ function bind() {
   });
 
   const ownerCep = document.querySelector('[data-address="ownerAddress"] [data-address-field="cep"]');
-  ownerCep?.addEventListener("blur", () => fillByCep("ownerAddress", ownerCep.value));
-  ownerCep?.addEventListener("change", () => fillByCep("ownerAddress", ownerCep.value));
+  if (ownerCep) {
+    let cepTimer = null;
+    const triggerCep = () => {
+      if (cepTimer) clearTimeout(cepTimer);
+      cepTimer = setTimeout(() => fillByCep("ownerAddress", ownerCep.value), 250);
+    };
+    ownerCep.addEventListener("input", triggerCep);
+    ownerCep.addEventListener("blur", triggerCep);
+  }
+
+  const ownerSn = document.getElementById("ownerAddressSn");
+  const ownerNumber = document.querySelector('[data-address="ownerAddress"] [data-address-field="number"]');
+  ownerSn?.addEventListener("change", () => {
+    if (!ownerNumber) return;
+    if (ownerSn.checked) {
+      ownerNumber.value = "SN";
+      ownerNumber.setAttribute("disabled", "disabled");
+    } else {
+      ownerNumber.removeAttribute("disabled");
+      if (ownerNumber.value.toUpperCase() === "SN") ownerNumber.value = "";
+    }
+  });
 
   plantsList.addEventListener("click", async (e) => {
     const b = e.target.closest("button[data-act]"); if (!b) return;
