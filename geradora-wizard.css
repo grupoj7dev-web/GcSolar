@@ -34,12 +34,27 @@
 .plant-card .section-block.soft {
   border-style: solid;
   background: #f7faf8;
+  padding: 0.9rem;
 }
 
 .plant-card .section-block.soft h4 {
   margin: 0 0 0.5rem;
   font-size: 1rem;
   color: #0f3b25;
+}
+
+.plant-card .grid {
+  gap: 0.75rem;
+}
+
+.plant-card .field {
+  min-width: 0;
+}
+
+.plant-card input,
+.plant-card select,
+.plant-card textarea {
+  width: 100%;
 }
 
 .plant-card .field span {

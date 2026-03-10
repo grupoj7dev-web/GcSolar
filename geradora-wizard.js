@@ -977,6 +977,13 @@ onAuthStateChanged(auth, async (user) => {
     id("wizardSubtitle").textContent = "Atualize os dados completos da geradora.";
     const snap = await getDoc(doc(db, source, editingId));
     if (snap.exists()) fill(snap.data());
+  } else {
+    const forcedType = params.get("ownerType");
+    if (forcedType === "person" || forcedType === "company") {
+      const radio = document.querySelector(`input[name="ownerType"][value="${forcedType}"]`);
+      if (radio) radio.checked = true;
+      syncOwnerView();
+    }
   }
 
   stepUI(); review();
