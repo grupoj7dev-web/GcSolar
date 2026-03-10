@@ -89,7 +89,7 @@
 
         <form id="wizardForm" class="wizard-card card" novalidate>
       <section class="pane active" data-pane="1">
-        <h2>? Concessionária e Dados do Proprietário</h2>
+        <h2>Concessionária e Dados do Proprietário</h2>
 
         <div class="section-block">
           <div class="grid cols-2">
@@ -116,7 +116,7 @@
         </div>
 
         <div class="section-block">
-          <h3>?? Tipo de Geradora</h3>
+          <h3>Tipo de Geradora</h3>
           <div class="radio-grid">
             <label class="radio-card">
               <input type="radio" name="ownerType" value="person" checked>
@@ -130,7 +130,7 @@
         </div>
 
         <div class="section-block" id="ownerPersonBlock">
-          <h3>?? Proprietário PF</h3>
+          <h3>Proprietário PF</h3>
           <div class="grid cols-3">
             <label class="field">
               <span>CPF *</span>
@@ -148,7 +148,7 @@
         </div>
 
         <div class="section-block hidden" id="ownerCompanyBlock">
-          <h3>?? Proprietário PJ</h3>
+          <h3>Proprietário PJ</h3>
           <div class="grid cols-3">
             <label class="field">
               <span>CNPJ *</span>
@@ -167,7 +167,7 @@
         </div>
 
         <div class="section-block">
-          <h3>?? Endereço do Proprietário</h3>
+          <h3>Endereço do Proprietário</h3>
           <div class="grid cols-4" data-address="ownerAddress">
             <label class="field">
               <span>CEP *</span>
@@ -189,7 +189,7 @@
       </section>
 
       <section class="pane" data-pane="2">
-        <h2>?? Administrador da Pessoa Jurídica (Opcional)</h2>
+        <h2>Administrador da Pessoa Jurídica (Opcional)</h2>
         <p class="inline-note">Esta etapa aparece apenas para pessoa jurídica e é opcional.</p>
 
         <div id="adminSection">
@@ -227,7 +227,7 @@
       </section>
 
       <section class="pane" data-pane="3">
-        <h2>?? Dados das Usinas</h2>
+        <h2>Dados das Usinas</h2>
         <div class="action-row">
           <button class="btn-secondary" type="button" id="addPlantBtn"><i class="ph ph-plus"></i> Adicionar Usina</button>
           <button class="btn-secondary" type="button" id="syncFirstPlantBtn"><i class="ph ph-arrows-clockwise"></i> Sincronizar 1ª Usina com Proprietário</button>
@@ -236,7 +236,7 @@
       </section>
 
       <section class="pane" data-pane="4">
-        <h2>?? Acesso à Distribuidora (Portal)</h2>
+        <h2>Acesso à Distribuidora (Portal)</h2>
         <p class="inline-note">Preenchimento automático usando CPF/CNPJ do proprietário e UC da primeira usina.</p>
         <div class="grid cols-3">
           <label class="field"><span>Unidade Consumidora (UC) *</span><input id="portalUc" required></label>
@@ -246,7 +246,7 @@
       </section>
 
       <section class="pane" data-pane="5">
-        <h2>?? Dados para Recebimento</h2>
+        <h2>Dados para Recebimento</h2>
         <div class="grid cols-3">
           <label class="field"><span>Banco *</span><input id="payBanco" required></label>
           <label class="field"><span>Agência *</span><input id="payAgencia" required></label>
@@ -258,13 +258,13 @@
       </section>
 
       <section class="pane" data-pane="6">
-        <h2>?? Anexos e Documentos</h2>
+        <h2>Anexos e Documentos</h2>
         <p class="inline-note">Upload assíncrono para Firebase Storage (`gcredito/generators/temp/{user_id}/...`). Formatos: PDF, JPG, PNG. Máx: 10MB.</p>
         <div class="upload-grid" id="uploadGrid"></div>
       </section>
 
       <section class="pane" data-pane="7">
-        <h2>?? Revisão</h2>
+        <h2>Revisão</h2>
         <pre id="reviewJson"></pre>
       </section>
 
