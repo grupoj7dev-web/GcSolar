@@ -56,28 +56,16 @@ const state = { plants: [], documents: {} };
 let scope = null;
 let currentStep = 1;
 
-const stepTitles = [
-  "Concessionária",
-  "Tipo de Geradora",
-  "Proprietário",
-  "Administrador PJ",
-  "Usinas",
-  "Distribuidora",
-  "Bancário",
-  "Anexos",
-  "Revisão",
-];
-
 const stepTimeline = [
-  { label: "Concessionária", icon: "ph-lightning" },
-  { label: "Tipo", icon: "ph-identification-card" },
-  { label: "Proprietário", icon: "ph-user" },
-  { label: "Adm. PJ", icon: "ph-buildings" },
-  { label: "Usinas", icon: "ph-solar-panel" },
-  { label: "Distribuidora", icon: "ph-plug" },
-  { label: "Bancário", icon: "ph-bank" },
-  { label: "Anexos", icon: "ph-file-text" },
-  { label: "Revisão", icon: "ph-check-circle" },
+  { step: 1, label: "Concessionária", icon: "ph-lightning" },
+  { step: 2, label: "Tipo", icon: "ph-identification-card" },
+  { step: 3, label: "Proprietário", icon: "ph-user" },
+  { step: 4, label: "Adm. PJ", icon: "ph-buildings" },
+  { step: 5, label: "Usinas", icon: "ph-solar-panel" },
+  { step: 6, label: "Distribuidora", icon: "ph-plug" },
+  { step: 7, label: "Bancário", icon: "ph-bank" },
+  { step: 8, label: "Anexos", icon: "ph-file-text" },
+  { step: 9, label: "Revisão", icon: "ph-check-circle" },
 ];
 
 function isMobile() {
@@ -556,26 +544,38 @@ function payload(withMeta = true) {
 function review() { reviewJson.textContent = JSON.stringify(payload(false), null, 2); }
 
 function stepUI() {
+  const visibleSteps = ownerType() === "company"
+    ? [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    : [1, 2, 3, 5, 6, 7, 8, 9];
+
+  if (!visibleSteps.includes(currentStep)) {
+    currentStep = visibleSteps[Math.max(0, visibleSteps.findIndex((s) => s > currentStep) - 1)] || visibleSteps[0];
+  }
+
   panes.forEach((p) => {
     const active = Number(p.dataset.step) === currentStep;
     p.classList.toggle("hidden", !active);
     p.classList.toggle("is-active", active);
   });
-  stepLabel.textContent = `Etapa ${currentStep} de ${TOTAL_STEPS}`;
-  if (stepTitle) stepTitle.textContent = stepTitles[currentStep - 1] || "";
-  prevBtn.disabled = currentStep <= 1;
-  nextBtn.classList.toggle("hidden", currentStep >= TOTAL_STEPS);
-  saveBtn.classList.toggle("hidden", currentStep < TOTAL_STEPS);
 
-  const progress = ((currentStep - 1) / (stepTitles.length - 1)) * 100;
+  const currentIndex = Math.max(0, visibleSteps.indexOf(currentStep));
+  stepLabel.textContent = `Etapa ${currentIndex + 1} de ${visibleSteps.length}`;
+  const currentMeta = stepTimeline.find((m) => m.step === currentStep);
+  if (stepTitle) stepTitle.textContent = currentMeta?.label || "";
+
+  prevBtn.disabled = currentIndex <= 0;
+  nextBtn.classList.toggle("hidden", currentIndex >= visibleSteps.length - 1);
+  saveBtn.classList.toggle("hidden", currentIndex < visibleSteps.length - 1);
+
+  const progress = visibleSteps.length === 1 ? 100 : (currentIndex / (visibleSteps.length - 1)) * 100;
   if (stepDots) {
     stepDots.style.setProperty("--timeline-progress", `${Math.max(0, Math.min(100, progress))}%`);
-    stepDots.innerHTML = stepTimeline.map((meta, i) => {
-      const n = i + 1;
-      const stateClass = n < currentStep ? "done" : n === currentStep ? "current" : "upcoming";
-      const indicator = n < currentStep ? "<i class='ph ph-check'></i>" : `<i class='ph ${meta.icon}'></i>`;
+    const visibleTimeline = stepTimeline.filter((m) => visibleSteps.includes(m.step));
+    stepDots.innerHTML = visibleTimeline.map((meta) => {
+      const stateClass = meta.step < currentStep ? "done" : meta.step === currentStep ? "current" : "upcoming";
+      const indicator = meta.step < currentStep ? "<i class='ph ph-check'></i>" : `<i class='ph ${meta.icon}'></i>`;
       return `
-        <button type='button' class='step-dot ${stateClass}' data-dot-step='${n}' aria-label='Etapa ${n}: ${meta.label}'>
+        <button type='button' class='step-dot ${stateClass}' data-dot-step='${meta.step}' aria-label='Etapa ${meta.step}: ${meta.label}'>
           <span class='step-dot-index'>${indicator}</span>
           <span class='step-dot-label'>${meta.label}</span>
         </button>
@@ -583,7 +583,7 @@ function stepUI() {
     }).join("");
   }
 
-  if (currentStep === TOTAL_STEPS) review();
+  if (currentIndex === visibleSteps.length - 1) review();
 }
 
 function validAddress(a) {
@@ -659,13 +659,37 @@ function bind() {
     const b = e.target.closest("[data-dot-step]");
     if (!b) return;
     const t = Number(b.dataset.dotStep);
-    if (t > currentStep) { const m = validate(currentStep); if (m) return show(m); }
+    const visibleSteps = ownerType() === "company"
+      ? [1, 2, 3, 4, 5, 6, 7, 8, 9]
+      : [1, 2, 3, 5, 6, 7, 8, 9];
+    const currentIndex = visibleSteps.indexOf(currentStep);
+    const targetIndex = visibleSteps.indexOf(t);
+    if (targetIndex > currentIndex) { const m = validate(currentStep); if (m) return show(m); }
     currentStep = t; stepUI();
   });
-  prevBtn.addEventListener("click", () => { if (currentStep > 1) currentStep -= 1; stepUI(); });
-  nextBtn.addEventListener("click", () => { const m = validate(currentStep); if (m) return show(m); if (currentStep < TOTAL_STEPS) currentStep += 1; stepUI(); });
+  prevBtn.addEventListener("click", () => {
+    const visibleSteps = ownerType() === "company"
+      ? [1, 2, 3, 4, 5, 6, 7, 8, 9]
+      : [1, 2, 3, 5, 6, 7, 8, 9];
+    const idx = visibleSteps.indexOf(currentStep);
+    if (idx > 0) currentStep = visibleSteps[idx - 1];
+    stepUI();
+  });
+  nextBtn.addEventListener("click", () => {
+    const m = validate(currentStep); if (m) return show(m);
+    const visibleSteps = ownerType() === "company"
+      ? [1, 2, 3, 4, 5, 6, 7, 8, 9]
+      : [1, 2, 3, 5, 6, 7, 8, 9];
+    const idx = visibleSteps.indexOf(currentStep);
+    if (idx < visibleSteps.length - 1) currentStep = visibleSteps[idx + 1];
+    stepUI();
+  });
 
-  document.querySelectorAll('input[name="ownerType"]').forEach((x) => x.addEventListener("change", () => { syncOwnerView(); syncFirstPlant(); syncPortal(true); review(); }));
+  document.querySelectorAll('input[name="ownerType"]').forEach((x) => x.addEventListener("change", () => {
+    syncOwnerView(); syncFirstPlant(); syncPortal(true); review();
+    if (ownerType() !== "company" && currentStep === 4) currentStep = 5;
+    stepUI();
+  }));
 
 
 
@@ -740,7 +764,14 @@ function bind() {
 
   wizardForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    for (let s = 1; s < TOTAL_STEPS; s += 1) { const m = validate(s); if (m) { currentStep = s; stepUI(); return show(m); } }
+    const visibleSteps = ownerType() === "company"
+      ? [1, 2, 3, 4, 5, 6, 7, 8, 9]
+      : [1, 2, 3, 5, 6, 7, 8, 9];
+    for (const s of visibleSteps) {
+      if (s === visibleSteps[visibleSteps.length - 1]) break;
+      const m = validate(s);
+      if (m) { currentStep = s; stepUI(); return show(m); }
+    }
     saveBtn.disabled = true;
     try {
       const data = payload(true);
