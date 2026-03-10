@@ -107,17 +107,18 @@
     cursor: pointer;
 }
 
+.view-toggle-btn:hover {
+    color: #166534;
+}
+
 .view-toggle-btn.active {
     background: #16a34a;
     color: #fff;
 }
 
 .status-toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.8rem;
-    flex-wrap: wrap;
+    display: grid;
+    gap: 0.7rem;
 }
 
 .status-filters {
@@ -157,13 +158,14 @@
     align-items: center;
     gap: 0.55rem;
     flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 .status-tools input {
     border: 1px solid var(--table-border);
     border-radius: 999px;
     padding: 0.55rem 0.9rem;
-    min-width: 240px;
+    min-width: 320px;
     background: var(--surface);
     color: var(--text);
 }
@@ -1198,12 +1200,18 @@
         align-items: stretch;
     }
 
+    .list-actions-row {
+        width: 100%;
+        justify-content: space-between;
+    }
+
     .status-toolbar {
         align-items: stretch;
     }
 
     .status-tools {
         width: 100%;
+        justify-content: stretch;
     }
 
     .status-tools input,
