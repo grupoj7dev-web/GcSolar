@@ -1066,7 +1066,7 @@ app.post('/api/whatsapp/connect', async (req, res) => {
                         method: 'DELETE',
                     });
                 } catch (error) {
-                    if (!/not found|does not exist|404/i.test(String(error?.message || ''))) {
+                    if (!/not found|does not exist|404|not connected/i.test(String(error?.message || ''))) {
                         throw error;
                     }
                 }
@@ -1136,7 +1136,7 @@ app.post('/api/whatsapp/disconnect', async (req, res) => {
                 method: 'DELETE',
             });
         } catch (error) {
-            if (!/not found|does not exist|404/i.test(String(error?.message || ''))) {
+            if (!/not found|does not exist|404|not connected/i.test(String(error?.message || ''))) {
                 throw error;
             }
         }

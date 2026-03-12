@@ -244,6 +244,9 @@ async function resolveUserInstanceName() {
 }
 
 async function ensureInstance() {
+  if (!scope?.uid) {
+    throw new Error("Usuario ainda nao foi carregado. Aguarde alguns segundos e tente novamente.");
+  }
   const suggested = await resolveUserInstanceName();
   const data = await callBackend("/api/whatsapp/ensure-instance", "POST", {
     userId: scope.uid,
@@ -276,6 +279,10 @@ function startStatusTimer() {
 }
 
 async function connectWhatsapp() {
+  if (!scope?.uid) {
+    setStatusMessage("Usuario ainda nao foi carregado. Aguarde e tente novamente.", "error");
+    return;
+  }
   connectBtn.disabled = true;
   disconnectBtn.disabled = true;
   refreshBtn.disabled = true;
@@ -307,6 +314,10 @@ async function connectWhatsapp() {
 }
 
 async function disconnectWhatsapp() {
+  if (!scope?.uid) {
+    setStatusMessage("Usuario ainda nao foi carregado. Aguarde e tente novamente.", "error");
+    return;
+  }
   const ok = window.confirm("Deseja desconectar o WhatsApp desta instância?");
   if (!ok) return;
 
