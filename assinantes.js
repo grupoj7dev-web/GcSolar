@@ -92,6 +92,7 @@ const dossierCloseBtn = document.getElementById("dossierCloseBtn");
 const dossierCancelBtn = document.getElementById("dossierCancelBtn");
 const dossierApproveBtn = document.getElementById("dossierApproveBtn");
 const dossierRejectBtn = document.getElementById("dossierRejectBtn");
+const PUBLIC_APP_ORIGIN = "https://app.gc.solar";
 
 let scope = null;
 let allSubscribers = [];
@@ -221,7 +222,16 @@ function dossierField(label, value) {
 
 function docLink(label, url) {
   if (!url) return "";
-  return `<a class="dossier-doc-link" href="${escHtml(url)}" target="_blank" rel="noopener noreferrer"><i class="ph ph-file-arrow-down"></i>${escHtml(label)}</a>`;
+  const normalizedUrl = normalizePublicAppUrl(url);
+  return `<a class="dossier-doc-link" href="${escHtml(normalizedUrl)}" target="_blank" rel="noopener noreferrer"><i class="ph ph-file-arrow-down"></i>${escHtml(label)}</a>`;
+}
+
+function normalizePublicAppUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  return raw
+    .replace(/^http:\/\/127\.0\.0\.1:3001/i, PUBLIC_APP_ORIGIN)
+    .replace(/^http:\/\/localhost:3001/i, PUBLIC_APP_ORIGIN);
 }
 
 function currencyFmt(value) {

@@ -8,9 +8,18 @@ const signedName = document.getElementById("signedName");
 const signedDocument = document.getElementById("signedDocument");
 const signedAt = document.getElementById("signedAt");
 const signedSubtitle = document.getElementById("signedSubtitle");
+const PUBLIC_APP_ORIGIN = "https://app.gc.solar";
 
 function decode(value) {
   return decodeURIComponent(String(value || ""));
+}
+
+function normalizePublicAppUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  return raw
+    .replace(/^http:\/\/127\.0\.0\.1:3001/i, PUBLIC_APP_ORIGIN)
+    .replace(/^http:\/\/localhost:3001/i, PUBLIC_APP_ORIGIN);
 }
 
 function formatDocument(value) {
@@ -20,9 +29,9 @@ function formatDocument(value) {
   return value || "-";
 }
 
-const contractUrl = decode(params.get("contract"));
-const proofUrl = decode(params.get("proof"));
-const imageUrl = decode(params.get("image"));
+const contractUrl = normalizePublicAppUrl(decode(params.get("contract")));
+const proofUrl = normalizePublicAppUrl(decode(params.get("proof")));
+const imageUrl = normalizePublicAppUrl(decode(params.get("image")));
 const signer = decode(params.get("name"));
 const documentValue = decode(params.get("document"));
 const signedAtValue = decode(params.get("signedAt"));

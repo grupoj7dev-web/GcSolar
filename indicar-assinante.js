@@ -176,6 +176,7 @@ let activeContractSignUrl = "";
 let contractModalFeedbackTimer = 0;
 let lastKanbanRefreshAt = 0;
 const BACKEND_CANDIDATES = ["http://127.0.0.1:3001", "http://localhost:3001"];
+const PUBLIC_APP_ORIGIN = "https://app.gc.solar";
 
 const FLOW_META = {
   aguardando_aprovacao: {
@@ -375,6 +376,14 @@ function formatPhone(value) {
   return digits
     .replace(/^(\d{2})(\d)/, "($1) $2")
     .replace(/(\d{5})(\d)/, "$1-$2");
+}
+
+function normalizePublicAppUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  return raw
+    .replace(/^http:\/\/127\.0\.0\.1:3001/i, PUBLIC_APP_ORIGIN)
+    .replace(/^http:\/\/localhost:3001/i, PUBLIC_APP_ORIGIN);
 }
 
 function formatCep(value) {
@@ -857,7 +866,7 @@ function buildIndicacaoDetails(item, signUrl = "") {
   const titularidade = item.contaEnergiaNoNomeDoContratante
     ? "Conta no nome do contratante"
     : "Conta em nome de terceiro";
-  const contratoPdfUrl = item?.contrato?.pdfUrl || item?.contratoPdfUrl || docs.contratoPdfUrl || "";
+  const contratoPdfUrl = normalizePublicAppUrl(item?.contrato?.pdfUrl || item?.contratoPdfUrl || docs.contratoPdfUrl || "");
   const stage = normalizeIndicacaoStatus(item.status || item.statusLabel);
   const contractActionUrl = signUrl || contratoPdfUrl;
   const contractActionLabel = signUrl ? "Assinar contrato" : "Abrir contrato";
@@ -1033,7 +1042,7 @@ function closeIndicacaoModal() {
 async function buildContractSignUrl(contract, item) {
   const response = await callBackend("/api/contracts/create-sign-link", {
     pendingId: String(item?.id || ""),
-    contractUrl: String(contract?.url || ""),
+    contractUrl: normalizePublicAppUrl(String(contract?.url || "")),
     signerName: String(item?.nome || item?.razaoSocial || item?.nomeFantasia || ""),
     signerDocument: String(item?.cpfCnpj || ""),
     signerPhone: String(item?.telefone || item?.phone || ""),
@@ -1058,8 +1067,9 @@ async function openContractModal(contract, item) {
   if (contractModalName) contractModalName.textContent = `Contrato de ${nome}`;
   if (contractModalSubtitle) contractModalSubtitle.textContent = "O contrato foi gerado com sucesso e o link de assinatura já está disponível.";
   if (contractModalMessage) contractModalMessage.textContent = "Contrato enviado para o WhatsApp do cliente.";
-  if (contractModalLink) contractModalLink.href = contract.url;
-  if (contractModalOpenBtn) contractModalOpenBtn.href = contract.url;
+  const normalizedContractUrl = normalizePublicAppUrl(contract.url);
+  if (contractModalLink) contractModalLink.href = normalizedContractUrl;
+  if (contractModalOpenBtn) contractModalOpenBtn.href = normalizedContractUrl;
   if (contractModalFeedback) contractModalFeedback.classList.add("hidden");
   contractModal.classList.remove("hidden");
 }
@@ -1284,15 +1294,15 @@ async function generateIndicacaoContract(item) {
   const currentDocs = item.documentos || {};
   await updateDoc(doc(db, COLL_PENDING, item.id), {
     contrato: {
-      pdfUrl: contract.url,
+      pdfUrl: normalizePublicAppUrl(contract.url),
       generatedAt: nowIso,
       fileName: contract.fileName || "",
     },
-    contratoPdfUrl: contract.url,
+    contratoPdfUrl: normalizePublicAppUrl(contract.url),
     contratoGeradoEm: nowIso,
     documentos: {
       ...currentDocs,
-      contratoPdfUrl: contract.url,
+      contratoPdfUrl: normalizePublicAppUrl(contract.url),
     },
     updatedAt: serverTimestamp(),
     updatedAtISO: nowIso,

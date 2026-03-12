@@ -29,6 +29,7 @@ const signerPhoneParam = String(params.get("phone") || "").replace(/\D/g, "");
 const senderUserParam = String(params.get("sender") || "").trim();
 const senderInstanceParam = String(params.get("senderInstance") || "").trim();
 const isLocalDevHost = ["127.0.0.1", "localhost"].includes(window.location.hostname);
+const PUBLIC_APP_ORIGIN = "https://app.gc.solar";
 let pendingId = "";
 let contractUrl = "";
 let signatureMode = "draw";
@@ -39,6 +40,14 @@ let codeVerified = false;
 function buildViewerlessPdfUrl(url) {
   if (!url) return "";
   return `${url}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`;
+}
+
+function normalizePublicAppUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  return raw
+    .replace(/^http:\/\/127\.0\.0\.1:3001/i, PUBLIC_APP_ORIGIN)
+    .replace(/^http:\/\/localhost:3001/i, PUBLIC_APP_ORIGIN);
 }
 
 function maskPhone(value) {
@@ -188,7 +197,7 @@ function getSignatureDataUrl() {
 
 function buildSignedResultUrl(signature = {}) {
   const url = new URL("contrato-assinado.html", window.location.href);
-  url.searchParams.set("contract", signature.signedContractUrl || contractUrl || "");
+  url.searchParams.set("contract", normalizePublicAppUrl(signature.signedContractUrl || contractUrl || ""));
   url.searchParams.set("proof", signature.recordUrl || "");
   url.searchParams.set("image", signature.signatureImageUrl || "");
   url.searchParams.set("name", signerNameInput.value.trim());
@@ -255,7 +264,7 @@ async function loadSigningSession() {
     const response = await callBackendGet(`/api/contracts/sign-link/${encodeURIComponent(token)}`);
     const session = response.session || {};
     pendingId = session.pendingId || "";
-    contractUrl = session.contractUrl || "";
+    contractUrl = normalizePublicAppUrl(session.contractUrl || "");
     signerPhone = session.signerPhone || signerPhoneParam || "";
     codeVerified = Boolean(session?.signVerification?.verifiedAt);
     signerNameInput.value = session.signerName || "";
