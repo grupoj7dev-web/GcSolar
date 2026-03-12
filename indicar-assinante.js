@@ -13,12 +13,6 @@ import {
   updateDoc,
   where,
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
-import {
-  getDownloadURL,
-  getStorage,
-  ref,
-  uploadBytes,
-} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAlBxFfzmhnapsLJbM1UeYOalrfWYOSr1I",
@@ -33,12 +27,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const storage = getStorage(app);
-const storageFallbacks = [
-  storage,
-  getStorage(app, "gs://gcredito.firebasestorage.app"),
-  getStorage(app, "gs://gcredito.appspot.com"),
-];
 
 const COLL_PENDING = "assinantes_pendentes";
 const COLL_COLLABORATORS = "gcredito_funcionarios";
@@ -332,6 +320,16 @@ function updateSaveButtonLabel() {
 
 function existingDocUrl(key) {
   return String(editingIndicacaoData?.documentos?.[key] || "");
+}
+
+function isFirebaseStorageUrl(url) {
+  const value = String(url || "").toLowerCase();
+  return value.includes("firebasestorage.googleapis.com") || value.includes("googleapis.com/v0/b/");
+}
+
+function hasUsableExistingDocUrl(key) {
+  const url = existingDocUrl(key);
+  return Boolean(url) && !isFirebaseStorageUrl(url);
 }
 
 function showListMode() {
@@ -899,13 +897,15 @@ function buildIndicacaoDetails(item, signUrl = "") {
   const contractActionDescription = signUrl
     ? "Link da página de assinatura com confirmação por WhatsApp"
     : "PDF disponível para assinatura e conferência";
-  const docLinks = [
-    buildDocLink("Conta de energia", docs.contaEnergiaUrl, "Fatura da unidade consumidora"),
-    buildDocLink("Documento principal", docs.cnhUrl, "CNH ou RG do titular"),
-    buildDocLink("Contrato social", docs.contratoSocialUrl, "Documento societário da empresa"),
-    buildDocLink("Documento do terceiro", docs.cnhDonoContaUrl, "CNH ou RG do titular da conta"),
-    buildDocLink(contractActionLabel, contractActionUrl, contractActionDescription),
-  ].filter(Boolean);
+  const docLinks = stage === "pendente_assinatura"
+    ? [buildDocLink(contractActionLabel, contractActionUrl, contractActionDescription)].filter(Boolean)
+    : [
+      buildDocLink("Conta de energia", docs.contaEnergiaUrl, "Fatura da unidade consumidora"),
+      buildDocLink("Documento principal", docs.cnhUrl, "CNH ou RG do titular"),
+      buildDocLink("Contrato social", docs.contratoSocialUrl, "Documento societário da empresa"),
+      buildDocLink("Documento do terceiro", docs.cnhDonoContaUrl, "CNH ou RG do titular da conta"),
+      buildDocLink(contractActionLabel, contractActionUrl, contractActionDescription),
+    ].filter(Boolean);
   const contractActionCard = stage === "pendente_assinatura" && contractActionUrl
     ? `
     <section class="dossier-section">
@@ -1944,13 +1944,6 @@ async function getUserScope(user) {
   return result;
 }
 
-function makeSafeFileName(fileName) {
-  return String(fileName || "arquivo")
-    .replace(/\s+/g, "-")
-    .replace(/[^a-zA-Z0-9._-]/g, "")
-    .slice(-90);
-}
-
 async function uploadDocumentViaBackend(file) {
   const endpoints = buildBackendEndpoints("/api/uploads/doc");
 
@@ -1982,71 +1975,36 @@ async function uploadDocumentViaBackend(file) {
 async function uploadDocument(file, key) {
   if (!file) return "";
 
-  try {
-    return await uploadDocumentViaBackend(file);
-  } catch (backendError) {
-    console.error("Falha no fallback de upload via backend", {
-      key,
-      name: file.name,
-      error: backendError,
-    });
-  }
-
-  const now = Date.now();
-  const safeName = makeSafeFileName(file.name);
-  const paths = [
-    `assinantes_pendentes/${scope.tenantId}/${scope.uid}/${now}_${key}_${safeName}`,
-    `assinantes_pendentes/${scope.tenantId}/${scope.uid}/indicacao/${now}_${key}_${safeName}`,
-  ];
-
-  let lastError = null;
-  for (const storageInstance of storageFallbacks) {
-    for (const path of paths) {
-      try {
-        const fileRef = ref(storageInstance, path);
-        await uploadBytes(fileRef, file, { contentType: file.type || "application/octet-stream" });
-        return await getDownloadURL(fileRef);
-      } catch (error) {
-        lastError = error;
-        console.error("Falha no upload do documento", {
-          key,
-          name: file.name,
-          path,
-          bucket: storageInstance.app.options.storageBucket,
-          error,
-          serverResponse: error?.serverResponse_ || error?.customData || null,
-        });
-      }
-    }
-  }
-
-  const code = lastError?.code ? ` (${lastError.code})` : "";
-  throw new Error(`Falha ao enviar "${file.name}"${code}. Verifique o Storage e tente novamente.`);
+  return uploadDocumentViaBackend(file);
 }
 
 function validateStep2Files() {
-  const hasContaEnergia = docContaEnergiaInput.files?.length || existingDocUrl("contaEnergiaUrl");
+  const hasContaEnergia = docContaEnergiaInput.files?.length || hasUsableExistingDocUrl("contaEnergiaUrl");
   if (!hasContaEnergia) {
+    setStatus("Reenvie a conta de energia. Links antigos do Firebase foram desativados.", "error");
     docContaEnergiaInput.reportValidity();
     return false;
   }
 
-  const hasIdentificacao = docIdentificacaoInput.files?.length || existingDocUrl("cnhUrl");
+  const hasIdentificacao = docIdentificacaoInput.files?.length || hasUsableExistingDocUrl("cnhUrl");
   if (!hasIdentificacao) {
+    setStatus("Reenvie o documento principal. Links antigos do Firebase foram desativados.", "error");
     docIdentificacaoInput.reportValidity();
     return false;
   }
 
   const isPj = tipoPessoaInput.value === "juridica";
-  const hasContratoSocial = docContratoSocialInput.files?.length || existingDocUrl("contratoSocialUrl");
+  const hasContratoSocial = docContratoSocialInput.files?.length || hasUsableExistingDocUrl("contratoSocialUrl");
   if (isPj && !hasContratoSocial) {
+    setStatus("Reenvie o contrato social. Links antigos do Firebase foram desativados.", "error");
     docContratoSocialInput.reportValidity();
     return false;
   }
 
   const isTerceiro = getContaNoNome() === "nao";
-  const hasDocTerceiro = docTerceiroInput.files?.length || existingDocUrl("cnhDonoContaUrl");
+  const hasDocTerceiro = docTerceiroInput.files?.length || hasUsableExistingDocUrl("cnhDonoContaUrl");
   if (isTerceiro && !hasDocTerceiro) {
+    setStatus("Reenvie o documento do terceiro. Links antigos do Firebase foram desativados.", "error");
     docTerceiroInput.reportValidity();
     return false;
   }
