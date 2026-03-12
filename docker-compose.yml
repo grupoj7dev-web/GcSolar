@@ -1,4 +1,22 @@
 services:
+  backend:
+    image: node:20-alpine
+    working_dir: /app/backend
+    command: sh -c "npm ci --omit=dev && node server/index.js"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - PUBLIC_BASE_URL=https://app.gc.solar
+    volumes:
+      - type: bind
+        source: ${GC_SOLAR_APP_DIR:-/root/gcsolar-app}
+        target: /app
+    networks:
+      - Admin
+    deploy:
+      restart_policy:
+        condition: on-failure
+
   landing:
     image: nginx:1.27-alpine
     volumes:
