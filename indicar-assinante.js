@@ -1077,13 +1077,7 @@ async function buildContractSignUrl(contract, item) {
   });
   const token = String(response?.token || "");
   if (!token) throw new Error("Nao foi possivel criar o link de assinatura.");
-  const baseUrl = new URL("assinar-contrato.html", window.location.href);
-  baseUrl.searchParams.set("t", token);
-  const signerPhone = normalizePhone(item?.telefone || item?.phone || "");
-  if (signerPhone) baseUrl.searchParams.set("phone", signerPhone);
-  if (scope?.uid) baseUrl.searchParams.set("sender", String(scope.uid));
-  if (scope?.uid) baseUrl.searchParams.set("senderInstance", `gcsolar-${String(scope.uid)}`);
-  return baseUrl.toString();
+  return `${window.location.origin}/api/contracts/s/${encodeURIComponent(token)}`;
 }
 
 async function openContractModal(contract, item) {

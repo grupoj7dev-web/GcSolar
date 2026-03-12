@@ -1324,6 +1324,22 @@ app.get('/api/contracts/sign-link/:token', async (req, res) => {
     }
 });
 
+app.get('/api/contracts/s/:token', async (req, res) => {
+    try {
+        const token = normalizeSpaces(req.params?.token || '');
+        if (!token) {
+            return res.status(400).send('Token obrigatorio.');
+        }
+
+        await readContractSignSession(token);
+        const target = new URL('/assinar-contrato.html', buildPublicUrl(req, '/'));
+        target.searchParams.set('t', token);
+        return res.redirect(302, target.toString());
+    } catch (error) {
+        return res.status(404).send('Link de assinatura nao encontrado.');
+    }
+});
+
 app.get('/api/contracts/sign-link/:token/document', async (req, res) => {
     try {
         const token = normalizeSpaces(req.params?.token || '');
