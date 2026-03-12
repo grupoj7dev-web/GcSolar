@@ -114,6 +114,6 @@ jobs:
           else
             SSH_BASE="sshpass -p \"$SSH_PASSWORD\" ssh -o ConnectTimeout=20 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p ${SSH_PORT:-22}"
           fi
-          eval "$SSH_BASE \"$SSH_USER@$SSH_HOST\" \"cd '$SSH_TARGET_DIR' && GC_SOLAR_APP_DIR='$SSH_TARGET_DIR' docker stack deploy -c '$SSH_TARGET_DIR/docker-compose.yml' gcsolar-app\""
+          eval "$SSH_BASE \"$SSH_USER@$SSH_HOST\" \"cd '$SSH_TARGET_DIR' && GC_SOLAR_APP_DIR='$SSH_TARGET_DIR' SWARM_NODE_HOSTNAME=\\$(hostname) docker stack deploy -c '$SSH_TARGET_DIR/docker-compose.yml' gcsolar-app\""
           eval "$SSH_BASE \"$SSH_USER@$SSH_HOST\" \"docker service update --force gcsolar-app_landing || true\""
           eval "$SSH_BASE \"$SSH_USER@$SSH_HOST\" \"docker service update --force gcsolar-app_backend || true\""

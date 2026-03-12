@@ -16,6 +16,9 @@ services:
     deploy:
       restart_policy:
         condition: on-failure
+      placement:
+        constraints:
+          - "node.hostname == ${SWARM_NODE_HOSTNAME}"
 
   landing:
     image: nginx:1.27-alpine
@@ -33,6 +36,9 @@ services:
     deploy:
       restart_policy:
         condition: on-failure
+      placement:
+        constraints:
+          - "node.hostname == ${SWARM_NODE_HOSTNAME}"
       labels:
         - "traefik.enable=true"
         - "traefik.docker.network=Admin"
