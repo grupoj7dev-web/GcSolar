@@ -6,6 +6,10 @@ services:
         source: ${GC_SOLAR_APP_DIR:-/root/gcsolar-app}
         target: /usr/share/nginx/html
         read_only: true
+      - type: bind
+        source: ${GC_SOLAR_APP_DIR:-/root/gcsolar-app}/nginx/default.conf
+        target: /etc/nginx/conf.d/default.conf
+        read_only: true
     networks:
       - Admin
     deploy:
