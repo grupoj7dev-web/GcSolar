@@ -1235,6 +1235,34 @@ app.post('/api/contracts/generate', async (req, res) => {
     }
 });
 
+app.get('/api/contracts/health', async (req, res) => {
+    try {
+        const contractsDirExists = fs.existsSync(CONTRACTS_DIR);
+        const uploadsDirExists = fs.existsSync(PUBLIC_UPLOADS_DIR);
+        const sampleFiles = contractsDirExists
+            ? (await fs.promises.readdir(CONTRACTS_DIR)).slice(-10)
+            : [];
+
+        return res.json({
+            ok: true,
+            runtime: {
+                cwd: process.cwd(),
+                serverDir: __dirname,
+                publicUploadsDir: PUBLIC_UPLOADS_DIR,
+                contractsDir: CONTRACTS_DIR,
+                uploadsDirExists,
+                contractsDirExists,
+            },
+            sampleFiles,
+        });
+    } catch (error) {
+        return res.status(500).json({
+            ok: false,
+            error: error.message || 'Falha ao inspecionar diretorio de contratos.',
+        });
+    }
+});
+
 app.post('/api/contracts/create-sign-link', async (req, res) => {
     try {
         const pendingId = normalizeSpaces(req.body?.pendingId || '');
