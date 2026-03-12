@@ -37,6 +37,7 @@ const COLLABORATORS_COLLECTION = "gcredito_funcionarios";
 const themeKey = "gcsolar_theme";
 const collapsedKey = "gcsolar_sidebar_collapsed";
 const IDENTITY_SIGNUP_URL = `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${firebaseConfig.apiKey}`;
+const IDENTITY_CREATE_AUTH_URI_URL = `https://identitytoolkit.googleapis.com/v1/accounts:createAuthUri?key=${firebaseConfig.apiKey}`;
 const GLOBAL_ADMIN_EMAILS = new Set(["projetos@goldtechenergia.com"]);
 
 const appShell = document.getElementById("appShell");
@@ -205,6 +206,28 @@ async function createAuthUser(email, password) {
   }
 
   return { uid: body.localId };
+}
+
+async function authEmailAlreadyExists(email) {
+  const response = await fetch(IDENTITY_CREATE_AUTH_URI_URL, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      identifier: email,
+      continueUri: `${window.location.origin}/login.html`,
+    }),
+  });
+
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const code = body?.error?.message || "CHECK_AUTH_EMAIL_FAILED";
+    throw new Error(`Falha ao validar e-mail no Firebase Auth: ${code}`);
+  }
+
+  if (body?.registered === true) return true;
+  if (Array.isArray(body?.signinMethods) && body.signinMethods.length > 0) return true;
+  if (Array.isArray(body?.allProviders) && body.allProviders.length > 0) return true;
+  return false;
 }
 
 function buildPayload(nowIso, authUid) {
@@ -395,6 +418,20 @@ async function savePartner(event) {
   try {
     let authUid = null;
     if (!isEditing) {
+      const existsInScope = partners.some(
+        (partner) => cleanText(partner.email || partner.mail).toLowerCase() === email
+      );
+      if (existsInScope) {
+        setStatus("Ja existe um parceiro com este e-mail nesta conta.", "error");
+        return;
+      }
+
+      const existsInAuth = await authEmailAlreadyExists(email);
+      if (existsInAuth) {
+        setStatus("Este e-mail ja possui login no Firebase Auth. Use outro e-mail ou edite o usuario existente.", "error");
+        return;
+      }
+
       const created = await createAuthUser(email, password);
       authUid = created.uid;
     }
@@ -425,8 +462,11 @@ async function savePartner(event) {
     resetForm();
     await loadPartners();
   } catch (error) {
-    console.error(error);
-    setStatus(`Falha ao salvar parceiro: ${error.message || "erro desconhecido"}`, "error");
+    const message = error?.message || "erro desconhecido";
+    if (!/ja esta cadastrado no Firebase Auth/i.test(message)) {
+      console.error(error);
+    }
+    setStatus(`Falha ao salvar parceiro: ${message}`, "error");
   }
 }
 
