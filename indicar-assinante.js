@@ -1067,7 +1067,7 @@ function closeIndicacaoModal() {
 }
 
 async function buildContractSignUrl(contract, item) {
-  const response = await callBackend("/api/contracts/create-sign-link", {
+  const response = await callBackend("/internal-api/contracts/create-sign-link", {
     pendingId: String(item?.id || ""),
     contractUrl: normalizePublicAppUrl(String(contract?.url || "")),
     signerName: String(item?.nome || item?.razaoSocial || item?.nomeFantasia || ""),
@@ -1271,7 +1271,7 @@ async function syncSignedIndicacoes(items) {
 
   let response;
   try {
-    response = await callBackend("/api/contracts/signed-status", {
+    response = await callBackend("/internal-api/contracts/signed-status", {
       pendingIds: pendentes.map((item) => String(item.id || "")),
     });
   } catch (error) {
@@ -1331,7 +1331,7 @@ async function syncSignedIndicacoes(items) {
 }
 
 async function generateIndicacaoContract(item) {
-  const response = await callBackend("/api/contracts/generate", buildContractPayload(item));
+  const response = await callBackend("/internal-api/contracts/generate", buildContractPayload(item));
   const contract = response?.contract;
   if (!contract?.url) {
     throw new Error("Contrato não retornou URL.");
