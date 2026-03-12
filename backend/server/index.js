@@ -38,6 +38,7 @@ const ASAAS_BASE_URLS = {
     production: 'https://api.asaas.com/v3',
     sandbox: 'https://sandbox.asaas.com/api/v3',
 };
+const PUBLIC_BASE_URL = String(process.env.PUBLIC_BASE_URL || 'https://app.gc.solar').replace(/\/+$/, '');
 const CONTRACT_SIGN_WHATSAPP_INSTANCE =
     process.env.CONTRACT_SIGN_WHATSAPP_INSTANCE ||
     process.env.EVOLUTION_SIGN_INSTANCE ||
@@ -47,6 +48,7 @@ const DEV_SIGN_CODE_EXPOSE = ['1', 'true', 'yes', 'on'].includes(String(process.
 const MAX_TEXT_SIZE = 22000;
 
 app.use(cors());
+app.set('trust proxy', true);
 app.use(express.json());
 
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
@@ -306,10 +308,21 @@ const normalizePdfText = (value) =>
         .replace(/[^\x20-\x7E]/g, ' ');
 
 const buildPublicUrl = (req, relativePath) => {
-    const host = req.get('host') || `127.0.0.1:${PORT}`;
-    const protocol = req.protocol || 'http';
     const normalized = String(relativePath || '').replace(/\\/g, '/').replace(/^\/+/, '');
-    return `${protocol}://${host}/${normalized}`;
+    const forwardedHost = normalizeSpaces(req.headers['x-forwarded-host'] || '');
+    const forwardedProto = normalizeSpaces(req.headers['x-forwarded-proto'] || '');
+    const host = forwardedHost || req.get('host') || '';
+    const protocol = forwardedProto || req.protocol || 'https';
+
+    if (host && !/^127\.0\.0\.1(?::\d+)?$/i.test(host) && !/^localhost(?::\d+)?$/i.test(host)) {
+        return `${protocol}://${host}/${normalized}`;
+    }
+
+    if (PUBLIC_BASE_URL) {
+        return `${PUBLIC_BASE_URL}/${normalized}`;
+    }
+
+    return `http://127.0.0.1:${PORT}/${normalized}`;
 };
 
 const decodeDataUrl = (value) => {

@@ -56,9 +56,7 @@ const validationBar = document.getElementById("validationBar");
 const detailModal = document.getElementById("detailModal");
 const detailTitle = document.getElementById("detailTitle");
 const detailSubtitle = document.getElementById("detailSubtitle");
-const detailMainJson = document.getElementById("detailMainJson");
-const detailPlantsJson = document.getElementById("detailPlantsJson");
-const detailPaymentJson = document.getElementById("detailPaymentJson");
+const detailBody = detailModal?.querySelector(".detail-body");
 const deleteGeneratorBtn = document.getElementById("deleteGeneratorBtn");
 
 const collapsedKey = "gcsolar_sidebar_collapsed";
@@ -122,6 +120,15 @@ function normalizeText(value) {
   return String(value || "").trim();
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function statusActive(value) {
   const s = String(value || "").toLowerCase().trim();
   if (!s) return true;
@@ -155,6 +162,52 @@ function resolveAddress(item, firstPlant) {
   const city = ownerAddress.cidade || plantAddress.cidade || item.cidade || "-";
   const state = ownerAddress.estado || plantAddress.estado || item.estado || "-";
   return `${city}, ${state}`;
+}
+
+function firstFilled(...values) {
+  for (const value of values) {
+    const normalized = normalizeText(value);
+    if (normalized) return normalized;
+  }
+  return "-";
+}
+
+function renderField(label, value) {
+  return `
+    <article class="detail-field">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(firstFilled(value))}</strong>
+    </article>
+  `;
+}
+
+function renderPlantCard(plant = {}, index = 0) {
+  const address = plant.address || {};
+  const metrics = [
+    ["UC", plant.uc || plant.consumerUnit || plant.unidadeConsumidora || ""],
+    ["Usina", plant.nomeUsina || plant.name || `Usina ${index + 1}`],
+    ["Status", plant.status || ""],
+    ["Titular", plant.titular || plant.holderName || ""],
+    ["Concessionária", plant.concessionaria || ""],
+    ["Potência", `${oneDecimal(plant.potenciaTotalUsina || plant.potenciaUsina || plant.potenciaTotalInversores || 0)} kWp`],
+    ["Geração Projetada", `${num(plant.geracaoProjetada || plant.generationEstimate || 0)} kWh/mês`],
+    ["Cidade/UF", [address.cidade || plant.cidade || "", address.estado || plant.estado || ""].filter(Boolean).join(" / ")],
+  ];
+
+  return `
+    <article class="plant-card">
+      <header class="plant-card-header">
+        <div>
+          <h5>${escapeHtml(firstFilled(plant.nomeUsina, plant.name, `Usina ${index + 1}`))}</h5>
+          <p>${escapeHtml(firstFilled(plant.concessionaria, "Sem concessionária"))}</p>
+        </div>
+        <span class="status-badge ${statusActive(plant.status) ? "" : "inactive"}">${escapeHtml(firstFilled(plant.status, "Ativa"))}</span>
+      </header>
+      <div class="detail-grid detail-grid-4">
+        ${metrics.map(([label, value]) => renderField(label, value)).join("")}
+      </div>
+    </article>
+  `;
 }
 
 function sumPlantField(plants, ...fields) {
@@ -342,22 +395,86 @@ function renderList() {
 function openDetailModal(item) {
   selectedForDetail = item;
   const raw = item.raw || {};
+  const owner = raw.owner || {};
+  const ownerAddress = owner.address || {};
+  const payment = raw.paymentData || raw.payment_data || {};
+  const distributorLogin = raw.distributor_login || raw.distributorLogin || {};
+  const plants = Array.isArray(raw.plants) ? raw.plants : [];
+
   detailTitle.textContent = item.ownerName;
-  detailSubtitle.textContent = `${item.concessionaria} ??? ${item.location} ??? ${item.statusLabel}`;
+  detailSubtitle.textContent = `${item.concessionaria} • ${item.location} • ${item.statusLabel}`;
 
-  detailMainJson.textContent = JSON.stringify(
-    {
-      id: raw.id || item.docId,
-      owner: raw.owner || {},
-      distributor_login: raw.distributor_login || raw.distributorLogin || {},
-      status: raw.status || item.statusLabel,
-    },
-    null,
-    2
-  );
+  if (detailBody) {
+    detailBody.innerHTML = `
+      <section class="generator-hero-panel">
+        <article class="generator-hero-card">
+          <span>Usinas</span>
+          <strong>${num(item.usinas)}</strong>
+        </article>
+        <article class="generator-hero-card">
+          <span>Capacidade</span>
+          <strong>${oneDecimal(item.capacityKwp)} kWp</strong>
+        </article>
+        <article class="generator-hero-card">
+          <span>Geração Mensal</span>
+          <strong>${num(item.monthlyKwh)} kWh</strong>
+        </article>
+        <article class="generator-hero-card">
+          <span>Status</span>
+          <strong>${escapeHtml(item.statusLabel)}</strong>
+        </article>
+      </section>
 
-  detailPlantsJson.textContent = JSON.stringify(raw.plants || [], null, 2);
-  detailPaymentJson.textContent = JSON.stringify(raw.paymentData || raw.payment_data || {}, null, 2);
+      <section class="detail-section">
+        <div class="section-heading">
+          <h4>Proprietário e Cadastro</h4>
+          <p>Dados principais do titular e configuração de acesso.</p>
+        </div>
+        <div class="detail-grid detail-grid-3">
+          ${renderField("ID", raw.id || item.docId)}
+          ${renderField("Titular", item.ownerName)}
+          ${renderField("Documento", owner.document || owner.cpfCnpj || owner.cnpj || owner.cpf)}
+          ${renderField("Nome fantasia", owner.nomeFantasia || owner.fantasia)}
+          ${renderField("E-mail", owner.email)}
+          ${renderField("Telefone", owner.telefone || owner.phone)}
+          ${renderField("Concessionária", item.concessionaria)}
+          ${renderField("Status geral", raw.status || item.statusLabel)}
+          ${renderField("Login distribuidora", distributorLogin.username || distributorLogin.user || distributorLogin.login)}
+        </div>
+      </section>
+
+      <section class="detail-section">
+        <div class="section-heading">
+          <h4>Usinas Vinculadas</h4>
+          <p>Informações operacionais e técnicas das unidades geradoras.</p>
+        </div>
+        <div class="plants-stack">
+          ${plants.length ? plants.map(renderPlantCard).join("") : `<article class="empty-detail">Nenhuma usina vinculada encontrada.</article>`}
+        </div>
+      </section>
+
+      <section class="detail-section">
+        <div class="section-heading">
+          <h4>Endereço, Recebimento e Banco</h4>
+          <p>Dados financeiros e endereço usado no cadastro.</p>
+        </div>
+        <div class="detail-grid detail-grid-3">
+          ${renderField("CEP", ownerAddress.cep)}
+          ${renderField("Logradouro", ownerAddress.logradouro || ownerAddress.street)}
+          ${renderField("Número", ownerAddress.numero || ownerAddress.number)}
+          ${renderField("Bairro", ownerAddress.bairro || ownerAddress.district)}
+          ${renderField("Cidade", ownerAddress.cidade || raw.cidade)}
+          ${renderField("UF", ownerAddress.estado || raw.estado)}
+          ${renderField("Recebedor", payment.recebedor || payment.receiverName || payment.nomeRecebedor)}
+          ${renderField("Banco", payment.banco || payment.bank)}
+          ${renderField("Agência/Conta", [payment.agencia || payment.branch, payment.conta || payment.account].filter(Boolean).join(" / "))}
+          ${renderField("Chave PIX", payment.pix || payment.pixKey || payment.chavePix)}
+          ${renderField("Favorecido", payment.favorecido || payment.beneficiary)}
+          ${renderField("Documento recebedor", payment.documento || payment.cpfCnpj)}
+        </div>
+      </section>
+    `;
+  }
 
   detailModal.classList.remove("hidden");
 }

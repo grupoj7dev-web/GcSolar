@@ -225,6 +225,9 @@ function resolveDocumento(item) {
 function resolveNome(item) {
   return (
     item.subscriber_name ||
+    item.subscriber?.fullName ||
+    item.subscriber?.companyName ||
+    item.subscriber?.name ||
     item.nome_cliente ||
     item.legal_name ||
     item.nome ||
@@ -236,6 +239,57 @@ function resolveNome(item) {
 
 function resolveReferencia(item) {
   return item.referencia || item.month_reference || item.mes_referencia || "-";
+}
+
+function resolveBillingCustomer(item) {
+  const name = (
+    item.subscriber_name ||
+    item.subscriber?.fullName ||
+    item.subscriber?.companyName ||
+    item.subscriber?.name ||
+    item.nome_cliente ||
+    item.legal_name ||
+    item.nome ||
+    ""
+  ).trim();
+
+  const cpfCnpj = normalizeDoc(
+    item.subscriber_documento ||
+      item.subscriber_cpf_cnpj ||
+      item.subscriber?.cpfCnpj ||
+      item.subscriber?.cpf ||
+      item.subscriber?.cnpj ||
+      item.documento ||
+      item.document ||
+      item.cnpj_cpf ||
+      item.dados_calculados?.dadosExtraidos?.cpfCnpj ||
+      item.dados_calculados?.full_result?.dados_extraidos?.cnpj_cpf ||
+      ""
+  );
+
+  const email = String(
+    item.subscriber_email ||
+      item.subscriber?.email ||
+      item.email ||
+      item.user_email ||
+      ""
+  ).trim();
+
+  const phone = String(
+    item.subscriber_phone ||
+      item.subscriber?.phone ||
+      item.subscriber?.telefone ||
+      item.telefone ||
+      item.phone ||
+      ""
+  ).trim();
+
+  return {
+    name: name || "-",
+    cpfCnpj,
+    email,
+    phone,
+  };
 }
 
 function parseRefMonth(monthRef) {
@@ -1015,8 +1069,9 @@ async function approveInvoice(record, markAsPaid = false) {
   const dueBr = dueFromRule.br;
   const dueIso = dueFromRule.iso;
 
-  const docDigits = normalizeDoc(resolveDocumento(record));
-  const name = resolveNome(record);
+  const billingCustomer = resolveBillingCustomer(record);
+  const docDigits = billingCustomer.cpfCnpj || normalizeDoc(resolveDocumento(record));
+  const name = billingCustomer.name || resolveNome(record);
   const value = Number(resolveValor(record) || 0);
   const reference = resolveReferencia(record);
   const uc = resolveUc(record);
@@ -1029,8 +1084,8 @@ async function approveInvoice(record, markAsPaid = false) {
     customer: {
       name,
       cpfCnpj: docDigits,
-      email: String(record.email || record.user_email || "").trim(),
-      phone: String(record.telefone || record.phone || "").trim(),
+      email: billingCustomer.email,
+      phone: billingCustomer.phone,
     },
     invoice: {
       value,
@@ -1055,6 +1110,10 @@ async function approveInvoice(record, markAsPaid = false) {
     asaas_environment: asaasConfig.environment,
     asaas_customer_id: asaasData?.customer?.id || "",
     asaas_external_reference: externalReference,
+    subscriber_name: name,
+    subscriber_documento: docDigits,
+    subscriber_email: billingCustomer.email,
+    subscriber_phone: billingCustomer.phone,
     asaas_payment_id: pix.id || boleto.id || "",
     asaas_pix_charge_id: pix.id || "",
     asaas_boleto_charge_id: boleto.id || "",
@@ -1082,6 +1141,10 @@ async function approveInvoice(record, markAsPaid = false) {
     aprovado_por_email: scope.email,
     enviado_para_asaas: true,
     asaas_sync_status: "sincronizado",
+    subscriber_name: name,
+    subscriber_documento: docDigits,
+    subscriber_email: billingCustomer.email,
+    subscriber_phone: billingCustomer.phone,
     asaas_customer_id: asaasData?.customer?.id || "",
     asaas_external_reference: externalReference,
     asaas_payment_id: pix.id || boleto.id || "",
@@ -1102,7 +1165,7 @@ async function approveInvoice(record, markAsPaid = false) {
     id: emitidaRef.id,
   };
 
-  const customerPhone = String(record.telefone || record.phone || "").trim();
+  const customerPhone = billingCustomer.phone;
   if (customerPhone) {
     try {
       const pdfBlob = await generateCombinedPdfBlob(emittedRecord);
