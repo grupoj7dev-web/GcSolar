@@ -62,6 +62,22 @@ let html2pdfLoader = null;
 let pdfLibsLoader = null;
 let asaasConfig = null;
 
+function isLocalDevHost() {
+  const host = String(window.location.hostname || "").toLowerCase();
+  return host === "localhost" || host === "127.0.0.1";
+}
+
+function buildBackendEndpoints(path) {
+  const normalizedPath = String(path || "").startsWith("/") ? String(path) : `/${path}`;
+  const endpoints = [`${window.location.origin}${normalizedPath}`];
+  if (isLocalDevHost()) {
+    if (window.location.port === "3001") endpoints.push(normalizedPath);
+    endpoints.push(`http://127.0.0.1:3001${normalizedPath}`);
+    endpoints.push(`http://localhost:3001${normalizedPath}`);
+  }
+  return [...new Set(endpoints)];
+}
+
 function getLocallyDeletedEmitidasIds() {
   try {
     const raw = localStorage.getItem(LOCAL_DELETED_EMITIDAS_KEY) || "[]";
@@ -531,12 +547,7 @@ function applyAsaasDataToEnergyHtml(energyHtml, asaasData) {
 }
 
 async function requestAsaasCreateCharges(payload) {
-  const endpoints = [];
-  if (window.location.port === "3001") {
-    endpoints.push("/api/asaas-create-charges");
-  }
-  endpoints.push("http://127.0.0.1:3001/api/asaas-create-charges");
-  endpoints.push("http://localhost:3001/api/asaas-create-charges");
+  const endpoints = buildBackendEndpoints("/api/asaas-create-charges");
 
   let lastError = null;
   for (const endpoint of endpoints) {
@@ -618,12 +629,7 @@ function buildWhatsappInvoiceCaption(record, dueBr, energyHtml) {
 }
 
 async function requestWhatsappInvoiceSend(payload) {
-  const endpoints = [];
-  if (window.location.port === "3001") {
-    endpoints.push("/api/whatsapp/send-invoice");
-  }
-  endpoints.push("http://127.0.0.1:3001/api/whatsapp/send-invoice");
-  endpoints.push("http://localhost:3001/api/whatsapp/send-invoice");
+  const endpoints = buildBackendEndpoints("/api/whatsapp/send-invoice");
 
   let lastError = null;
   for (const endpoint of endpoints) {

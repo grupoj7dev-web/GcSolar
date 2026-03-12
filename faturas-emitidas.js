@@ -59,6 +59,10 @@ let pollingTimer = null;
 let pollingInFlight = false;
 let asaasConfig = null;
 let pdfLibsLoader = null;
+let asaasBackendOfflineUntil = 0;
+let asaasBackendLastError = "";
+
+const ASAAS_BACKEND_COOLDOWN_MS = 5 * 60 * 1000;
 
 function getLocallyDeletedIds() {
   try {
@@ -545,6 +549,40 @@ function setUpdatedNow(suffix = "") {
   updatedAtLabel.textContent = `Atualizado em ${new Date().toLocaleString("pt-BR")}${s}`;
 }
 
+function isLocalDevHost() {
+  const host = String(window.location.hostname || "").toLowerCase();
+  return host === "localhost" || host === "127.0.0.1";
+}
+
+function getAsaasApiEndpoints(path) {
+  const normalizedPath = String(path || "").startsWith("/") ? String(path) : `/${path}`;
+  const endpoints = [`${window.location.origin}${normalizedPath}`];
+
+  if (isLocalDevHost()) {
+    if (window.location.port === "3001") {
+      endpoints.push(normalizedPath);
+    }
+    endpoints.push(`http://127.0.0.1:3001${normalizedPath}`);
+    endpoints.push(`http://localhost:3001${normalizedPath}`);
+  }
+
+  return [...new Set(endpoints)];
+}
+
+function isAsaasBackendCoolingDown() {
+  return Date.now() < asaasBackendOfflineUntil;
+}
+
+function markAsaasBackendOffline(error) {
+  asaasBackendOfflineUntil = Date.now() + ASAAS_BACKEND_COOLDOWN_MS;
+  asaasBackendLastError = error?.message || "backend ASAAS indisponivel";
+}
+
+function clearAsaasBackendOffline() {
+  asaasBackendOfflineUntil = 0;
+  asaasBackendLastError = "";
+}
+
 async function loadData() {
   const emitidasSnap = await getDocsFromServer(collection(db, COLL_EMITIDAS));
   const deletedIds = getLocallyDeletedIds();
@@ -631,6 +669,14 @@ async function deleteInvoice(record) {
     return;
   }
 
+  if (isAsaasBackendCoolingDown()) {
+    const hint = isLocalDevHost()
+      ? "Inicie o servidor local na porta 3001 e tente novamente."
+      : "Verifique a disponibilidade da API em producao e tente novamente.";
+    window.alert(`O backend financeiro/ASAAS esta offline no momento. ${hint}`);
+    return;
+  }
+
   const pixPaymentId = String(record.asaas_pix_charge_id || record.pix_id || "").trim();
   const boletoPaymentId = String(record.asaas_boleto_charge_id || "").trim();
   const externalReference = String(record.asaas_external_reference || "").trim();
@@ -642,12 +688,7 @@ async function deleteInvoice(record) {
     environment: asaasConfig.environment,
   });
 
-  const endpoints = [];
-  if (window.location.port === "3001") {
-    endpoints.push("/api/asaas-delete-charges");
-  }
-  endpoints.push("http://127.0.0.1:3001/api/asaas-delete-charges");
-  endpoints.push("http://localhost:3001/api/asaas-delete-charges");
+  const endpoints = getAsaasApiEndpoints("/api/asaas-delete-charges");
 
   let deleteOk = false;
   let lastError = null;
@@ -681,6 +722,7 @@ async function deleteInvoice(record) {
         throw new Error(`${body?.error || `HTTP ${response.status}`}${details}`);
       }
       deleteOk = true;
+      clearAsaasBackendOffline();
       break;
     } catch (error) {
       console.error("[EMITIDAS][DELETE] Falha endpoint", endpoint, error);
@@ -689,6 +731,7 @@ async function deleteInvoice(record) {
   }
 
   if (!deleteOk) {
+    markAsaasBackendOffline(lastError);
     window.alert(`Falha ao excluir cobrancas no ASAAS: ${lastError?.message || "erro desconhecido"}`);
     return;
   }
@@ -823,13 +866,9 @@ async function fetchAsaasPaymentStatus(record) {
   if (!asaasConfig?.apiKey) return null;
   const { paymentId, externalReference } = resolveAsaasIdentifier(record);
   if (!paymentId && !externalReference) return null;
+  if (isAsaasBackendCoolingDown()) return null;
 
-  const endpoints = [];
-  if (window.location.port === "3001") {
-    endpoints.push("/api/asaas-payment-status");
-  }
-  endpoints.push("http://127.0.0.1:3001/api/asaas-payment-status");
-  endpoints.push("http://localhost:3001/api/asaas-payment-status");
+  const endpoints = getAsaasApiEndpoints("/api/asaas-payment-status");
 
   const payload = {
     environment: asaasConfig.environment,
@@ -851,12 +890,14 @@ async function fetchAsaasPaymentStatus(record) {
         const err = body?.error || `HTTP ${response.status}`;
         throw new Error(err);
       }
+      clearAsaasBackendOffline();
       return body?.payment || null;
     } catch (error) {
       lastError = error;
     }
   }
 
+  markAsaasBackendOffline(lastError);
   throw lastError || new Error("Falha ao consultar pagamento no ASAAS.");
 }
 
@@ -890,6 +931,16 @@ async function runPaymentPolling(manual = false) {
       return;
     }
 
+    if (isAsaasBackendCoolingDown()) {
+      const detail = asaasBackendLastError ? `: ${asaasBackendLastError}` : "";
+      if (manual) {
+        asaasBackendOfflineUntil = 0;
+      } else {
+        setUpdatedNow(`ASAAS offline${detail}`);
+        return;
+      }
+    }
+
     const target = emittedInvoices.filter((x) => resolvePaymentStatus(x) !== "pago").slice(0, 25);
     let changed = 0;
 
@@ -910,6 +961,15 @@ async function runPaymentPolling(manual = false) {
     }
 
     setUpdatedNow("polling ASAAS");
+  } catch (error) {
+    const detail = error?.message ? `: ${error.message}` : "";
+    setUpdatedNow(`ASAAS offline${detail}`);
+    if (manual) {
+      const hint = isLocalDevHost()
+        ? "Inicie o servidor local em http://localhost:3001."
+        : "Verifique a API da aplicacao em producao.";
+      window.alert(`Nao foi possivel acessar o backend financeiro/ASAAS. ${hint}`);
+    }
   } finally {
     pollingInFlight = false;
   }

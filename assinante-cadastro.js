@@ -612,13 +612,17 @@ async function uploadOptional(file, key) {
   const ext = String(file.name || "").toLowerCase();
   if (![".pdf", ".doc", ".docx", ".jpg", ".jpeg", ".png"].some((x) => ext.endsWith(x))) throw new Error(`Formato inválido: ${file.name}`);
   if (file.size > 10 * 1024 * 1024) throw new Error(`Arquivo acima de 10MB: ${file.name}`);
-  const backendEndpoints = [];
-  if (window.location.port === "3001") backendEndpoints.push("/api/uploads/doc");
-  backendEndpoints.push("http://127.0.0.1:3001/api/uploads/doc");
-  backendEndpoints.push("http://localhost:3001/api/uploads/doc");
+  const isLocalDevHost =
+    window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+  const backendEndpoints = [`${window.location.origin}/api/uploads/doc`];
+  if (isLocalDevHost) {
+    if (window.location.port === "3001") backendEndpoints.push("/api/uploads/doc");
+    backendEndpoints.push("http://127.0.0.1:3001/api/uploads/doc");
+    backendEndpoints.push("http://localhost:3001/api/uploads/doc");
+  }
 
   let backendError = null;
-  for (const endpoint of backendEndpoints) {
+  for (const endpoint of [...new Set(backendEndpoints)]) {
     try {
       const form = new FormData();
       form.append("file", file);

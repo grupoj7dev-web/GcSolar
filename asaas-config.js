@@ -47,6 +47,22 @@ let currentUser = null;
 let currentScope = null;
 let keysByEnv = new Map();
 
+function isLocalDevHost() {
+  const host = String(window.location.hostname || "").toLowerCase();
+  return host === "localhost" || host === "127.0.0.1";
+}
+
+function buildBackendEndpoints(path) {
+  const normalizedPath = String(path || "").startsWith("/") ? String(path) : `/${path}`;
+  const endpoints = [`${window.location.origin}${normalizedPath}`];
+  if (isLocalDevHost()) {
+    if (window.location.port === "3001") endpoints.push(normalizedPath);
+    endpoints.push(`http://127.0.0.1:3001${normalizedPath}`);
+    endpoints.push(`http://localhost:3001${normalizedPath}`);
+  }
+  return [...new Set(endpoints)];
+}
+
 function isMobile() {
   return window.matchMedia("(max-width: 960px)").matches;
 }
@@ -121,12 +137,7 @@ async function getUserScope(user) {
 }
 
 async function testViaBackend(environment, apiKey) {
-  const endpoints = [];
-  if (window.location.port === "3001") {
-    endpoints.push("/api/asaas-test");
-  }
-  endpoints.push("http://127.0.0.1:3001/api/asaas-test");
-  endpoints.push("http://localhost:3001/api/asaas-test");
+  const endpoints = buildBackendEndpoints("/api/asaas-test");
 
   let lastError = null;
 

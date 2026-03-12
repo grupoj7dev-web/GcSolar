@@ -349,7 +349,12 @@ function inferTemplateKey(email) {
 
 async function generateCodeFromApi() {
   try {
-    const endpoints = ["http://127.0.0.1:3001/api/proposal-code", "http://localhost:3001/api/proposal-code"];
+    const isLocalDevHost =
+      window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    const endpoints = [`${window.location.origin}/api/proposal-code`];
+    if (isLocalDevHost) {
+      endpoints.push("http://127.0.0.1:3001/api/proposal-code", "http://localhost:3001/api/proposal-code");
+    }
     for (const endpoint of endpoints) {
       try {
         const response = await fetch(endpoint, { method: "GET" });
@@ -495,10 +500,12 @@ function parsePdfTextRegex(text) {
 }
 
 async function parsePdfTextGemini(text, fileName = "") {
-  const endpoints = [
-    "http://127.0.0.1:3001/api/extract-invoice",
-    "http://localhost:3001/api/extract-invoice",
-  ];
+  const isLocalDevHost =
+    window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+  const endpoints = [`${window.location.origin}/api/extract-invoice`];
+  if (isLocalDevHost) {
+    endpoints.push("http://127.0.0.1:3001/api/extract-invoice", "http://localhost:3001/api/extract-invoice");
+  }
 
   for (const endpoint of endpoints) {
     try {

@@ -51,6 +51,22 @@ let userEmail = "";
 let instanceName = "";
 let statusTimer = null;
 
+function isLocalDevHost() {
+  const host = String(window.location.hostname || "").toLowerCase();
+  return host === "localhost" || host === "127.0.0.1";
+}
+
+function buildBackendEndpoints(path) {
+  const normalizedPath = String(path || "").startsWith("/") ? String(path) : `/${path}`;
+  const endpoints = [`${window.location.origin}${normalizedPath}`];
+  if (isLocalDevHost()) {
+    if (window.location.port === "3001") endpoints.push(normalizedPath);
+    endpoints.push(`http://127.0.0.1:3001${normalizedPath}`);
+    endpoints.push(`http://localhost:3001${normalizedPath}`);
+  }
+  return [...new Set(endpoints)];
+}
+
 function isMobile() {
   return window.matchMedia("(max-width: 960px)").matches;
 }
@@ -119,10 +135,7 @@ async function getJson(url) {
 }
 
 async function callBackend(path, method = "GET", payload = null) {
-  const endpoints = [];
-  if (window.location.port === "3001") endpoints.push(path);
-  endpoints.push(`http://127.0.0.1:3001${path}`);
-  endpoints.push(`http://localhost:3001${path}`);
+  const endpoints = buildBackendEndpoints(path);
 
   let lastError = null;
   for (const endpoint of endpoints) {

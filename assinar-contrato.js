@@ -228,8 +228,17 @@ async function getJson(url) {
   return body;
 }
 
+function buildBackendCandidates(path) {
+  const normalizedPath = String(path || "").startsWith("/") ? String(path) : `/${path}`;
+  const candidates = [`${window.location.origin}${normalizedPath}`];
+  if (isLocalDevHost) {
+    candidates.push(`http://127.0.0.1:3001${normalizedPath}`, `http://localhost:3001${normalizedPath}`);
+  }
+  return [...new Set(candidates)];
+}
+
 async function callBackend(path, payload) {
-  const candidates = [`http://127.0.0.1:3001${path}`, `http://localhost:3001${path}`];
+  const candidates = buildBackendCandidates(path);
   let lastError = null;
   for (const candidate of candidates) {
     try {
@@ -242,7 +251,7 @@ async function callBackend(path, payload) {
 }
 
 async function callBackendGet(path) {
-  const candidates = [`http://127.0.0.1:3001${path}`, `http://localhost:3001${path}`];
+  const candidates = buildBackendCandidates(path);
   let lastError = null;
   for (const candidate of candidates) {
     try {

@@ -176,7 +176,6 @@ let draggingIndicacaoId = "";
 let activeContractSignUrl = "";
 let contractModalFeedbackTimer = 0;
 let lastKanbanRefreshAt = 0;
-const BACKEND_CANDIDATES = ["http://127.0.0.1:3001", "http://localhost:3001"];
 const PUBLIC_APP_ORIGIN = "https://app.gc.solar";
 
 const FLOW_META = {
@@ -277,6 +276,22 @@ function setUpdated(extra = "") {
   updatedText.textContent = `Atualizado em ${new Date().toLocaleString("pt-BR")}${suffix}`;
 }
 
+function isLocalDevHost() {
+  const host = String(window.location.hostname || "").toLowerCase();
+  return host === "localhost" || host === "127.0.0.1";
+}
+
+function buildBackendEndpoints(path) {
+  const normalizedPath = String(path || "").startsWith("/") ? String(path) : `/${path}`;
+  const endpoints = [`${window.location.origin}${normalizedPath}`];
+  if (isLocalDevHost()) {
+    if (window.location.port === "3001") endpoints.push(normalizedPath);
+    endpoints.push(`http://127.0.0.1:3001${normalizedPath}`);
+    endpoints.push(`http://localhost:3001${normalizedPath}`);
+  }
+  return [...new Set(endpoints)];
+}
+
 async function postJson(url, payload) {
   const response = await fetch(url, {
     method: "POST",
@@ -291,9 +306,7 @@ async function postJson(url, payload) {
 }
 
 async function callBackend(path, payload, method = "POST") {
-  const endpoints = [];
-  if (window.location.port === "3001") endpoints.push(path);
-  BACKEND_CANDIDATES.forEach((baseUrl) => endpoints.push(`${baseUrl}${path}`));
+  const endpoints = buildBackendEndpoints(path);
 
   let lastError = null;
   for (const endpoint of endpoints) {
@@ -1918,9 +1931,7 @@ function makeSafeFileName(fileName) {
 }
 
 async function uploadDocumentViaBackend(file) {
-  const endpoints = [];
-  if (window.location.port === "3001") endpoints.push("/api/uploads/doc");
-  BACKEND_CANDIDATES.forEach((baseUrl) => endpoints.push(`${baseUrl}/api/uploads/doc`));
+  const endpoints = buildBackendEndpoints("/api/uploads/doc");
 
   let lastError = null;
   for (const endpoint of endpoints) {

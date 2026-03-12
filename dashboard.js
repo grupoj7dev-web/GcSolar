@@ -142,7 +142,21 @@ function asDate(value) {
   if (value instanceof Date) return value;
   if (typeof value.toDate === "function") return value.toDate();
   if (typeof value === "string") {
-    const d = new Date(value);
+    const s = value.trim();
+    // Aceita datas salvas em pt-BR, ex.: 12/03/2026 ou 12/03/2026, 10:47:11.
+    const br = s.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:[,\s]+(\d{2}):(\d{2})(?::(\d{2}))?)?$/);
+    if (br) {
+      const day = Number(br[1]);
+      const month = Number(br[2]) - 1;
+      const year = Number(br[3]);
+      const hh = Number(br[4] || 0);
+      const mm = Number(br[5] || 0);
+      const ss = Number(br[6] || 0);
+      const d = new Date(year, month, day, hh, mm, ss);
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+
+    const d = new Date(s);
     return Number.isNaN(d.getTime()) ? null : d;
   }
   if (typeof value === "number") {
