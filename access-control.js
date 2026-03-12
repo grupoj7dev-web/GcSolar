@@ -55,7 +55,7 @@ const PAGE_PERMISSION_MAP = {
   "assinantes.html": "assinantes",
   "indicar-assinante.html": "indicarAssinante",
   "cadastrar-rateio.html": "rateio",
-  "calcular-desconto.html": "rateio",
+  "calcular-desconto.html": "desconto",
   "geradoras.html": "geradoras",
   "geradora-wizard.html": "geradoras",
   "fatura-manual.html": "faturas",
@@ -75,7 +75,7 @@ const NAV_PERMISSION_BY_HREF = {
   "assinantes.html": "assinantes",
   "indicar-assinante.html": "indicarAssinante",
   "cadastrar-rateio.html": "rateio",
-  "calcular-desconto.html": "rateio",
+  "calcular-desconto.html": "desconto",
   "geradoras.html": "geradoras",
   "fatura-manual.html": "faturas",
   "procuracao.html": "procuracao",
@@ -157,7 +157,6 @@ function canAccessPermission(profile, permissionKey) {
   if (!profile) return false;
   if (profile.isSuperAdmin || profile.isAdmin) return true;
   if (profile.isBlocked) return false;
-  if (permissionKey === "dashboard") return true;
 
   const permissions = profile.permissions || {};
   const direct = permissions[permissionKey];

@@ -439,9 +439,9 @@ function applyAsaasDataToEnergyHtml(energyHtml, asaasData) {
     "";
   const lineDigits = onlyDigits(rawLine);
   const lineReadable = lineDigits || "Linha digitavel indisponivel";
-  const barcodeDigits = onlyDigits(asaasData?.charges?.boleto?.barCode || "") || lineDigits;
+  const barcodeDigits = onlyDigits(asaasData?.charges?.boleto?.barCode || "");
   const barcodeImgUrl = barcodeDigits
-    ? `https://bwipjs-api.metafloor.com/?bcid=code128&scale=2&height=12&includetext=false&text=${encodeURIComponent(barcodeDigits)}`
+    ? `https://bwipjs-api.metafloor.com/?bcid=interleaved2of5&scale=2&height=12&includetext=false&text=${encodeURIComponent(barcodeDigits)}`
     : "";
 
   const barcodeEl = doc.querySelector(".j7-barcode-placeholder");
@@ -505,6 +505,101 @@ async function requestAsaasCreateCharges(payload) {
   throw lastError || new Error("Falha ao criar cobrancas no ASAAS.");
 }
 
+function resolveInvoiceTotals(record) {
+  const v2 =
+    record?.dados_calculados?.fatura_calculada_v2?.totals ||
+    record?.dados_calculados?.full_result?.fatura_calculada_v2?.totals ||
+    record?.fatura_calculada_v2?.totals ||
+    {};
+  const split =
+    record?.dados_calculados?.fatura_calculada?.split ||
+    record?.dados_calculados?.full_result?.fatura_calculada?.split ||
+    record?.fatura_calculada?.split ||
+    {};
+
+  return {
+    payable: toNumber(v2.payable ?? split.total_pagar ?? resolveValor(record)),
+    equatorial: toNumber(v2.equatorial ?? split.equatorial_total ?? resolveValor(record)),
+    company: toNumber(v2.goldtech ?? split.goldtech_liquido ?? 0),
+    economy: toNumber(v2.economy ?? split.economia_real ?? 0),
+    withoutDiscount: toNumber(split.valor_sem_solar ?? 0),
+  };
+}
+
+function resolveReceiverCompanyName(energyHtml) {
+  const raw = String(energyHtml || "").trim();
+  if (!raw) return "Energy Pay";
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(raw, "text/html");
+  const text = String(doc.body?.textContent || "").replace(/\s+/g, " ").trim();
+  const match = text.match(/RECEBEDOR:\s*([^|]+?)(?:\s*CNPJ:|\s*CPF:|$)/i);
+  return (match?.[1] || "Energy Pay").trim();
+}
+
+function buildWhatsappInvoiceCaption(record, dueBr, energyHtml) {
+  const totals = resolveInvoiceTotals(record);
+  const customerName = resolveNome(record);
+  const uc = resolveUc(record);
+  const reference = resolveReferencia(record);
+  const receiverCompany = resolveReceiverCompanyName(energyHtml);
+
+  return [
+    "Prezado(a) cliente",
+    `${customerName},`,
+    `A fatura de energia da`,
+    `UC ${uc}`,
+    `Referente a ${reference},`,
+    `com venc. em: ${dueBr}`,
+    `Ficou por,`,
+    `Valor TOTAL: ${brl(totals.payable)}`,
+    "",
+    "🚨Pagamento em 2️⃣ BOLETOS",
+    `${brl(totals.equatorial)} (EQUATORIAL)`,
+    `${brl(totals.company)} (${receiverCompany})`,
+    "",
+    `Sua conta sem desconto esse mês seria de ${brl(totals.withoutDiscount)}`,
+    "",
+    `Você ECONOMIZOU ${brl(totals.economy)} esse mês!!!`,
+  ].join("\n");
+}
+
+async function requestWhatsappInvoiceSend(payload) {
+  const endpoints = [];
+  if (window.location.port === "3001") {
+    endpoints.push("/api/whatsapp/send-invoice");
+  }
+  endpoints.push("http://127.0.0.1:3001/api/whatsapp/send-invoice");
+  endpoints.push("http://localhost:3001/api/whatsapp/send-invoice");
+
+  let lastError = null;
+  for (const endpoint of endpoints) {
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || body?.ok === false) {
+        throw new Error(body?.error || `HTTP ${response.status}`);
+      }
+      return body;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError || new Error("Falha ao enviar fatura por WhatsApp.");
+}
+
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Falha ao converter PDF da fatura."));
+    reader.readAsDataURL(blob);
+  });
+}
+
 function buildEmitidaPayload(record, paid = false, extra = {}) {
   return {
     ...record,
@@ -560,7 +655,6 @@ function tableRow(record) {
       <td class="actions-col actions-cell">
         <button class="actions-btn" type="button" data-menu-toggle aria-label="Ações"><i class="ph ph-dots-three"></i></button>
         <div class="actions-menu hidden">
-          <button class="menu-item view" type="button" data-action="view" data-id="${record.id}"><i class="ph ph-eye"></i>Ver</button>
           <button class="menu-item download" type="button" data-action="download" data-id="${record.id}"><i class="ph ph-download-simple"></i>Baixar Fatura</button>
           <button class="menu-item approve" type="button" data-action="approve" data-id="${record.id}"><i class="ph ph-check"></i>Aprovar</button>
           <button class="menu-item reject" type="button" data-action="reject" data-id="${record.id}"><i class="ph ph-thumbs-down"></i>Rejeitar</button>
@@ -706,13 +800,12 @@ function ensureHtml2Pdf() {
   return html2pdfLoader;
 }
 
-async function downloadCombinedAsPdf(record) {
+async function generateCombinedPdfBlob(record) {
   const energyHtml = String(record.fatura_energypay_html || "").trim();
   const equatorialPreview = String(record.fatura_equatorial_preview || "").trim();
 
   if (!energyHtml && !equatorialPreview) {
-    window.alert("Não foi encontrado arquivo para download.");
-    return;
+    throw new Error("Não foi encontrado arquivo para download.");
   }
 
   if (!pdfLibsLoader) {
@@ -738,10 +831,6 @@ async function downloadCombinedAsPdf(record) {
   await pdfLibsLoader;
 
   const { jsPDF } = window.jspdf;
-  const uc = String(resolveUc(record) || "sem-uc").replace(/[^\w-]/g, "");
-  const ref = String(resolveReferencia(record) || "sem-referencia").replace(/[^\w-]/g, "_");
-  const fileName = `fatura-combinada-${uc}-${ref}.pdf`;
-
   const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageW = 210;
   const pageH = 297;
@@ -850,10 +939,23 @@ async function downloadCombinedAsPdf(record) {
       pdf.addImage(equatorialPreview, "JPEG", second.x, second.y, second.w, second.h, undefined, "FAST");
     }
 
-    pdf.save(fileName);
+    return pdf.output("blob");
   } finally {
     captureHost.remove();
   }
+}
+
+async function downloadCombinedAsPdf(record) {
+  const blob = await generateCombinedPdfBlob(record);
+  const uc = String(resolveUc(record) || "sem-uc").replace(/[^\w-]/g, "");
+  const ref = String(resolveReferencia(record) || "sem-referencia").replace(/[^\w-]/g, "_");
+  const fileName = `fatura-combinada-${uc}-${ref}.pdf`;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
 
 function openInvoice(record) {
@@ -993,6 +1095,65 @@ async function approveInvoice(record, markAsPaid = false) {
     fatura_emitida_ref: emitidaRef.id,
     updated_at: serverTimestamp(),
   });
+
+  const emittedRecord = {
+    ...record,
+    ...emitidaPayload,
+    id: emitidaRef.id,
+  };
+
+  const customerPhone = String(record.telefone || record.phone || "").trim();
+  if (customerPhone) {
+    try {
+      const pdfBlob = await generateCombinedPdfBlob(emittedRecord);
+      const pdfDataUrl = await blobToDataUrl(pdfBlob);
+      const caption = buildWhatsappInvoiceCaption(emittedRecord, dueBr, emittedRecord.fatura_energypay_html);
+      const fileUc = String(resolveUc(emittedRecord) || "sem-uc").replace(/[^\w-]/g, "");
+      const fileRef = String(resolveReferencia(emittedRecord) || "sem-referencia").replace(/[^\w-]/g, "_");
+      const fileName = `fatura-energy-pay-${fileUc}-${fileRef}.pdf`;
+
+      await requestWhatsappInvoiceSend({
+        senderUserId: scope.uid,
+        senderInstanceName: `gcsolar-${scope.uid}`,
+        phone: customerPhone,
+        caption,
+        fileName,
+        mimeType: "application/pdf",
+        pdfDataUrl,
+      });
+
+      await Promise.all([
+        updateDoc(doc(db, COLL_EMITIDAS, emitidaRef.id), {
+          whatsapp_sent_at: serverTimestamp(),
+          whatsapp_sent_at_iso: new Date().toISOString(),
+          whatsapp_sent_to: customerPhone,
+          whatsapp_send_status: "sent",
+          updated_at: serverTimestamp(),
+        }).catch(() => {}),
+        updateDoc(doc(db, COLL_VALIDACAO, record.id), {
+          whatsapp_sent_at: serverTimestamp(),
+          whatsapp_sent_at_iso: new Date().toISOString(),
+          whatsapp_sent_to: customerPhone,
+          whatsapp_send_status: "sent",
+          updated_at: serverTimestamp(),
+        }).catch(() => {}),
+      ]);
+    } catch (error) {
+      console.error("Falha ao enviar fatura por WhatsApp:", error);
+      await Promise.all([
+        updateDoc(doc(db, COLL_EMITIDAS, emitidaRef.id), {
+          whatsapp_send_status: "error",
+          whatsapp_send_error: String(error?.message || error || ""),
+          updated_at: serverTimestamp(),
+        }).catch(() => {}),
+        updateDoc(doc(db, COLL_VALIDACAO, record.id), {
+          whatsapp_send_status: "error",
+          whatsapp_send_error: String(error?.message || error || ""),
+          updated_at: serverTimestamp(),
+        }).catch(() => {}),
+      ]);
+    }
+  }
 
   localStorage.setItem(LAST_EMITIDA_KEY, emitidaRef.id);
   window.location.href = "faturas-emitidas.html";
@@ -1140,7 +1301,6 @@ function bindEvents() {
     try {
       btn.disabled = true;
 
-      if (action === "view") openInvoice(record);
       if (action === "download") downloadInvoice(record);
       if (action === "approve") await approveInvoice(record, false);
       if (action === "reject") await rejectInvoice(record);

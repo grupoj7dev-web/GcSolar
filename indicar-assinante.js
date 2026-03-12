@@ -34,6 +34,11 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
+const storageFallbacks = [
+  storage,
+  getStorage(app, "gs://gcredito.firebasestorage.app"),
+  getStorage(app, "gs://gcredito.appspot.com"),
+];
 
 const COLL_PENDING = "assinantes_pendentes";
 const COLL_COLLABORATORS = "gcredito_funcionarios";
@@ -63,14 +68,26 @@ const indicacaoRateioBtn = document.getElementById("indicacaoRateioBtn");
 const indicacaoAssinarBtn = document.getElementById("indicacaoAssinarBtn");
 const indicacaoApproveBtn = document.getElementById("indicacaoApproveBtn");
 const indicacaoRejectBtn = document.getElementById("indicacaoRejectBtn");
-const indicacaoStatusSelect = document.getElementById("indicacaoStatusSelect");
-const indicacaoStatusApplyBtn = document.getElementById("indicacaoStatusApplyBtn");
+const contractModal = document.getElementById("contractModal");
+const contractModalName = document.getElementById("contractModalName");
+const contractModalMessage = document.getElementById("contractModalMessage");
+const contractModalSubtitle = document.getElementById("contractModalSubtitle");
+const contractModalLink = document.getElementById("contractModalLink");
+const contractModalCopyBtn = document.getElementById("contractModalCopyBtn");
+const contractModalFeedback = document.getElementById("contractModalFeedback");
+const contractModalOpenBtn = document.getElementById("contractModalOpenBtn");
+const contractModalCloseBtn = document.getElementById("contractModalCloseBtn");
+const contractModalCancelBtn = document.getElementById("contractModalCancelBtn");
 
 const statusFilters = document.getElementById("statusFilters");
 const searchIndicacoes = document.getElementById("searchIndicacoes");
 const clearFiltersBtn = document.getElementById("clearFiltersBtn");
+const statusFiltersKanban = document.getElementById("statusFiltersKanban");
+const searchIndicacoesKanban = document.getElementById("searchIndicacoesKanban");
+const clearFiltersBtnKanban = document.getElementById("clearFiltersBtnKanban");
 const viewListBtn = document.getElementById("viewListBtn");
 const viewKanbanBtn = document.getElementById("viewKanbanBtn");
+const novaIndicacaoTopBtnKanban = document.getElementById("novaIndicacaoTopBtnKanban");
 
 const step1Panel = document.getElementById("step1");
 const step2Panel = document.getElementById("step2");
@@ -153,7 +170,12 @@ let sellerByUid = new Map();
 let activeIndicacaoModalId = "";
 let activeStatusFilter = "all";
 let searchTerm = "";
-let viewMode = "list";
+let viewMode = "kanban";
+let draggingIndicacaoId = "";
+let activeContractSignUrl = "";
+let contractModalFeedbackTimer = 0;
+let lastKanbanRefreshAt = 0;
+const BACKEND_CANDIDATES = ["http://127.0.0.1:3001", "http://localhost:3001"];
 
 const FLOW_META = {
   aguardando_aprovacao: {
@@ -163,19 +185,19 @@ const FLOW_META = {
     step: 1,
     helper: "Pré-cadastro recebido e aguardando revisão interna.",
   },
-  pendente_rateio: {
-    label: "Pendente para rateio",
-    pillClass: "rateio",
-    badgeClass: "rateio",
-    step: 2,
-    helper: "Cadastro aprovado. Próximo passo: criar o rateio da UC.",
-  },
   pendente_assinatura: {
-    label: "Faltando assinatura",
+    label: "Aguardando assinatura",
     pillClass: "signature",
     badgeClass: "signature",
+    step: 2,
+    helper: "Cadastro aprovado. Aguardando assinatura do contrato.",
+  },
+  pendente_rateio: {
+    label: "Aguardando rateio",
+    pillClass: "rateio",
+    badgeClass: "rateio",
     step: 3,
-    helper: "Rateio concluído. Aguardando assinatura do contrato.",
+    helper: "Contrato assinado. Próximo passo: criar o rateio da UC.",
   },
   rejeitado: {
     label: "Rejeitado",
@@ -253,6 +275,40 @@ function setUpdated(extra = "") {
   updatedText.textContent = `Atualizado em ${new Date().toLocaleString("pt-BR")}${suffix}`;
 }
 
+async function postJson(url, payload) {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload || {}),
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok || body?.ok === false) {
+    throw new Error(body?.error || `HTTP ${response.status}`);
+  }
+  return body;
+}
+
+async function callBackend(path, payload, method = "POST") {
+  const endpoints = [];
+  if (window.location.port === "3001") endpoints.push(path);
+  BACKEND_CANDIDATES.forEach((baseUrl) => endpoints.push(`${baseUrl}${path}`));
+
+  let lastError = null;
+  for (const endpoint of endpoints) {
+    try {
+      if (method === "POST") return await postJson(endpoint, payload);
+      const response = await fetch(endpoint, { method: "GET" });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || body?.ok === false) throw new Error(body?.error || `HTTP ${response.status}`);
+      return body;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError || new Error("Backend indisponível.");
+}
+
 function updateSaveButtonLabel() {
   if (!salvarBtn) return;
   if (editingIndicacaoId) salvarBtn.textContent = "Salvar alterações";
@@ -264,9 +320,7 @@ function existingDocUrl(key) {
 }
 
 function showListMode() {
-  listSection?.classList.remove("hidden");
-  wizardCard?.classList.add("hidden");
-  kanbanSection?.classList.add("hidden");
+  showKanbanMode();
 }
 
 function showCadastroMode() {
@@ -287,6 +341,82 @@ function getContaNoNome() {
 
 function getModalidade() {
   return modalidadeInputs.find((item) => item.checked)?.value || "nao_mudar_titularidade";
+}
+
+function formatCpf(value) {
+  const digits = onlyDigits(value).slice(0, 11);
+  return digits
+    .replace(/^(\d{3})(\d)/, "$1.$2")
+    .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/\.(\d{3})(\d)/, ".$1-$2");
+}
+
+function formatCnpj(value) {
+  const digits = onlyDigits(value).slice(0, 14);
+  return digits
+    .replace(/^(\d{2})(\d)/, "$1.$2")
+    .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/\.(\d{3})(\d)/, ".$1/$2")
+    .replace(/(\d{4})(\d)/, "$1-$2");
+}
+
+function formatCpfCnpj(value) {
+  const digits = onlyDigits(value);
+  return digits.length <= 11 ? formatCpf(digits) : formatCnpj(digits);
+}
+
+function formatPhone(value) {
+  const digits = onlyDigits(value).slice(0, 11);
+  if (digits.length <= 10) {
+    return digits
+      .replace(/^(\d{2})(\d)/, "($1) $2")
+      .replace(/(\d{4})(\d)/, "$1-$2");
+  }
+  return digits
+    .replace(/^(\d{2})(\d)/, "($1) $2")
+    .replace(/(\d{5})(\d)/, "$1-$2");
+}
+
+function formatCep(value) {
+  const digits = onlyDigits(value).slice(0, 8);
+  return digits.replace(/^(\d{5})(\d)/, "$1-$2");
+}
+
+function formatUc(value) {
+  return onlyDigits(value).slice(0, 20);
+}
+
+function formatUf(value) {
+  return String(value || "")
+    .replace(/[^a-z]/gi, "")
+    .toUpperCase()
+    .slice(0, 2);
+}
+
+function applyInputMask(input) {
+  if (!input) return;
+  const mask = input.dataset.mask || "";
+  const current = input.value || "";
+
+  if (mask === "cpf") input.value = formatCpf(current);
+  else if (mask === "cnpj") input.value = formatCnpj(current);
+  else if (mask === "cpf-cnpj") input.value = formatCpfCnpj(current);
+  else if (mask === "phone") input.value = formatPhone(current);
+  else if (mask === "cep") input.value = formatCep(current);
+  else if (mask === "uc") input.value = formatUc(current);
+  else if (mask === "uf") input.value = formatUf(current);
+}
+
+function bindInputMasks() {
+  document.querySelectorAll("[data-mask]").forEach((input) => {
+    applyInputMask(input);
+    input.addEventListener("input", () => applyInputMask(input));
+    input.addEventListener("blur", () => applyInputMask(input));
+  });
+}
+
+function refreshFormMasks() {
+  document.querySelectorAll("[data-mask]").forEach((input) => applyInputMask(input));
 }
 
 function updateTypeUI() {
@@ -385,11 +515,11 @@ function normalizeIndicacaoStatus(value) {
   if (!raw) return "aguardando_aprovacao";
   if (raw.includes("rejeit")) return "rejeitado";
   if (raw.includes("assinatura") || raw.includes("assinar")) return "pendente_assinatura";
-  if (raw.includes("aguardando")) return "aguardando_aprovacao";
   if (raw.includes("aguardando_aprov") || raw.includes("aprovacao")) return "aguardando_aprovacao";
   if (raw.includes("pendente_rateio") || raw.includes("rateio")) return "pendente_rateio";
   if (raw.includes("contrato_enviado")) return "pendente_assinatura";
-  if (raw.includes("aprov")) return "pendente_rateio";
+  if (raw === "aprovado" || raw.includes("aprovad")) return "pendente_assinatura";
+  if (raw.includes("aguardando")) return "aguardando_aprovacao";
   if (raw.includes("ativo")) return "ativo";
   return "aguardando_aprovacao";
 }
@@ -416,8 +546,8 @@ function buildFlowTimeline(item) {
   const meta = getIndicacaoFlowMeta(item);
   const steps = [
     { number: 1, title: "Triagem", desc: "Aprovar ou reprovar o pré-assinante." },
-    { number: 2, title: "Rateio", desc: "Após aprovação, preparar o rateio da unidade." },
-    { number: 3, title: "Assinatura", desc: "Coletar assinatura do contrato." },
+    { number: 2, title: "Assinatura", desc: "Coletar assinatura do contrato." },
+    { number: 3, title: "Rateio", desc: "Após assinatura, preparar o rateio da unidade." },
     { number: 4, title: "Assinante", desc: "Concluir a migração para a base ativa." },
   ];
 
@@ -445,11 +575,9 @@ function buildFlowTimeline(item) {
   `;
 }
 
-let activeStatusFilter = "all";
-let searchTerm = "";
-
 function buildStatusFilters() {
-  if (!statusFilters) return;
+  const filterHosts = [statusFilters, statusFiltersKanban].filter(Boolean);
+  if (!filterHosts.length) return;
   const counts = indicacoesCache.reduce((acc, item) => {
     const key = normalizeIndicacaoStatus(item.status || item.statusLabel);
     acc[key] = (acc[key] || 0) + 1;
@@ -459,19 +587,23 @@ function buildStatusFilters() {
   const chips = [
     { key: "all", label: "Todos", count: indicacoesCache.length },
     { key: "aguardando_aprovacao", label: FLOW_META.aguardando_aprovacao.label, count: counts.aguardando_aprovacao || 0 },
-    { key: "pendente_rateio", label: FLOW_META.pendente_rateio.label, count: counts.pendente_rateio || 0 },
     { key: "pendente_assinatura", label: FLOW_META.pendente_assinatura.label, count: counts.pendente_assinatura || 0 },
+    { key: "pendente_rateio", label: FLOW_META.pendente_rateio.label, count: counts.pendente_rateio || 0 },
     { key: "ativo", label: FLOW_META.ativo.label, count: counts.ativo || 0 },
     { key: "rejeitado", label: FLOW_META.rejeitado.label, count: counts.rejeitado || 0 },
   ];
 
-  statusFilters.innerHTML = chips
+  const html = chips
     .map((chip) => `
       <button type="button" class="status-chip ${activeStatusFilter === chip.key ? "active" : ""}" data-status="${chip.key}">
         ${escapeHtml(chip.label)} <span>${chip.count}</span>
       </button>
     `)
     .join("");
+
+  filterHosts.forEach((host) => {
+    host.innerHTML = html;
+  });
 }
 
 function filteredIndicacoes() {
@@ -495,33 +627,6 @@ function resolveSellerName(item) {
   const uid = String(item.createdBy || item.user_id || item.created_by || "");
   const mapped = uid ? sellerByUid.get(uid) : "";
   return cleanText(mapped || item.nomeAdmin || item.createdByName || item.createdByEmail || uid || "-");
-}
-
-async function normalizeWesleyIndicacoes(docsList) {
-  const updates = docsList
-    .filter((item) => resolveSellerName(item).toLowerCase() === "wesley")
-    .filter((item) => normalizeIndicacaoStatus(item.status || item.statusLabel) !== "aguardando_aprovacao")
-    .map(async (item) => {
-      const nowIso = new Date().toISOString();
-      await updateDoc(doc(db, COLL_PENDING, item.id), {
-        status: "aguardando_aprovacao",
-        statusLabel: "Aguardando aprovação",
-        updatedAt: serverTimestamp(),
-        updatedAtISO: nowIso,
-      });
-      return {
-        ...item,
-        status: "aguardando_aprovacao",
-        statusLabel: "Aguardando aprovação",
-        updatedAtISO: nowIso,
-      };
-    });
-
-  if (!updates.length) return docsList;
-
-  const updatedItems = await Promise.all(updates);
-  const updatedById = new Map(updatedItems.map((item) => [String(item.id), item]));
-  return docsList.map((item) => updatedById.get(String(item.id)) || item);
 }
 
 function renderIndicacoesList() {
@@ -594,8 +699,8 @@ function renderKanbanBoard() {
 
   const columns = [
     { key: "aguardando_aprovacao", label: FLOW_META.aguardando_aprovacao.label },
-    { key: "pendente_rateio", label: FLOW_META.pendente_rateio.label },
     { key: "pendente_assinatura", label: FLOW_META.pendente_assinatura.label },
+    { key: "pendente_rateio", label: FLOW_META.pendente_rateio.label },
     { key: "ativo", label: FLOW_META.ativo.label },
     { key: "rejeitado", label: FLOW_META.rejeitado.label },
   ];
@@ -611,23 +716,16 @@ function renderKanbanBoard() {
             const doc = onlyDigits(item.cpfCnpj || item.cpf || item.cnpj || "-");
             const uc = onlyDigits(item.uc || "-");
             return `
-              <article class="kanban-card-item">
+              <article class="kanban-card-item" data-view-id="${escapeHtml(item.id)}" data-drag-id="${escapeHtml(item.id)}" draggable="true" role="button" tabindex="0" aria-label="Abrir ${escapeHtml(nome || "-")}">
                 <strong>${escapeHtml(nome || "-")}</strong>
                 <div class="kanban-meta">
-                  <span>Doc: ${escapeHtml(doc || "-")}</span>
-                  <span>UC: ${escapeHtml(uc || "-")}</span>
+                  <span><span class="kanban-meta-label">Doc</span> ${escapeHtml(doc || "-")}</span>
+                  <span><span class="kanban-meta-label">UC</span> ${escapeHtml(uc || "-")}</span>
                 </div>
-                <div class="kanban-actions">
-                  <button type="button" class="btn-secondary" data-view-id="${escapeHtml(item.id)}">Ver</button>
-                  <button type="button" class="btn-secondary" data-edit-id="${escapeHtml(item.id)}">Editar</button>
-                  ${col.key === "aguardando_aprovacao" ? `<button type="button" class="btn-primary-solid" data-act="approve" data-id="${escapeHtml(item.id)}">Aprovar</button>` : ""}
-                  ${col.key === "aguardando_aprovacao" ? `<button type="button" class="btn-danger" data-act="reject" data-id="${escapeHtml(item.id)}">Rejeitar</button>` : ""}
-                  ${col.key === "pendente_rateio" ? `<button type="button" class="btn-primary-solid" data-act="rateio" data-id="${escapeHtml(item.id)}">Assinatura pendente</button>` : ""}
-                  ${col.key === "pendente_assinatura" ? `<button type="button" class="btn-primary-solid" data-act="assinar" data-id="${escapeHtml(item.id)}">Concluir assinatura</button>` : ""}
-                </div>
+                <div class="kanban-card-foot">Clique para abrir</div>
               </article>
             `;
-          }).join("") : `<p class="empty-row">Sem itens</p>`}
+          }).join("") : `<div class="kanban-empty">Sem itens nesta etapa</div>`}
         </div>
       </div>
     `;
@@ -639,8 +737,10 @@ function resetToNewIndicacaoForm(message) {
   editingIndicacaoData = null;
   form.reset();
   tipoPessoaInput.value = "fisica";
+  estadoInput.value = "";
   updateTypeUI();
   updateTitularidadeUI();
+  refreshFormMasks();
   updateSummary();
   setStep(1);
   showCadastroMode();
@@ -700,6 +800,7 @@ function populateFormForEdit(item) {
     input.checked = input.value === modalidadeValue;
   });
 
+  refreshFormMasks();
   docContaEnergiaInput.value = "";
   docIdentificacaoInput.value = "";
   docContratoSocialInput.value = "";
@@ -742,7 +843,7 @@ function prettyModalidade(value) {
     : "Não mudar titularidade (geração compartilhada)";
 }
 
-function buildIndicacaoDetails(item) {
+function buildIndicacaoDetails(item, signUrl = "") {
   if (!item) return "";
   const endereco = item?.endereco || {};
   const docs = item?.documentos || {};
@@ -756,12 +857,33 @@ function buildIndicacaoDetails(item) {
   const titularidade = item.contaEnergiaNoNomeDoContratante
     ? "Conta no nome do contratante"
     : "Conta em nome de terceiro";
+  const contratoPdfUrl = item?.contrato?.pdfUrl || item?.contratoPdfUrl || docs.contratoPdfUrl || "";
+  const stage = normalizeIndicacaoStatus(item.status || item.statusLabel);
+  const contractActionUrl = signUrl || contratoPdfUrl;
+  const contractActionLabel = signUrl ? "Assinar contrato" : "Abrir contrato";
+  const contractActionDescription = signUrl
+    ? "Link da página de assinatura com confirmação por WhatsApp"
+    : "PDF disponível para assinatura e conferência";
   const docLinks = [
     buildDocLink("Conta de energia", docs.contaEnergiaUrl, "Fatura da unidade consumidora"),
     buildDocLink("Documento principal", docs.cnhUrl, "CNH ou RG do titular"),
     buildDocLink("Contrato social", docs.contratoSocialUrl, "Documento societário da empresa"),
     buildDocLink("Documento do terceiro", docs.cnhDonoContaUrl, "CNH ou RG do titular da conta"),
+    buildDocLink(stage === "pendente_assinatura" ? contractActionLabel : "Contrato gerado", contractActionUrl, contractActionDescription),
   ].filter(Boolean);
+  const contractActionCard = stage === "pendente_assinatura" && contractActionUrl
+    ? `
+    <section class="dossier-section">
+      <div class="dossier-section-head">
+        <h4>Contrato para assinatura</h4>
+        <p>Use este link para abrir o contrato enquanto o status estiver em aguardando assinatura.</p>
+      </div>
+      <div class="dossier-docs">
+        ${buildDocLink("Assinar contrato", contractActionUrl, "Link da página de assinatura com confirmação por WhatsApp")}
+      </div>
+    </section>
+  `
+    : "";
 
   return `
     <section class="dossier-hero">
@@ -808,9 +930,10 @@ function buildIndicacaoDetails(item) {
       </div>
       <div class="dossier-grid">
         ${buildDetailField("Etapa atual", flowMeta.label)}
-        ${buildDetailField("Próxima ação", flowMeta.step === 1 ? "Aprovar ou reprovar" : flowMeta.step === 2 ? "Criar/concluir rateio" : flowMeta.step === 3 ? "Fluxo finalizado" : "Cadastro encerrado")}
+        ${buildDetailField("Próxima ação", flowMeta.step === 1 ? "Aprovar ou reprovar" : flowMeta.step === 2 ? "Coletar assinatura" : flowMeta.step === 3 ? "Criar e concluir rateio" : flowMeta.step === 4 ? "Fluxo finalizado" : "Cadastro encerrado")}
       </div>
     </section>
+    ${contractActionCard}
     <section class="dossier-section">
       <div class="dossier-section-head">
         <h4>Cadastro</h4>
@@ -873,17 +996,30 @@ function buildIndicacaoDetails(item) {
   `;
 }
 
-function openIndicacaoModal(item) {
+async function openIndicacaoModal(item) {
   if (!item) return;
   activeIndicacaoModalId = String(item.id || "");
   indicacaoModalStatus.textContent = `Status: ${statusLabel(item)}`;
-  indicacaoModalBody.innerHTML = buildIndicacaoDetails(item);
   const stage = normalizeIndicacaoStatus(item.status || item.statusLabel);
+  indicacaoModalBody.innerHTML = '<div class="empty-row">Carregando dossiê...</div>';
+  let signUrl = "";
+  if (stage === "pendente_assinatura" && (item?.contrato?.pdfUrl || item?.contratoPdfUrl || item?.documentos?.contratoPdfUrl)) {
+    try {
+      signUrl = await buildContractSignUrl(
+        { url: item?.contrato?.pdfUrl || item?.contratoPdfUrl || item?.documentos?.contratoPdfUrl || "" },
+        item
+      );
+    } catch (error) {
+      console.error("Falha ao gerar link de assinatura para o dossiê", error);
+    }
+  }
+  indicacaoModalBody.innerHTML = buildIndicacaoDetails(item, signUrl);
   indicacaoApproveBtn.classList.toggle("hidden", stage !== "aguardando_aprovacao");
   indicacaoRejectBtn.classList.toggle("hidden", stage !== "aguardando_aprovacao");
   indicacaoRateioBtn.classList.toggle("hidden", stage !== "pendente_rateio");
   indicacaoAssinarBtn?.classList.toggle("hidden", stage !== "pendente_assinatura");
-  if (indicacaoStatusSelect) indicacaoStatusSelect.value = stage;
+  if (indicacaoAssinarBtn) indicacaoAssinarBtn.textContent = "Marcar rateio pendente";
+  if (indicacaoRateioBtn) indicacaoRateioBtn.textContent = "Ir para rateio";
   indicacaoModal.classList.remove("hidden");
 }
 
@@ -894,12 +1030,84 @@ function closeIndicacaoModal() {
   indicacaoModal.classList.add("hidden");
 }
 
+async function buildContractSignUrl(contract, item) {
+  const response = await callBackend("/api/contracts/create-sign-link", {
+    pendingId: String(item?.id || ""),
+    contractUrl: String(contract?.url || ""),
+    signerName: String(item?.nome || item?.razaoSocial || item?.nomeFantasia || ""),
+    signerDocument: String(item?.cpfCnpj || ""),
+    signerPhone: String(item?.telefone || item?.phone || ""),
+    senderUserId: String(scope?.uid || ""),
+  });
+  const token = String(response?.token || "");
+  if (!token) throw new Error("Nao foi possivel criar o link de assinatura.");
+  const baseUrl = new URL("assinar-contrato.html", window.location.href);
+  baseUrl.searchParams.set("t", token);
+  const signerPhone = normalizePhone(item?.telefone || item?.phone || "");
+  if (signerPhone) baseUrl.searchParams.set("phone", signerPhone);
+  if (scope?.uid) baseUrl.searchParams.set("sender", String(scope.uid));
+  if (scope?.uid) baseUrl.searchParams.set("senderInstance", `gcsolar-${String(scope.uid)}`);
+  return baseUrl.toString();
+}
+
+async function openContractModal(contract, item) {
+  if (!contractModal || !contract?.url) return;
+  const nome = item?.nome || item?.razaoSocial || item?.nomeFantasia || "assinante";
+  const signUrl = await buildContractSignUrl(contract, item);
+  activeContractSignUrl = signUrl;
+  if (contractModalName) contractModalName.textContent = `Contrato de ${nome}`;
+  if (contractModalSubtitle) contractModalSubtitle.textContent = "O contrato foi gerado com sucesso e o link de assinatura já está disponível.";
+  if (contractModalMessage) contractModalMessage.textContent = "Contrato enviado para o WhatsApp do cliente.";
+  if (contractModalLink) contractModalLink.href = contract.url;
+  if (contractModalOpenBtn) contractModalOpenBtn.href = contract.url;
+  if (contractModalFeedback) contractModalFeedback.classList.add("hidden");
+  contractModal.classList.remove("hidden");
+}
+
+function closeContractModal() {
+  window.clearTimeout(contractModalFeedbackTimer);
+  contractModalFeedbackTimer = 0;
+  activeContractSignUrl = "";
+  if (contractModalLink) contractModalLink.removeAttribute("href");
+  if (contractModalOpenBtn) contractModalOpenBtn.removeAttribute("href");
+  if (contractModalFeedback) contractModalFeedback.classList.add("hidden");
+  contractModal?.classList.add("hidden");
+}
+
+function buildContractPayload(item) {
+  return {
+    subscriber: {
+      id: item.id || "",
+      tipoPessoa: item.tipoPessoa || "fisica",
+      nome: item.nome || "",
+      razaoSocial: item.razaoSocial || "",
+      nomeFantasia: item.nomeFantasia || "",
+      nomeRepresentante: item.nomeRepresentante || "",
+      cpfCnpj: item.cpfCnpj || "",
+      email: item.email || "",
+      telefone: item.telefone || "",
+      uc: item.uc || "",
+      consumoMedio: Number(item.consumoMedio || 0),
+      desconto: Number(item.desconto || 0),
+      modalidade: item.modalidade || "",
+      isencaoImpostos: Boolean(item.isencaoImpostos),
+      isencaoFioB: Boolean(item.isencaoFioB),
+      contaEnergiaNoNomeDoContratante: Boolean(item.contaEnergiaNoNomeDoContratante),
+      nomeDonoConta: item.nomeDonoConta || "",
+      cpfCnpjDonoConta: item.cpfCnpjDonoConta || "",
+      dataNascimentoDonoConta: item.dataNascimentoDonoConta || "",
+      endereco: item.endereco || {},
+    },
+  };
+}
+
 function buildSubscriberPayloadFromIndicacao(item) {
   const isCompany = String(item.tipoPessoa || "").toLowerCase() === "juridica";
   const holderType = isCompany ? "company" : "person";
   const holderName = item.nome || item.razaoSocial || item.nomeFantasia || "";
   const cpfCnpj = item.cpfCnpj || "";
   const nowIso = new Date().toISOString();
+  const contratoPdfUrl = item?.contrato?.pdfUrl || item?.contratoPdfUrl || item?.documentos?.contratoPdfUrl || "";
 
   return {
     user_id: item.createdBy || item.user_id || scope.uid,
@@ -932,6 +1140,11 @@ function buildSubscriberPayloadFromIndicacao(item) {
       contractedKwh: Number(item.consumoMedio || 0),
       discountPercentage: Number(item.desconto || 0),
     },
+    contrato: contratoPdfUrl ? {
+      pdfUrl: contratoPdfUrl,
+      generatedAt: item?.contrato?.generatedAt || item?.contratoGeradoEm || nowIso,
+    } : {},
+    contratoPdfUrl,
     created_at: item.createdAtISO || nowIso,
     updated_at: nowIso,
     pending_source_id: item.id,
@@ -941,8 +1154,8 @@ function buildSubscriberPayloadFromIndicacao(item) {
 async function approveIndicacao(item) {
   const nowIso = new Date().toISOString();
   await updateDoc(doc(db, COLL_PENDING, item.id), {
-    status: "pendente_rateio",
-    statusLabel: "Pendente para rateio",
+    status: "pendente_assinatura",
+    statusLabel: "Aguardando assinatura",
     approved_by: scope.uid,
     approved_at: nowIso,
     updatedAt: serverTimestamp(),
@@ -972,25 +1185,150 @@ async function updateIndicacaoStatus(item, statusKey) {
 }
 
 async function completeIndicacaoRateio(item) {
-  const nowIso = new Date().toISOString();
-  await updateDoc(doc(db, COLL_PENDING, item.id), {
-    status: "pendente_assinatura",
-    statusLabel: "Faltando assinatura",
-    updatedAt: serverTimestamp(),
-    updatedAtISO: nowIso,
-  });
-}
-
-async function completeIndicacaoAssinatura(item) {
   const subscriberPayload = {
     ...buildSubscriberPayloadFromIndicacao(item),
     status: "active",
-    onboarding_stage: "assinatura_concluida",
+    onboarding_stage: "rateio_concluido",
     onboarding_origin_status: normalizeIndicacaoStatus(item.status || item.statusLabel),
     migrated_at: new Date().toISOString(),
   };
   await addDoc(collection(db, COLL_SUBSCRIBERS), subscriberPayload);
   await deleteDoc(doc(db, COLL_PENDING, item.id));
+}
+
+async function completeIndicacaoAssinatura(item) {
+  const nowIso = new Date().toISOString();
+  await updateDoc(doc(db, COLL_PENDING, item.id), {
+    status: "pendente_rateio",
+    statusLabel: "Aguardando rateio",
+    updatedAt: serverTimestamp(),
+    updatedAtISO: nowIso,
+  });
+}
+
+async function syncSignedIndicacoes(items) {
+  const pendentes = (items || []).filter(
+    (item) => normalizeIndicacaoStatus(item?.status || item?.statusLabel) === "pendente_assinatura"
+  );
+  if (!pendentes.length) return items;
+
+  let response;
+  try {
+    response = await callBackend("/api/contracts/signed-status", {
+      pendingIds: pendentes.map((item) => String(item.id || "")),
+    });
+  } catch (error) {
+    console.warn("Nao foi possivel sincronizar assinaturas concluídas.", error);
+    return items;
+  }
+
+  const statuses = response?.statuses || {};
+  const updates = [];
+  const signedMap = new Map();
+
+  pendentes.forEach((item) => {
+    const match = statuses[String(item.id || "")];
+    if (!match?.signedAt) return;
+    signedMap.set(String(item.id || ""), match);
+    updates.push(
+      updateDoc(doc(db, COLL_PENDING, item.id), {
+        status: "pendente_rateio",
+        statusLabel: "Aguardando rateio",
+        assinaturaConcluidaEm: match.signedAt,
+        contrato: {
+          ...(item.contrato || {}),
+          signedPdfUrl: String(match.signedContractUrl || item?.contrato?.signedPdfUrl || ""),
+        },
+        contratoAssinadoUrl: String(match.signedContractUrl || item?.contratoAssinadoUrl || ""),
+        assinaturaComprovanteUrl: String(match.signatureRecordUrl || item?.assinaturaComprovanteUrl || ""),
+        assinaturaImagemUrl: String(match.signatureImageUrl || item?.assinaturaImagemUrl || ""),
+        updatedAt: serverTimestamp(),
+        updatedAtISO: new Date().toISOString(),
+      }).catch((error) => {
+        console.warn(`Falha ao sincronizar assinatura da indicação ${item.id}.`, error);
+      })
+    );
+  });
+
+  if (updates.length) {
+    await Promise.all(updates);
+  }
+
+  return items.map((item) => {
+    const match = signedMap.get(String(item.id || ""));
+    if (!match?.signedAt) return item;
+    return {
+      ...item,
+      status: "pendente_rateio",
+      statusLabel: "Aguardando rateio",
+      assinaturaConcluidaEm: match.signedAt,
+      contrato: {
+        ...(item.contrato || {}),
+        signedPdfUrl: String(match.signedContractUrl || item?.contrato?.signedPdfUrl || ""),
+      },
+      contratoAssinadoUrl: String(match.signedContractUrl || item?.contratoAssinadoUrl || ""),
+      assinaturaComprovanteUrl: String(match.signatureRecordUrl || item?.assinaturaComprovanteUrl || ""),
+      assinaturaImagemUrl: String(match.signatureImageUrl || item?.assinaturaImagemUrl || ""),
+    };
+  });
+}
+
+async function generateIndicacaoContract(item) {
+  const response = await callBackend("/api/contracts/generate", buildContractPayload(item));
+  const contract = response?.contract;
+  if (!contract?.url) {
+    throw new Error("Contrato não retornou URL.");
+  }
+
+  const nowIso = contract.generatedAt || new Date().toISOString();
+  const currentDocs = item.documentos || {};
+  await updateDoc(doc(db, COLL_PENDING, item.id), {
+    contrato: {
+      pdfUrl: contract.url,
+      generatedAt: nowIso,
+      fileName: contract.fileName || "",
+    },
+    contratoPdfUrl: contract.url,
+    contratoGeradoEm: nowIso,
+    documentos: {
+      ...currentDocs,
+      contratoPdfUrl: contract.url,
+    },
+    updatedAt: serverTimestamp(),
+    updatedAtISO: nowIso,
+  });
+
+  return contract;
+}
+
+async function handleIndicacaoMove(item, targetStatus) {
+  const currentStatus = normalizeIndicacaoStatus(item?.status || item?.statusLabel);
+  const nextStatus = normalizeIndicacaoStatus(targetStatus);
+  if (!item || !nextStatus || currentStatus === nextStatus) return { moved: false, contract: null };
+
+  if (currentStatus === "aguardando_aprovacao" && nextStatus === "pendente_assinatura") {
+    const contract = await generateIndicacaoContract(item);
+    await approveIndicacao(item);
+    return { moved: true, contract };
+  }
+
+  if (currentStatus === "pendente_assinatura" && nextStatus === "pendente_rateio") {
+    await completeIndicacaoAssinatura(item);
+    return { moved: true, contract: null };
+  }
+
+  if (currentStatus === "pendente_rateio" && nextStatus === "ativo") {
+    await completeIndicacaoRateio(item);
+    return { moved: true, contract: null };
+  }
+
+  if (nextStatus === "rejeitado") {
+    await rejectIndicacao(item);
+    return { moved: true, contract: null };
+  }
+
+  await updateIndicacaoStatus(item, nextStatus);
+  return { moved: true, contract: null };
 }
 
 function isPartnerLikeRecord(item) {
@@ -1129,14 +1467,14 @@ async function loadIndicacoesList() {
     indicacoesCache = pendingDocs
       .map((d) => ({ id: d.id, ...d.data() }))
       .filter(isPreAssinanteRecord)
-      .filter((x) => !matchesPartner(x))
+      .filter((x) => !isPartnerLikeRecord(x))
       .sort((a, b) => {
         const ad = asDate(a.createdAt || a.createdAtISO || a.created_at)?.getTime() || 0;
         const bd = asDate(b.createdAt || b.createdAtISO || b.created_at)?.getTime() || 0;
         return bd - ad;
       });
 
-    indicacoesCache = await normalizeWesleyIndicacoes(indicacoesCache);
+    indicacoesCache = await syncSignedIndicacoes(indicacoesCache);
 
     buildStatusFilters();
     renderIndicacoesList();
@@ -1188,7 +1526,17 @@ function readStep1Data() {
 
 function updateSummary() {
   const data = readStep1Data();
-  summaryBar.innerHTML = `Cliente: <strong>${escapeHtml(data.nome || "- ")}</strong> | Documento: <strong>${escapeHtml(data.cpfCnpj || "-")}</strong> | UC: <strong>${escapeHtml(data.uc || "-")}</strong> | Modalidade: <strong>${escapeHtml(data.modalidade)}</strong>`;
+  const docLabel = data.cpfCnpj ? formatCpfCnpj(data.cpfCnpj) : "-";
+  const phoneLabel = data.telefone ? formatPhone(data.telefone) : "-";
+  const modalidadeLabel = prettyModalidade(data.modalidade);
+  summaryBar.innerHTML = `Cliente: <strong>${escapeHtml(data.nome || "-")}</strong> | Documento: <strong>${escapeHtml(docLabel)}</strong> | WhatsApp: <strong>${escapeHtml(phoneLabel)}</strong> | UC: <strong>${escapeHtml(data.uc || "-")}</strong> | Modalidade: <strong>${escapeHtml(modalidadeLabel)}</strong>`;
+}
+
+function resetKanbanFilters() {
+  activeStatusFilter = "all";
+  searchTerm = "";
+  if (searchIndicacoes) searchIndicacoes.value = "";
+  if (searchIndicacoesKanban) searchIndicacoesKanban.value = "";
 }
 
 function validateStep1() {
@@ -1545,16 +1893,79 @@ function makeSafeFileName(fileName) {
     .slice(-90);
 }
 
+async function uploadDocumentViaBackend(file) {
+  const endpoints = [];
+  if (window.location.port === "3001") endpoints.push("/api/uploads/doc");
+  BACKEND_CANDIDATES.forEach((baseUrl) => endpoints.push(`${baseUrl}/api/uploads/doc`));
+
+  let lastError = null;
+  for (const endpoint of endpoints) {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await fetch(endpoint, {
+        method: "POST",
+        body: formData,
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || body?.error) {
+        throw new Error(body?.error || `HTTP ${response.status}`);
+      }
+      const url = body.url
+        ? (String(body.url).startsWith("http") ? body.url : `${window.location.origin}${body.url}`)
+        : "";
+      return url;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError || new Error("Backend indisponível para upload.");
+}
+
 async function uploadDocument(file, key) {
   if (!file) return "";
 
+  try {
+    return await uploadDocumentViaBackend(file);
+  } catch (backendError) {
+    console.error("Falha no fallback de upload via backend", {
+      key,
+      name: file.name,
+      error: backendError,
+    });
+  }
+
   const now = Date.now();
   const safeName = makeSafeFileName(file.name);
-  const path = `assinantes_pendentes/${scope.tenantId}/${scope.uid}/${now}_${key}_${safeName}`;
+  const paths = [
+    `assinantes_pendentes/${scope.tenantId}/${scope.uid}/${now}_${key}_${safeName}`,
+    `assinantes_pendentes/${scope.tenantId}/${scope.uid}/indicacao/${now}_${key}_${safeName}`,
+  ];
 
-  const fileRef = ref(storage, path);
-  await uploadBytes(fileRef, file, { contentType: file.type || "application/octet-stream" });
-  return getDownloadURL(fileRef);
+  let lastError = null;
+  for (const storageInstance of storageFallbacks) {
+    for (const path of paths) {
+      try {
+        const fileRef = ref(storageInstance, path);
+        await uploadBytes(fileRef, file, { contentType: file.type || "application/octet-stream" });
+        return await getDownloadURL(fileRef);
+      } catch (error) {
+        lastError = error;
+        console.error("Falha no upload do documento", {
+          key,
+          name: file.name,
+          path,
+          bucket: storageInstance.app.options.storageBucket,
+          error,
+          serverResponse: error?.serverResponse_ || error?.customData || null,
+        });
+      }
+    }
+  }
+
+  const code = lastError?.code ? ` (${lastError.code})` : "";
+  throw new Error(`Falha ao enviar "${file.name}"${code}. Verifique o Storage e tente novamente.`);
 }
 
 function validateStep2Files() {
@@ -1668,6 +2079,7 @@ async function saveIndicacao() {
       await addDoc(collection(db, COLL_PENDING), payload);
     }
 
+    resetKanbanFilters();
     await loadIndicacoesList();
     setStep(3);
     setStatus(editingIndicacaoId ? "Indicação atualizada com sucesso." : "Indicacao salva com sucesso.", "success");
@@ -1734,6 +2146,48 @@ function bindEvents() {
     fillAddressFromCep();
   });
 
+  [
+    nomeCompletoInput,
+    cpfInput,
+    dataNascimentoInput,
+    razaoSocialInput,
+    nomeFantasiaInput,
+    cnpjInput,
+    nomeRepresentanteInput,
+    dataFundacaoInput,
+    emailInput,
+    telefoneInput,
+    ucInput,
+    consumoMedioInput,
+    descontoInput,
+    cepInput,
+    logradouroInput,
+    numeroInput,
+    complementoInput,
+    bairroInput,
+    cidadeInput,
+    estadoInput,
+    nomeDonoContaInput,
+    cpfCnpjDonoContaInput,
+    dataNascimentoDonoContaInput,
+  ].forEach((input) => {
+    input?.addEventListener("input", () => {
+      if (input === estadoInput) estadoInput.value = formatUf(estadoInput.value);
+      updateSummary();
+    });
+  });
+
+  [
+    isencaoImpostosInput,
+    isencaoFioBInput,
+    ...contaNoNomeInputs,
+    ...modalidadeInputs,
+  ].forEach((input) => {
+    input?.addEventListener("change", () => {
+      updateSummary();
+    });
+  });
+
   cepInput?.addEventListener("blur", () => {
     if (onlyDigits(cepInput.value).length === 8) fillAddressFromCep();
   });
@@ -1751,16 +2205,20 @@ function bindEvents() {
     resetToNewIndicacaoForm("Preencha os dados e avance para o upload.");
   });
 
+  novaIndicacaoTopBtnKanban?.addEventListener("click", () => {
+    resetToNewIndicacaoForm("Preencha os dados e avance para o upload.");
+  });
+
   voltarListaTopBtn?.addEventListener("click", async () => {
     await loadIndicacoesList();
     showListMode();
-    setStatus("Lista de indicações atualizada.");
+    setStatus("Kanban de indicações atualizado.");
   });
 
   voltarListaBtn?.addEventListener("click", async () => {
     await loadIndicacoesList();
     showListMode();
-    setStatus("Lista de indicações atualizada.");
+    setStatus("Kanban de indicações atualizado.");
   });
 
   indicacoesTableBody?.addEventListener("click", async (event) => {
@@ -1797,30 +2255,76 @@ function bindEvents() {
       if (item) populateFormForEdit(item);
       return;
     }
-    const actBtn = event.target.closest("[data-act]");
-    if (!actBtn) return;
-    const id = String(actBtn.getAttribute("data-id") || "");
-    const item = indicacoesCache.find((x) => String(x.id) === id);
-    if (!item) return;
-    const act = actBtn.getAttribute("data-act");
-    if (act === "approve") {
-      const ok = window.confirm(`Aprovar o pré-assinante "${item.nome || item.razaoSocial || "-"}"?`);
-      if (!ok) return;
-      await approveIndicacao(item);
-    } else if (act === "reject") {
-      const ok = window.confirm(`Rejeitar o pré-assinante "${item.nome || item.razaoSocial || "-"}"?`);
-      if (!ok) return;
-      await rejectIndicacao(item);
-    } else if (act === "rateio") {
-      const ok = window.confirm(`Marcar "${item.nome || item.razaoSocial || "-"}" como faltando assinatura?`);
-      if (!ok) return;
-      await completeIndicacaoRateio(item);
-    } else if (act === "assinar") {
-      const ok = window.confirm(`Concluir assinatura de "${item.nome || item.razaoSocial || "-"}"?`);
-      if (!ok) return;
-      await completeIndicacaoAssinatura(item);
+  });
+
+  kanbanBoard?.addEventListener("dragstart", (event) => {
+    const card = event.target.closest("[data-drag-id]");
+    if (!card) return;
+    draggingIndicacaoId = String(card.getAttribute("data-drag-id") || "");
+    card.classList.add("is-dragging");
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", draggingIndicacaoId);
     }
-    await loadIndicacoesList();
+  });
+
+  kanbanBoard?.addEventListener("dragend", (event) => {
+    const card = event.target.closest("[data-drag-id]");
+    if (card) card.classList.remove("is-dragging");
+    draggingIndicacaoId = "";
+    kanbanBoard.querySelectorAll(".kanban-col.drag-over").forEach((col) => col.classList.remove("drag-over"));
+  });
+
+  kanbanBoard?.addEventListener("dragover", (event) => {
+    const col = event.target.closest("[data-status-col]");
+    if (!col || !draggingIndicacaoId) return;
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+  });
+
+  kanbanBoard?.addEventListener("dragenter", (event) => {
+    const col = event.target.closest("[data-status-col]");
+    if (!col || !draggingIndicacaoId) return;
+    col.classList.add("drag-over");
+  });
+
+  kanbanBoard?.addEventListener("dragleave", (event) => {
+    const col = event.target.closest("[data-status-col]");
+    if (!col) return;
+    const related = event.relatedTarget;
+    if (related && col.contains(related)) return;
+    col.classList.remove("drag-over");
+  });
+
+  kanbanBoard?.addEventListener("drop", async (event) => {
+    const col = event.target.closest("[data-status-col]");
+    if (!col) return;
+    event.preventDefault();
+    col.classList.remove("drag-over");
+    const draggedId = draggingIndicacaoId || event.dataTransfer?.getData("text/plain") || "";
+    draggingIndicacaoId = "";
+    if (!draggedId) return;
+
+    const item = indicacoesCache.find((x) => String(x.id) === String(draggedId));
+    if (!item) return;
+
+    const targetStatus = String(col.getAttribute("data-status-col") || "");
+    const currentStatus = normalizeIndicacaoStatus(item.status || item.statusLabel);
+    if (!targetStatus || currentStatus === targetStatus) return;
+
+    try {
+      const { contract } = await handleIndicacaoMove(item, targetStatus);
+      await loadIndicacoesList();
+      if (contract) {
+        await openContractModal(contract, item);
+        setStatus("Contrato gerado após mover a indicação para aguardando assinatura.", "success");
+      } else {
+        setStatus(`Indicação movida para ${FLOW_META[targetStatus]?.label || targetStatus}.`, "success");
+      }
+    } catch (error) {
+      console.error(error);
+      setStatus("Não foi possível mover a indicação entre as colunas.", "error");
+    }
   });
 
   indicacaoModalCloseBtn?.addEventListener("click", closeIndicacaoModal);
@@ -1828,77 +2332,98 @@ function bindEvents() {
   indicacaoModal?.addEventListener("click", (event) => {
     if (event.target === indicacaoModal) closeIndicacaoModal();
   });
+  contractModalCloseBtn?.addEventListener("click", closeContractModal);
+  contractModalCancelBtn?.addEventListener("click", closeContractModal);
+  contractModalCopyBtn?.addEventListener("click", async () => {
+    if (!activeContractSignUrl) return;
+    try {
+      await navigator.clipboard.writeText(activeContractSignUrl);
+      if (contractModalFeedback) {
+        contractModalFeedback.textContent = "Link para assinatura copiado. Agora ele pode ser enviado ao cliente.";
+        contractModalFeedback.classList.remove("hidden");
+      }
+      window.clearTimeout(contractModalFeedbackTimer);
+      contractModalFeedbackTimer = window.setTimeout(() => {
+        contractModalFeedback?.classList.add("hidden");
+      }, 4000);
+      setStatus("Link para assinatura copiado.", "success");
+    } catch (error) {
+      console.error(error);
+      if (contractModalFeedback) {
+        contractModalFeedback.textContent = "Não foi possível copiar o link para assinatura.";
+        contractModalFeedback.classList.remove("hidden");
+      }
+      setStatus("Não foi possível copiar o link para assinatura.", "error");
+    }
+  });
+  contractModal?.addEventListener("click", (event) => {
+    if (event.target === contractModal) closeContractModal();
+  });
 
-  statusFilters?.addEventListener("click", (event) => {
+  const handleStatusFilterClick = (event) => {
     const btn = event.target.closest("[data-status]");
     if (!btn) return;
     activeStatusFilter = btn.dataset.status || "all";
     buildStatusFilters();
     renderIndicacoesList();
     renderKanbanBoard();
-  });
+  };
+  statusFilters?.addEventListener("click", handleStatusFilterClick);
+  statusFiltersKanban?.addEventListener("click", handleStatusFilterClick);
 
-  searchIndicacoes?.addEventListener("input", () => {
-    searchTerm = String(searchIndicacoes.value || "").trim().toLowerCase();
+  const handleSearchInput = (value) => {
+    searchTerm = String(value || "").trim().toLowerCase();
+    if (searchIndicacoes && searchIndicacoes !== document.activeElement) searchIndicacoes.value = value;
+    if (searchIndicacoesKanban && searchIndicacoesKanban !== document.activeElement) searchIndicacoesKanban.value = value;
     renderIndicacoesList();
     renderKanbanBoard();
-  });
+  };
+  searchIndicacoes?.addEventListener("input", () => handleSearchInput(searchIndicacoes.value));
+  searchIndicacoesKanban?.addEventListener("input", () => handleSearchInput(searchIndicacoesKanban.value));
 
-  clearFiltersBtn?.addEventListener("click", () => {
+  const handleClearFilters = () => {
     activeStatusFilter = "all";
     searchTerm = "";
     if (searchIndicacoes) searchIndicacoes.value = "";
+    if (searchIndicacoesKanban) searchIndicacoesKanban.value = "";
     buildStatusFilters();
     renderIndicacoesList();
     renderKanbanBoard();
-  });
+  };
+  clearFiltersBtn?.addEventListener("click", handleClearFilters);
+  clearFiltersBtnKanban?.addEventListener("click", handleClearFilters);
 
   viewListBtn?.addEventListener("click", () => {
-    viewMode = "list";
-    viewListBtn.classList.add("active");
-    viewKanbanBtn?.classList.remove("active");
-    showListMode();
-  });
-
-  viewKanbanBtn?.addEventListener("click", () => {
     viewMode = "kanban";
-    viewKanbanBtn.classList.add("active");
-    viewListBtn?.classList.remove("active");
     showKanbanMode();
     renderKanbanBoard();
   });
 
-  indicacaoStatusApplyBtn?.addEventListener("click", async () => {
-    if (!activeIndicacaoModalId) return;
-    const item = indicacoesCache.find((x) => String(x.id) === activeIndicacaoModalId);
-    if (!item) return;
-    const nextStatus = indicacaoStatusSelect?.value || "aguardando_aprovacao";
-    if (nextStatus === "ativo") {
-      const ok = window.confirm(`Concluir assinatura de "${item.nome || item.razaoSocial || "-"}" e mover para assinantes?`);
-      if (!ok) return;
-      await completeIndicacaoAssinatura(item);
-    } else {
-      await updateIndicacaoStatus(item, nextStatus);
-    }
-    await loadIndicacoesList();
-    const updated = indicacoesCache.find((x) => String(x.id) === activeIndicacaoModalId);
-    if (updated) openIndicacaoModal(updated);
+  viewKanbanBtn?.addEventListener("click", () => {
+    viewMode = "kanban";
+    showKanbanMode();
+    renderKanbanBoard();
   });
 
   indicacaoApproveBtn?.addEventListener("click", async () => {
     if (!activeIndicacaoModalId) return;
     const item = indicacoesCache.find((x) => String(x.id) === activeIndicacaoModalId);
     if (!item || !canReviewIndicacao(item)) return;
-    const ok = window.confirm(`Aprovar o pré-assinante "${item.nome || item.razaoSocial || "-"}" e enviar para etapa de rateio?`);
+    const ok = window.confirm(`Aprovar o pré-assinante "${item.nome || item.razaoSocial || "-"}" e gerar o contrato?`);
     if (!ok) return;
     indicacaoApproveBtn.disabled = true;
     indicacaoRejectBtn.disabled = true;
     try {
-      await approveIndicacao(item);
+      const { contract } = await handleIndicacaoMove(item, "pendente_assinatura");
       await loadIndicacoesList();
       const updated = indicacoesCache.find((x) => String(x.id) === activeIndicacaoModalId);
       if (updated) openIndicacaoModal(updated);
-      setStatus("Pré-assinante aprovado. Agora ele está pendente para rateio.", "success");
+      if (contract) {
+        await openContractModal(contract, item);
+        setStatus("Pré-assinante aprovado. Contrato gerado e etapa movida para aguardando assinatura.", "success");
+      } else {
+        setStatus("Pré-assinante aprovado, mas o contrato não foi gerado.", "error");
+      }
     } catch (error) {
       console.error(error);
       setStatus("Não foi possível aprovar o pré-assinante.", "error");
@@ -1936,17 +2461,18 @@ function bindEvents() {
     if (!activeIndicacaoModalId) return;
     const item = indicacoesCache.find((x) => String(x.id) === activeIndicacaoModalId);
     if (!item || normalizeIndicacaoStatus(item.status || item.statusLabel) !== "pendente_rateio") return;
-    const ok = window.confirm(`Marcar "${item.nome || item.razaoSocial || "-"}" como pendente de assinatura?`);
+    const ok = window.confirm(`Abrir a tela de rateio para "${item.nome || item.razaoSocial || "-"}"? Ele só vira assinante depois de ser vinculado e salvo em algum rateio.`);
     if (!ok) return;
     indicacaoRateioBtn.disabled = true;
     try {
-      await completeIndicacaoRateio(item);
-      closeIndicacaoModal();
-      await loadIndicacoesList();
-      setStatus("Status atualizado para faltando assinatura.", "success");
+      const target = new URL("cadastrar-rateio.html", window.location.href);
+      target.searchParams.set("pendingId", String(item.id || ""));
+      target.searchParams.set("uc", String(item.uc || ""));
+      target.searchParams.set("name", String(item.nome || item.razaoSocial || item.nomeFantasia || ""));
+      window.location.href = target.toString();
     } catch (error) {
       console.error(error);
-      setStatus("Não foi possível concluir o rateio.", "error");
+      setStatus("Não foi possível abrir a tela de rateio.", "error");
     } finally {
       indicacaoRateioBtn.disabled = false;
     }
@@ -1956,14 +2482,14 @@ function bindEvents() {
     if (!activeIndicacaoModalId) return;
     const item = indicacoesCache.find((x) => String(x.id) === activeIndicacaoModalId);
     if (!item || normalizeIndicacaoStatus(item.status || item.statusLabel) !== "pendente_assinatura") return;
-    const ok = window.confirm(`Concluir assinatura de "${item.nome || item.razaoSocial || "-"}" e mover para assinantes?`);
+    const ok = window.confirm(`Confirmar a assinatura de "${item.nome || item.razaoSocial || "-"}" e enviar para rateio?`);
     if (!ok) return;
     indicacaoAssinarBtn.disabled = true;
     try {
-      await completeIndicacaoAssinatura(item);
+      await handleIndicacaoMove(item, "pendente_rateio");
       closeIndicacaoModal();
       await loadIndicacoesList();
-      setStatus("Assinatura concluída. Cadastro movido para assinantes.", "success");
+      setStatus("Assinatura concluída. Cadastro movido para aguardando rateio.", "success");
     } catch (error) {
       console.error(error);
       setStatus("Não foi possível concluir a assinatura.", "error");
@@ -1980,11 +2506,24 @@ function initUi() {
   applySidebarState();
   updateTypeUI();
   updateTitularidadeUI();
+  bindInputMasks();
   updateSummary();
   setStep(1);
-  showListMode();
+  showKanbanMode();
   updateSaveButtonLabel();
   bindEvents();
+}
+
+async function refreshIndicacoesOnReturn() {
+  if (!scope?.uid) return;
+  const now = Date.now();
+  if (now - lastKanbanRefreshAt < 2500) return;
+  lastKanbanRefreshAt = now;
+  try {
+    await loadIndicacoesList();
+  } catch (error) {
+    console.warn("Falha ao atualizar o kanban ao retornar para a página.", error);
+  }
 }
 
 onAuthStateChanged(auth, async (user) => {
@@ -1998,10 +2537,20 @@ onAuthStateChanged(auth, async (user) => {
     if (!emailInput.value) emailInput.value = user.email || "";
     await loadIndicacoesList();
     setUpdated("autenticado");
-    setStatus("Selecione uma indicação da lista ou clique em Nova indicação.");
+    setStatus("Selecione uma indicação no kanban ou clique em Nova indicação.");
   } catch (error) {
     console.error(error);
     setStatus("Falha ao carregar contexto do usuário.", "error");
+  }
+});
+
+window.addEventListener("focus", () => {
+  refreshIndicacoesOnReturn();
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") {
+    refreshIndicacoesOnReturn();
   }
 });
 

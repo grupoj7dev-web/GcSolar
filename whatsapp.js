@@ -266,11 +266,15 @@ async function connectWhatsapp() {
   connectBtn.disabled = true;
   disconnectBtn.disabled = true;
   refreshBtn.disabled = true;
+  setQrImage(null);
   setStatusMessage("Gerando QR Code de conexão...", "info");
 
   try {
     await ensureInstance();
-    const data = await callBackend("/api/whatsapp/connect", "POST", { instanceName });
+    const data = await callBackend("/api/whatsapp/connect", "POST", {
+      instanceName,
+      forceNewQr: true,
+    });
     updateStatusBadge(data.state || "connecting");
     setQrImage(data.qr || null);
     await saveInstanceMeta({

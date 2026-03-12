@@ -1,2 +1,8 @@
 .DS_Store
 Thumbs.db
+.vscode/
+backend/node_modules/
+backend/server/.uploads/
+backend/server/public_uploads/
+backend/server/extract-cache.json
+backend/server/proposal_counter.json

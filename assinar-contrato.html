@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assinar Contrato | GC Solar</title>
+    <link rel="icon" type="image/png" href="gc_icon_final.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Dancing+Script:wght@700&family=Great+Vibes&family=Pacifico&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assinar-contrato.css">
+</head>
+<body>
+    <main class="sign-shell">
+        <aside class="sign-rail">
+            <div class="sign-header">
+                <span class="sign-kicker">Assinatura</span>
+                <h1>Assine para concluir</h1>
+                <p>Confira o contrato e registre a assinatura abaixo.</p>
+            </div>
+
+            <div class="sign-meta">
+                <label class="field">
+                    <span>Nome do assinante</span>
+                    <input id="signerName" type="text" placeholder="Nome completo">
+                </label>
+                <label class="field">
+                    <span>CPF/CNPJ</span>
+                    <input id="signerDocument" type="text" placeholder="Documento">
+                </label>
+            </div>
+
+            <section class="signature-stage">
+                <div class="signature-head">
+                    <strong>Assinatura</strong>
+                    <button type="button" class="link-btn" id="clearSignatureBtn">Limpar</button>
+                </div>
+                <div class="signature-mode-switch" id="signatureModeSwitch">
+                    <button type="button" class="signature-mode-btn active" data-mode="draw">Desenhar</button>
+                    <button type="button" class="signature-mode-btn" data-mode="type">Digitar</button>
+                </div>
+                <div class="signature-typed hidden" id="typedSignatureBox">
+                    <label class="field">
+                        <span>Assinatura digitada</span>
+                        <input id="typedSignatureInput" type="text" placeholder="Digite o nome para assinar">
+                    </label>
+                    <label class="field">
+                        <span>Fonte da assinatura</span>
+                        <select id="typedSignatureFont">
+                            <option value="Great Vibes">Great Vibes</option>
+                            <option value="Pacifico">Pacifico</option>
+                            <option value="Dancing Script">Dancing Script</option>
+                            <option value="Times New Roman">Times New Roman</option>
+                        </select>
+                    </label>
+                    <div class="typed-preview" id="typedPreview"></div>
+                </div>
+                <canvas id="signaturePad" width="760" height="240"></canvas>
+                <p class="signature-hint">Assine com mouse, touch ou caneta.</p>
+            </section>
+
+            <section class="verification-stage">
+                <div class="signature-head">
+                    <strong>Confirmação por WhatsApp</strong>
+                </div>
+                <p class="signature-hint" id="verificationHelp">Para concluir a assinatura, envie e confirme o código recebido no WhatsApp.</p>
+                <div class="verification-actions">
+                    <button type="button" id="sendCodeBtn" class="btn-secondary">Enviar código</button>
+                </div>
+                <label class="field">
+                    <span>Código de confirmação</span>
+                    <input id="verificationCodeInput" type="text" inputmode="numeric" maxlength="6" placeholder="Digite os 6 dígitos">
+                </label>
+            </section>
+
+            <div class="sign-actions">
+                <button type="button" id="saveSignatureBtn" class="btn-primary">Confirmar assinatura</button>
+            </div>
+
+            <p class="status-msg" id="statusMsg"></p>
+
+            <section class="result-card hidden" id="resultCard">
+                <span class="result-badge">Concluído</span>
+                <h2>Contrato assinado com sucesso</h2>
+                <p class="result-copy">Sua assinatura foi validada e o cadastro já pode seguir para a etapa de rateio na GC Solar.</p>
+                <a id="signedContractLink" class="btn-primary result-primary-link" href="#" target="_blank" rel="noopener noreferrer">Baixar contrato assinado</a>
+                <div class="result-links">
+                    <a id="signatureRecordLink" href="#" target="_blank" rel="noopener noreferrer">Abrir comprovante</a>
+                    <a id="signatureImageLink" href="#" target="_blank" rel="noopener noreferrer">Ver imagem da assinatura</a>
+                </div>
+                <div class="signature-meta hidden" id="signatureMeta">
+                    <p id="signatureMetaDate"></p>
+                    <p id="signatureMetaIp"></p>
+                    <p id="signatureMetaEnv"></p>
+                </div>
+            </section>
+        </aside>
+
+        <section class="pdf-panel">
+            <div class="pdf-head">
+                <div>
+                    <span class="pdf-kicker">Contrato</span>
+                    <strong>Visualização do documento</strong>
+                </div>
+                <a id="pdfExternalLink" href="#" target="_blank" rel="noopener noreferrer">Abrir em nova aba</a>
+            </div>
+            <div class="pdf-stage">
+                <iframe id="contractFrame" title="Contrato para assinatura"></iframe>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="assinar-contrato.js"></script>
+</body>
+</html>

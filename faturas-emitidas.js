@@ -185,9 +185,9 @@ function applyPaymentDataToEnergyHtml(energyHtml, record) {
     "";
   const lineDigits = onlyDigits(rawLine);
   const lineReadable = lineDigits || "Linha digitavel indisponivel";
-  const barcodeDigits = onlyDigits(record.boleto_barcode || "") || lineDigits;
+  const barcodeDigits = onlyDigits(record.boleto_barcode || "");
   const barcodeImgUrl = barcodeDigits
-    ? `https://bwipjs-api.metafloor.com/?bcid=code128&scale=2&height=12&includetext=false&text=${encodeURIComponent(barcodeDigits)}`
+    ? `https://bwipjs-api.metafloor.com/?bcid=interleaved2of5&scale=2&height=12&includetext=false&text=${encodeURIComponent(barcodeDigits)}`
     : "";
 
   const barcodeEl = doc.querySelector(".j7-barcode-placeholder");
@@ -486,7 +486,6 @@ function rowTemplate(record) {
       <td class="actions-col actions-cell">
         <button class="actions-btn" type="button" data-menu-toggle aria-label="Acoes"><i class="ph ph-dots-three"></i></button>
         <div class="actions-menu hidden">
-          <button class="menu-item view" type="button" data-action="view" data-id="${record.id}"><i class="ph ph-eye"></i>Ver</button>
           <button class="menu-item download" type="button" data-action="download" data-id="${record.id}"><i class="ph ph-download-simple"></i>Baixar Fatura</button>
           ${canMarkPaid ? `<button class="menu-item pay" type="button" data-action="mark-paid" data-id="${record.id}"><i class="ph ph-check-circle"></i>Tornar pago</button>` : ""}
           <button class="menu-item delete" type="button" data-action="delete" data-id="${record.id}"><i class="ph ph-trash"></i>Excluir</button>
@@ -970,7 +969,6 @@ function bindEvents() {
 
     try {
       btn.disabled = true;
-      if (action === "view") openInvoice(record);
       if (action === "download") downloadInvoice(record);
       if (action === "mark-paid") await markAsPaid(record);
       if (action === "delete") await deleteInvoice(record);

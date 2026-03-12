@@ -30,6 +30,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const pageParams = new URLSearchParams(window.location.search);
 
 const appShell = document.getElementById("appShell");
 const toggleSidebarBtn = document.getElementById("toggleSidebar");
@@ -38,7 +39,7 @@ const themeBtn = document.getElementById("themeBtn");
 const collapsedKey = "gcsolar_sidebar_collapsed";
 const themeKey = "gcsolar_theme";
 
-const modeButtons = Array.from(document.querySelectorAll("[data-view-mode]"));
+let modeButtons = Array.from(document.querySelectorAll("[data-view-mode]"));
 const newRateioView = document.getElementById("newRateioView");
 const historyRateioView = document.getElementById("historyRateioView");
 const rateioMain = document.querySelector(".rateio-main");
@@ -73,6 +74,10 @@ const historySearchInput = document.getElementById("historySearchInput");
 const historyTypeFilter = document.getElementById("historyTypeFilter");
 const historyCountText = document.getElementById("historyCountText");
 const historyListContainer = document.getElementById("historyListContainer");
+let activeRateioView = null;
+let activeGeneratorSelect = null;
+let activeRateioCountText = null;
+let activeRateioContainer = null;
 
 const confirmModal = document.getElementById("confirmModal");
 const confirmModalText = document.getElementById("confirmModalText");
@@ -84,12 +89,23 @@ let generators = [];
 let subscribers = [];
 let existingLinks = [];
 let historyEntries = [];
+let pendingSubscribers = [];
 
 let selectedGenerator = null;
 let linkedSubscribers = [];
 let pendingSubscriberToAdd = null;
 let rateioType = "percentage";
 let currentViewMode = "new";
+
+function prefillPendingSearchFromUrl() {
+  const pendingId = String(pageParams.get("pendingId") || "").trim();
+  const name = String(pageParams.get("name") || "").trim();
+  const uc = String(pageParams.get("uc") || "").trim();
+  if (!pendingId && !name && !uc) return;
+  const searchValue = name || uc || pendingId;
+  if (subscriberSearchInput) subscriberSearchInput.value = searchValue;
+  showValidation("Selecione a geradora, adicione o pré-assinante indicado e salve o rateio para que ele vire assinante.", "success");
+}
 
 function isMobile() {
   return window.matchMedia("(max-width: 960px)").matches;
@@ -113,6 +129,51 @@ function applySidebarState() {
   const collapsed = localStorage.getItem(collapsedKey) === "1";
   if (!isMobile() && collapsed) appShell.classList.add("sidebar-collapsed");
   else appShell.classList.remove("sidebar-collapsed");
+}
+
+function ensureActiveRateioUi() {
+  if (!newRateioView || !historyRateioView || activeRateioView) return;
+
+  const modeSwitch = document.querySelector(".mode-switch");
+  if (modeSwitch) {
+    const activeBtn = document.createElement("button");
+    activeBtn.type = "button";
+    activeBtn.className = "mode-btn";
+    activeBtn.dataset.viewMode = "active";
+    activeBtn.setAttribute("aria-selected", "false");
+    activeBtn.innerHTML = '<i class="ph ph-binoculars"></i>Rateio Ativo';
+    modeSwitch.appendChild(activeBtn);
+  }
+
+  const panel = document.createElement("div");
+  panel.id = "activeRateioView";
+  panel.className = "view-panel hidden";
+  panel.innerHTML = `
+    <section class="history-toolbar card">
+      <div class="field grow">
+        <label for="activeGeneratorSelect">Consultar geradora</label>
+        <select id="activeGeneratorSelect">
+          <option value="">Selecione uma geradora...</option>
+        </select>
+      </div>
+    </section>
+    <section class="history-list card">
+      <div class="history-head">
+        <h2>Rateio ativo da geradora</h2>
+        <p id="activeRateioCountText">Nenhuma geradora selecionada</p>
+      </div>
+      <div id="activeRateioContainer" class="history-items">
+        <p class="empty-row">Selecione uma geradora para consultar o rateio ativo.</p>
+      </div>
+    </section>
+  `;
+  historyRateioView.insertAdjacentElement("beforebegin", panel);
+
+  activeRateioView = panel;
+  activeGeneratorSelect = panel.querySelector("#activeGeneratorSelect");
+  activeRateioCountText = panel.querySelector("#activeRateioCountText");
+  activeRateioContainer = panel.querySelector("#activeRateioContainer");
+  modeButtons = Array.from(document.querySelectorAll("[data-view-mode]"));
 }
 
 toggleSidebarBtn.addEventListener("click", () => {
@@ -161,6 +222,24 @@ function numberFmt(value, fractionDigits = 2) {
   });
 }
 
+function normalizeConcessionaria(value) {
+  const raw = normalizeText(value);
+  if (!raw) return "";
+  if (raw.includes("equatorial")) return "equatorial";
+  if (raw.includes("enel")) return "enel";
+  if (raw.includes("cemig")) return "cemig";
+  if (raw.includes("cpfl")) return "cpfl";
+  return raw;
+}
+
+function concessionariaMatches(generatorValue, subscriberValue, isPending = false) {
+  const generator = normalizeConcessionaria(generatorValue);
+  const subscriber = normalizeConcessionaria(subscriberValue);
+  if (!generator) return true;
+  if (!subscriber) return isPending;
+  return generator === subscriber;
+}
+
 function asDate(value) {
   if (!value) return null;
   if (value instanceof Date) return value;
@@ -179,7 +258,7 @@ function formatDateTime(value) {
 }
 
 function belongsToScope(data, userScope) {
-  const userId = String(data.user_id || data.uid || "");
+  const userId = String(data.user_id || data.uid || data.createdBy || data.auth_user_id || "");
   const tenantId = String(data.tenantId || data.tenant_id || "");
   if (tenantId && tenantId === userScope.tenantId) return true;
   if (userId && userId === userScope.uid) return true;
@@ -236,6 +315,76 @@ function parseSubscriber(data, id) {
   };
 }
 
+function parsePendingSubscriber(data, id) {
+  const holderName = data.nome || data.razaoSocial || data.nomeFantasia || "Sem nome";
+  return {
+    id: `pending:${id}`,
+    realId: id,
+    name: holderName,
+    cpfCnpj: String(data.cpfCnpj || ""),
+    uc: String(data.uc || ""),
+    concessionaria: String(data.concessionaria || "Equatorial"),
+    contractedKwh: toNumber(data.consumoMedio),
+    status: "pending_rateio",
+    isPending: true,
+    pendingData: { id, ...data },
+  };
+}
+
+function buildSubscriberPayloadFromPending(item) {
+  const data = item?.pendingData || {};
+  const isCompany = String(data.tipoPessoa || "").toLowerCase() === "juridica";
+  const holderType = isCompany ? "company" : "person";
+  const holderName = data.nome || data.razaoSocial || data.nomeFantasia || "";
+  const cpfCnpj = data.cpfCnpj || "";
+  const nowIso = new Date().toISOString();
+  const contratoPdfUrl = data?.contrato?.pdfUrl || data?.contratoPdfUrl || data?.documentos?.contratoPdfUrl || "";
+
+  return {
+    user_id: data.createdBy || data.user_id || scope.uid,
+    tenantId: data.tenantId || scope.tenantId,
+    status: "active",
+    concessionaria: data.concessionaria || "Equatorial",
+    subscriber: {
+      fullName: isCompany ? "" : holderName,
+      companyName: isCompany ? holderName : "",
+      cpf: isCompany ? "" : cpfCnpj,
+      cnpj: isCompany ? cpfCnpj : "",
+      email: data.email || "",
+      phone: data.telefone || "",
+      observations: data.modalidade || "",
+      partnerNumber: "",
+      contacts: {},
+    },
+    energy_account: {
+      holderType,
+      cpfCnpj,
+      holderName,
+      uc: data.uc || "",
+      partnerNumber: "",
+    },
+    plan_details: {
+      contractedKwh: toNumber(data.consumoMedio),
+      discountPercentage: toNumber(data.desconto),
+    },
+    plan_contract: {
+      contractedKwh: toNumber(data.consumoMedio),
+      discountPercentage: toNumber(data.desconto),
+    },
+    contrato: contratoPdfUrl ? {
+      pdfUrl: contratoPdfUrl,
+      generatedAt: data?.contrato?.generatedAt || data?.contratoGeradoEm || nowIso,
+    } : {},
+    contratoPdfUrl,
+    created_at: data.createdAtISO || nowIso,
+    updated_at: nowIso,
+    pending_source_id: data.id || item?.realId || "",
+    onboarding_stage: "rateio_concluido",
+    onboarding_origin_status: "pendente_rateio",
+    migrated_at: nowIso,
+  };
+}
+
 function flattenGenerators(list, source) {
   const flat = [];
   list.forEach((item) => {
@@ -268,12 +417,14 @@ async function loadBaseData() {
     gcreditoGeneratorsSnap,
     generatorsSnap,
     subscribersSnap,
+    pendingSnap,
     linksSnap,
     historySnap,
   ] = await Promise.all([
     getDocs(collection(db, "gcredito_generators")),
     getDocs(collection(db, "generators")),
     getDocs(collection(db, "gcredito_subscribers")),
+    getDocs(collection(db, "assinantes_pendentes")),
     getDocs(collection(db, "generator_subscribers")),
     getDocs(collection(db, "gcredito_rateio_history")),
   ]);
@@ -294,6 +445,14 @@ async function loadBaseData() {
     .filter((d) => belongsToScope(d, scope))
     .map((d) => parseSubscriber(d, d.id));
 
+  pendingSubscribers = pendingSnap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .filter((d) => belongsToScope(d, scope))
+    .filter((d) => String(d.status || "") === "pendente_rateio")
+    .map((d) => parsePendingSubscriber(d, d.id));
+
+  subscribers = [...subscribers, ...pendingSubscribers];
+
   existingLinks = linksSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
   historyEntries = historySnap.docs
@@ -302,19 +461,23 @@ async function loadBaseData() {
     .sort((a, b) => (asDate(b.created_at)?.getTime() || 0) - (asDate(a.created_at)?.getTime() || 0));
 
   renderGeneratorOptions();
+  renderActiveGeneratorOptions();
   renderSubscriberOptions();
   renderHistory();
+  renderActiveRateioViewer();
   rateioUpdatedAt.textContent = `Atualizado em ${new Date().toLocaleString("pt-BR")}`;
 }
 
 function setViewMode(mode) {
-  currentViewMode = mode === "history" ? "history" : "new";
+  currentViewMode = mode === "history" || mode === "active" ? mode : "new";
   const history = currentViewMode === "history";
+  const active = currentViewMode === "active";
 
-  newRateioView.classList.toggle("hidden", history);
+  newRateioView.classList.toggle("hidden", history || active);
   historyRateioView.classList.toggle("hidden", !history);
-  saveRateioBtn.classList.toggle("hidden", history);
-  rateioMain?.classList.toggle("history-mode", history);
+  activeRateioView?.classList.toggle("hidden", !active);
+  saveRateioBtn.classList.toggle("hidden", history || active);
+  rateioMain?.classList.toggle("history-mode", history || active);
 
   modeButtons.forEach((btn) => {
     const active = btn.dataset.viewMode === currentViewMode;
@@ -332,6 +495,16 @@ function renderGeneratorOptions() {
   generatorSelect.innerHTML = options.join("");
 }
 
+function renderActiveGeneratorOptions() {
+  if (!activeGeneratorSelect) return;
+  const options = ['<option value="">Selecione uma geradora...</option>'];
+  generators.forEach((g) => {
+    const label = `${g.nickname || "Geradora"} ${g.uc ? `- UC ${g.uc}` : ""}`.trim();
+    options.push(`<option value="${g.key}">${label}</option>`);
+  });
+  activeGeneratorSelect.innerHTML = options.join("");
+}
+
 function getLinksForSelectedGenerator() {
   if (!selectedGenerator) return [];
   return existingLinks.filter((link) => {
@@ -340,6 +513,88 @@ function getLinksForSelectedGenerator() {
     const inScope = belongsToScope(link, scope);
     return sameGenerator && inScope;
   });
+}
+
+function renderActiveRateioViewer() {
+  if (!activeRateioContainer || !activeRateioCountText || !activeGeneratorSelect) return;
+  const selectedKey = activeGeneratorSelect.value;
+  const generator = generators.find((item) => item.key === selectedKey) || null;
+
+  if (!generator) {
+    activeRateioCountText.textContent = "Nenhuma geradora selecionada";
+    activeRateioContainer.innerHTML = '<p class="empty-row">Selecione uma geradora para consultar o rateio ativo.</p>';
+    return;
+  }
+
+  const links = existingLinks.filter((link) => {
+    if (!link || !link.generator_id) return false;
+    return String(link.generator_id) === String(generator.generatorId) && belongsToScope(link, scope);
+  });
+
+  if (!links.length) {
+    activeRateioCountText.textContent = `${generator.nickname || "Geradora"} sem rateio ativo`;
+    activeRateioContainer.innerHTML = '<p class="empty-row">Esta geradora não possui rateio ativo no momento.</p>';
+    return;
+  }
+
+  const allocations = links
+    .map((link) => {
+      const subscriber = subscribers.find((item) => String(item.id) === String(link.subscriber_id));
+      return {
+        name: subscriber?.name || "Assinante",
+        uc: subscriber?.uc || "-",
+        cpfCnpj: subscriber?.cpfCnpj || "-",
+        contractedKwh: toNumber(subscriber?.contractedKwh),
+        percentage: toNumber(link.percentage),
+        priority: toNumber(link.priority),
+      };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+
+  activeRateioCountText.textContent = `${allocations.length} vinculados na geradora ${generator.nickname || generator.uc || "-"}`;
+  const hasPercentage = allocations.some((item) => item.percentage > 0);
+  const rows = allocations.map((item, index) => `
+    <tr>
+      <td>${index + 1}</td>
+      <td>${item.name}</td>
+      <td>${item.uc}</td>
+      <td>${item.cpfCnpj}</td>
+      <td>${numberFmt(item.contractedKwh)} kWh</td>
+      <td>${hasPercentage ? `${numberFmt(item.percentage)}%` : "-"}</td>
+      <td>${!hasPercentage ? item.priority || "-" : "-"}</td>
+    </tr>
+  `);
+
+  activeRateioContainer.innerHTML = `
+    <article class="history-item">
+      <div class="history-item-head">
+        <div>
+          <h3>${generator.nickname || "Geradora"} ${generator.uc ? `- UC ${generator.uc}` : ""}</h3>
+          <p class="history-item-sub">${generator.concessionaria || "-"} • Rateio ativo atual</p>
+        </div>
+        <div class="history-pills">
+          <span class="history-pill">${allocations.length} vinculados</span>
+          <span class="history-pill">${hasPercentage ? "Por Porcentagem" : "Por Prioridade"}</span>
+        </div>
+      </div>
+      <div class="history-item-table-wrap">
+        <table class="history-item-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Assinante</th>
+              <th>UC</th>
+              <th>Documento</th>
+              <th>Consumo</th>
+              <th>Cota (%)</th>
+              <th>Prioridade</th>
+            </tr>
+          </thead>
+          <tbody>${rows.join("")}</tbody>
+        </table>
+      </div>
+    </article>
+  `;
 }
 
 function mountLinkedSubscribersFromExisting() {
@@ -355,6 +610,7 @@ function mountLinkedSubscribersFromExisting() {
       }
       return {
         subscriberId: link.subscriber_id,
+        sourceSubscriberId: link.subscriber_id,
         name: sub.name,
         uc: sub.uc || "-",
         cpfCnpj: sub.cpfCnpj || "-",
@@ -362,6 +618,9 @@ function mountLinkedSubscribersFromExisting() {
         concessionaria: sub.concessionaria || "",
         percentage: toNumber(link.percentage),
         priority: toNumber(link.priority),
+        isPending: Boolean(sub.isPending),
+        pendingSourceId: sub.isPending ? sub.realId : "",
+        pendingData: sub.isPending ? sub.pendingData : null,
       };
     })
     .filter(Boolean)
@@ -379,16 +638,19 @@ function mountLinkedSubscribersFromExisting() {
 
 function availableSubscribers() {
   if (!selectedGenerator) return [];
-  const selectedConcessionaria = normalizeText(selectedGenerator.concessionaria);
+  const selectedConcessionaria = selectedGenerator.concessionaria;
   const linkedIds = new Set(linkedSubscribers.map((x) => String(x.subscriberId)));
   const search = normalizeText(subscriberSearchInput.value);
 
   return subscribers
     .filter((sub) => {
       if (linkedIds.has(String(sub.id))) return false;
-      if (normalizeText(sub.status).includes("inativ")) return false;
-      const subscriberConcessionaria = normalizeText(sub.concessionaria);
-      const matchConcessionaria = !selectedConcessionaria || subscriberConcessionaria === selectedConcessionaria;
+      if (!sub.isPending && normalizeText(sub.status).includes("inativ")) return false;
+      const matchConcessionaria = concessionariaMatches(
+        selectedConcessionaria,
+        sub.concessionaria,
+        Boolean(sub.isPending)
+      );
       if (!matchConcessionaria) return false;
       if (!search) return true;
       const haystack = normalizeText(`${sub.name} ${sub.cpfCnpj} ${sub.uc}`);
@@ -417,7 +679,7 @@ function renderSubscriberOptions() {
   const options = ['<option value="">Selecione um assinante...</option>'];
   list.forEach((sub) => {
     options.push(
-      `<option value="${sub.id}">${sub.name} - UC ${sub.uc || "-"} - ${numberFmt(sub.contractedKwh)} kWh</option>`
+      `<option value="${sub.id}">${sub.name} - UC ${sub.uc || "-"} - ${numberFmt(sub.contractedKwh)} kWh${sub.isPending ? " - Pre-assinante" : ""}</option>`
     );
   });
 
@@ -634,14 +896,29 @@ async function saveRateio() {
   try {
     const linksToReplace = getLinksForSelectedGenerator();
     const batch = writeBatch(db);
+    const subscriberIdMap = new Map();
 
     linksToReplace.forEach((link) => {
       batch.delete(doc(db, "generator_subscribers", link.id));
     });
 
     linkedSubscribers.forEach((item) => {
+      if (!item.isPending || !item.pendingSourceId) {
+        subscriberIdMap.set(item.subscriberId, item.subscriberId);
+        return;
+      }
+      const newSubscriberRef = doc(collection(db, "gcredito_subscribers"));
+      subscriberIdMap.set(item.subscriberId, newSubscriberRef.id);
+      batch.set(newSubscriberRef, buildSubscriberPayloadFromPending(item));
+      batch.delete(doc(db, "assinantes_pendentes", item.pendingSourceId));
+    });
+
+    linkedSubscribers.forEach((item) => {
       const newRef = doc(collection(db, "generator_subscribers"));
-      batch.set(newRef, buildLinkPayload(item, nowIso));
+      batch.set(newRef, {
+        ...buildLinkPayload(item, nowIso),
+        subscriber_id: subscriberIdMap.get(item.subscriberId) || item.subscriberId,
+      });
     });
 
     await batch.commit();
@@ -802,6 +1079,7 @@ function cloneFromHistory(entryId) {
     const subscriber = subscribers.find((item) => String(item.id) === String(allocation.subscriber_id));
     return {
       subscriberId: allocation.subscriber_id,
+      sourceSubscriberId: allocation.subscriber_id,
       name: subscriber?.name || allocation.name || "Assinante",
       uc: subscriber?.uc || allocation.uc || "-",
       cpfCnpj: subscriber?.cpfCnpj || allocation.cpfCnpj || "-",
@@ -809,6 +1087,9 @@ function cloneFromHistory(entryId) {
       concessionaria: subscriber?.concessionaria || selectedGenerator.concessionaria || "",
       percentage: toNumber(allocation.percentage),
       priority: Math.trunc(toNumber(allocation.priority) || index + 1),
+      isPending: Boolean(subscriber?.isPending),
+      pendingSourceId: subscriber?.isPending ? subscriber.realId : "",
+      pendingData: subscriber?.isPending ? subscriber.pendingData : null,
     };
   });
 
@@ -835,6 +1116,7 @@ function addPendingSubscriber() {
   if (!pendingSubscriberToAdd) return;
   linkedSubscribers.push({
     subscriberId: pendingSubscriberToAdd.id,
+    sourceSubscriberId: pendingSubscriberToAdd.id,
     name: pendingSubscriberToAdd.name,
     uc: pendingSubscriberToAdd.uc,
     cpfCnpj: pendingSubscriberToAdd.cpfCnpj,
@@ -842,6 +1124,9 @@ function addPendingSubscriber() {
     concessionaria: pendingSubscriberToAdd.concessionaria,
     percentage: linkedSubscribers.length === 0 ? 100 : 0,
     priority: linkedSubscribers.length + 1,
+    isPending: Boolean(pendingSubscriberToAdd.isPending),
+    pendingSourceId: pendingSubscriberToAdd.isPending ? pendingSubscriberToAdd.realId : "",
+    pendingData: pendingSubscriberToAdd.isPending ? pendingSubscriberToAdd.pendingData : null,
   });
 
   closeConfirmModal();
@@ -871,6 +1156,10 @@ function onGeneratorChange() {
   renderSubscriberOptions();
   renderLinkedSubscribersTable();
   if (ignoredBrokenLinks === 0) hideValidation();
+}
+
+function onActiveGeneratorChange() {
+  renderActiveRateioViewer();
 }
 
 function onAddSubscriberClick() {
@@ -936,6 +1225,8 @@ function switchRateioType(nextType) {
   renderLinkedSubscribersTable();
 }
 
+ensureActiveRateioUi();
+
 modeButtons.forEach((btn) => {
   btn.addEventListener("click", () => setViewMode(btn.dataset.viewMode));
 });
@@ -944,6 +1235,7 @@ generatorSelect.addEventListener("change", onGeneratorChange);
 generationExpectedInput.addEventListener("input", renderLinkedSubscribersTable);
 subscriberSearchInput.addEventListener("input", renderSubscriberOptions);
 addSubscriberBtn.addEventListener("click", onAddSubscriberClick);
+activeGeneratorSelect?.addEventListener("change", onActiveGeneratorChange);
 
 rateioTypeButtons.forEach((btn) => {
   btn.addEventListener("click", () => switchRateioType(btn.dataset.rateioType));
@@ -998,6 +1290,8 @@ onAuthStateChanged(auth, async (user) => {
 
   try {
     await loadBaseData();
+    prefillPendingSearchFromUrl();
+    renderSubscriberOptions();
   } catch (error) {
     console.error("Erro ao carregar dados de rateio:", error);
     showValidation("Falha ao carregar dados iniciais da tela de rateio.", "error");

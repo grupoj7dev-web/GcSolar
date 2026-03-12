@@ -612,20 +612,39 @@ async function uploadOptional(file, key) {
   const ext = String(file.name || "").toLowerCase();
   if (![".pdf", ".doc", ".docx", ".jpg", ".jpeg", ".png"].some((x) => ext.endsWith(x))) throw new Error(`Formato inválido: ${file.name}`);
   if (file.size > 10 * 1024 * 1024) throw new Error(`Arquivo acima de 10MB: ${file.name}`);
-  const isLocalHost =
-    window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+  const backendEndpoints = [];
+  if (window.location.port === "3001") backendEndpoints.push("/api/uploads/doc");
+  backendEndpoints.push("http://127.0.0.1:3001/api/uploads/doc");
+  backendEndpoints.push("http://localhost:3001/api/uploads/doc");
 
-  if (!isLocalHost) {
-    const form = new FormData();
-    form.append("file", file);
-    const response = await fetch("/api/uploads/doc", { method: "POST", body: form });
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok || body?.error) {
-      throw new Error(body?.error || `Falha no upload do arquivo ${file.name}`);
+  let backendError = null;
+  for (const endpoint of backendEndpoints) {
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const response = await fetch(endpoint, { method: "POST", body: form });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || body?.error) {
+        throw new Error(body?.error || `HTTP ${response.status}`);
+      }
+      const url = body.url
+        ? (String(body.url).startsWith("http") ? body.url : `${window.location.origin}${body.url}`)
+        : "";
+      return { url, path: body.path || url, name: file.name, size: file.size, type: file.type, source: "backend" };
+    } catch (error) {
+      backendError = error;
+      console.warn("Falha no upload via backend", { endpoint, key, name: file.name, error });
     }
-    const url = body.url ? (body.url.startsWith("http") ? body.url : `${window.location.origin}${body.url}`) : "";
-    return { url, path: body.path || url, name: file.name, size: file.size, type: file.type, source: "backend" };
   }
+
+  if (backendError) {
+    console.warn("Fallback para Firebase Storage após falha no backend", {
+      key,
+      name: file.name,
+      error: backendError,
+    });
+  }
+
   const safe = String(file.name || "arquivo").replace(/\s+/g, "-").replace(/[^a-zA-Z0-9._-]/g, "") || "arquivo";
   const paths = [
     `assinantes_pendentes/${state.scope.tenantId}/${state.scope.uid}/cadastro_assinante/${Date.now()}_${key}_${safe}`,

@@ -224,6 +224,15 @@ function docLink(label, url) {
   return `<a class="dossier-doc-link" href="${escHtml(url)}" target="_blank" rel="noopener noreferrer"><i class="ph ph-file-arrow-down"></i>${escHtml(label)}</a>`;
 }
 
+function currencyFmt(value) {
+  return Number(value || 0).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 function firstFilled(...values) {
   for (const value of values) {
     if (value && String(value).trim()) return String(value).trim();
@@ -231,8 +240,118 @@ function firstFilled(...values) {
   return "";
 }
 
+function buildActiveSubscriberModal(item) {
+  const raw = item.raw || {};
+  const subscriber = raw.subscriber || {};
+  const energy = raw.energy_account || raw.energyAccount || {};
+  const planDetails = raw.plan_details || raw.planDetails || {};
+  const planContract = raw.plan_contract || raw.planContract || {};
+  const contrato = raw.contrato || {};
+  const docs = [
+    docLink("Contrato assinado", firstFilled(contrato.signedPdfUrl, raw.contratoAssinadoUrl)),
+    docLink("Contrato gerado", firstFilled(contrato.pdfUrl, raw.contratoPdfUrl)),
+    docLink("Comprovante de assinatura", firstFilled(raw.assinaturaComprovanteUrl)),
+    docLink("Imagem da assinatura", firstFilled(raw.assinaturaImagemUrl)),
+  ].filter(Boolean);
+
+  const contractedKwh =
+    planDetails.contractedKwh ??
+    planContract.contractedKwh ??
+    planContract.contracted_kwh ??
+    item.contractedKwh;
+  const discount =
+    planDetails.discountPercentage ??
+    planContract.discountPercentage ??
+    planContract.discountPercent ??
+    planContract.discount_percent ??
+    item.discountPercentage;
+
+  const createdAt = formatDate(raw.created_at || raw.createdAt || item.createdAt);
+  const updatedAt = formatDate(raw.updated_at || raw.updatedAt || raw.updatedAtISO);
+
+  return `
+    <section class="subscriber-hero">
+      <div class="subscriber-hero-main">
+        <span class="subscriber-hero-icon"><i class="ph ${item.holderType === "company" ? "ph-buildings" : "ph-user-circle"}"></i></span>
+        <div>
+          <p class="subscriber-hero-eyebrow">Visão geral do assinante</p>
+          <h4>${escHtml(item.name || "-")}</h4>
+          <p class="subscriber-hero-sub">${escHtml(holderTypeLabel(item.holderType))} • Documento ${escHtml(item.cpfCnpj || "-")} • UC ${escHtml(item.uc || "-")}</p>
+        </div>
+      </div>
+      <div class="subscriber-hero-metrics">
+        <div class="subscriber-metric">
+          <small>Desconto</small>
+          <strong>${escHtml(numberFmt(discount))}%</strong>
+        </div>
+        <div class="subscriber-metric">
+          <small>kWh contratado</small>
+          <strong>${escHtml(numberFmt(contractedKwh))} kWh</strong>
+        </div>
+        <div class="subscriber-metric">
+          <small>Status</small>
+          <strong>${escHtml(statusLabel(item.status, raw))}</strong>
+        </div>
+      </div>
+    </section>
+    <section class="dossier-section">
+      <h4>Cadastro e Contato</h4>
+      <div class="dossier-grid dossier-grid-3">
+        ${dossierField("Nome completo / Razão social", item.name)}
+        ${dossierField("CPF/CNPJ", item.cpfCnpj)}
+        ${dossierField("Tipo", holderTypeLabel(item.holderType))}
+        ${dossierField("E-mail", firstFilled(item.email, subscriber.email))}
+        ${dossierField("Telefone", firstFilled(item.phone, subscriber.phone))}
+        ${dossierField("Concessionária", item.concessionaria)}
+      </div>
+    </section>
+    <section class="dossier-section">
+      <h4>Energia e Plano</h4>
+      <div class="dossier-grid dossier-grid-3">
+        ${dossierField("UC", firstFilled(item.uc, energy.uc))}
+        ${dossierField("Titular da conta", firstFilled(energy.holderName, subscriber.fullName, subscriber.companyName, item.name))}
+        ${dossierField("Número parceiro", firstFilled(item.partnerNumber, energy.partnerNumber, subscriber.partnerNumber))}
+        ${dossierField("kWh contratado", `${numberFmt(contractedKwh)} kWh`)}
+        ${dossierField("Desconto contratado", `${numberFmt(discount)}%`)}
+        ${dossierField("Observações", firstFilled(item.observations, subscriber.observations))}
+      </div>
+    </section>
+    <section class="dossier-section">
+      <h4>Rastreabilidade</h4>
+      <div class="dossier-grid">
+        ${dossierField("Cadastro em", createdAt)}
+        ${dossierField("Última atualização", updatedAt)}
+        ${dossierField("Tenant", raw.tenantId || raw.tenant_id)}
+        ${dossierField("Criado por", raw.user_id || raw.uid)}
+      </div>
+    </section>
+    <section class="dossier-section">
+      <h4>Documentos e Contrato</h4>
+      <div class="dossier-docs">
+        ${docs.length ? docs.join("") : '<p class="dossier-empty-docs">Nenhum documento adicional encontrado para este assinante.</p>'}
+      </div>
+    </section>
+  `;
+}
+
 function openDossierModal(item) {
-  if (!item || item.sourceCollection !== COLL_PENDING) return;
+  if (!item) return;
+
+  const isPending = item.sourceCollection === COLL_PENDING;
+  dossierItemId = item.id;
+  dossierStatusText.textContent = `Status: ${statusLabel(item.status, item.raw)}`;
+
+  if (!isPending) {
+    dossierBody.innerHTML = buildActiveSubscriberModal(item);
+    const headTitle = document.getElementById("dossierTitle");
+    if (headTitle) headTitle.textContent = "Visão Completa do Assinante";
+    dossierApproveBtn?.classList.add("hidden");
+    dossierRejectBtn?.classList.add("hidden");
+    dossierCancelBtn.textContent = "Fechar";
+    dossierModal.classList.remove("hidden");
+    return;
+  }
+
   const raw = item.raw || {};
   const endereco = raw.endereco || {};
   const docs = raw.documentos || {};
@@ -257,12 +376,36 @@ function openDossierModal(item) {
   ].filter(Boolean);
   const titularConta = raw.contaEnergiaNoNomeDoContratante === false ? "Conta em nome de terceiro" : "Conta no nome do contratante";
 
-  dossierItemId = item.id;
-  dossierStatusText.textContent = `Status: ${statusLabel(item.status, raw)}`;
+  const headTitle = document.getElementById("dossierTitle");
+  if (headTitle) headTitle.textContent = "Dossiê Completo";
   dossierBody.innerHTML = `
+    <section class="subscriber-hero">
+      <div class="subscriber-hero-main">
+        <span class="subscriber-hero-icon"><i class="ph ${item.holderType === "company" ? "ph-buildings" : "ph-user-circle"}"></i></span>
+        <div>
+          <p class="subscriber-hero-eyebrow">Cadastro em análise</p>
+          <h4>${escHtml(item.name || "-")}</h4>
+          <p class="subscriber-hero-sub">${escHtml(holderTypeLabel(item.holderType))} • Documento ${escHtml(item.cpfCnpj || "-")} • UC ${escHtml(item.uc || "-")}</p>
+        </div>
+      </div>
+      <div class="subscriber-hero-metrics">
+        <div class="subscriber-metric">
+          <small>Desconto</small>
+          <strong>${escHtml(numberFmt(item.discountPercentage))}%</strong>
+        </div>
+        <div class="subscriber-metric">
+          <small>kWh</small>
+          <strong>${escHtml(numberFmt(item.contractedKwh))} kWh</strong>
+        </div>
+        <div class="subscriber-metric">
+          <small>Cidade/UF</small>
+          <strong>${escHtml(item.cidadeEstado || "-")}</strong>
+        </div>
+      </div>
+    </section>
     <section class="dossier-section">
       <h4>Cadastro</h4>
-      <div class="dossier-grid">
+      <div class="dossier-grid dossier-grid-3">
         ${dossierField("Tipo de pessoa", raw.tipoPessoa)}
         ${dossierField("Nome", raw.nome || raw.razaoSocial)}
         ${dossierField("Nome fantasia", raw.nomeFantasia)}
@@ -305,6 +448,9 @@ function openDossierModal(item) {
     </section>
   `;
 
+  dossierApproveBtn?.classList.remove("hidden");
+  dossierRejectBtn?.classList.remove("hidden");
+  dossierCancelBtn.textContent = "Fechar";
   dossierModal.classList.remove("hidden");
 }
 
@@ -312,6 +458,10 @@ function closeDossierModal() {
   dossierModal.classList.add("hidden");
   dossierBody.innerHTML = "";
   dossierStatusText.textContent = "";
+  const headTitle = document.getElementById("dossierTitle");
+  if (headTitle) headTitle.textContent = "Dossiê Completo";
+  dossierApproveBtn?.classList.remove("hidden");
+  dossierRejectBtn?.classList.remove("hidden");
   dossierItemId = null;
 }
 
@@ -943,11 +1093,7 @@ async function handleSubscriberAction(action, item) {
   }
 
   if (action === "view") {
-    alert(
-      `Nome: ${item.name}\nCPF/CNPJ: ${item.cpfCnpj}\nEmail: ${item.email || "-"}\nUC: ${item.uc || "-"}\nkWh Contratado: ${
-        item.contractedKwh
-      }\nDesconto: ${item.discountPercentage}%\nStatus: ${statusLabel(item.status, item.raw)}`
-    );
+    openDossierModal(item);
     return;
   }
 

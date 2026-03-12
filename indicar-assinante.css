@@ -172,81 +172,142 @@
 
 .kanban-card {
     display: grid;
+    gap: 1rem;
+    overflow: hidden;
 }
 
 .kanban-board {
     display: grid;
-    grid-template-columns: repeat(5, minmax(220px, 1fr));
-    gap: 0.9rem;
+    grid-template-columns: repeat(5, minmax(280px, 1fr));
+    gap: 1rem;
     overflow-x: auto;
-    padding-bottom: 0.4rem;
+    padding: 0.2rem 0 0.6rem;
+    align-items: start;
+    scrollbar-width: thin;
 }
 
 .kanban-col {
     border: 1px solid var(--table-border);
-    background: var(--surface-soft);
-    border-radius: 16px;
-    padding: 0.7rem;
+    background:
+        linear-gradient(180deg, rgba(21, 128, 61, 0.04), transparent 22%),
+        var(--surface-soft);
+    border-radius: 20px;
+    padding: 0.9rem;
     display: grid;
-    gap: 0.7rem;
-    min-width: 220px;
+    grid-template-rows: auto 1fr;
+    align-content: start;
+    gap: 0.8rem;
+    min-width: 280px;
+    min-height: 220px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    transition: border-color 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
 }
 
 .kanban-col h3 {
-    font-size: 0.9rem;
+    font-size: 0.96rem;
     font-weight: 800;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
+    line-height: 1.3;
+    margin: 0;
 }
 
 .kanban-count {
-    font-size: 0.75rem;
-    color: var(--muted);
+    font-size: 0.76rem;
+    color: #166534;
     background: var(--surface);
-    border: 1px solid var(--table-border);
+    border: 1px solid rgba(22, 163, 74, 0.18);
     border-radius: 999px;
-    padding: 0.12rem 0.5rem;
+    padding: 0.16rem 0.56rem;
+    min-width: 30px;
+    text-align: center;
 }
 
 .kanban-cards {
     display: grid;
     gap: 0.6rem;
+    align-content: start;
 }
 
 .kanban-card-item {
     border: 1px solid var(--table-border);
-    background: var(--surface);
-    border-radius: 14px;
-    padding: 0.7rem;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent),
+        var(--surface);
+    border-radius: 16px;
+    padding: 0.85rem;
     display: grid;
-    gap: 0.45rem;
+    gap: 0.55rem;
+    box-shadow: 0 10px 18px rgba(15, 23, 42, 0.04);
+    cursor: pointer;
+    transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
 }
 
 .kanban-card-item strong {
-    font-size: 0.92rem;
+    font-size: 0.95rem;
+    line-height: 1.35;
+}
+
+.kanban-card-item:hover,
+.kanban-card-item:focus-visible {
+    transform: translateY(-2px);
+    border-color: rgba(22, 163, 74, 0.28);
+    box-shadow: 0 16px 28px rgba(15, 23, 42, 0.08);
+    outline: none;
+}
+
+.kanban-card-item.is-dragging {
+    opacity: 0.48;
+    transform: rotate(1deg);
+    box-shadow: 0 22px 40px rgba(15, 23, 42, 0.12);
+}
+
+.kanban-col.drag-over {
+    border-color: rgba(21, 128, 61, 0.35);
+    box-shadow: inset 0 0 0 2px rgba(34, 197, 94, 0.14);
+    background:
+        linear-gradient(180deg, rgba(34, 197, 94, 0.06), transparent),
+        var(--surface-soft);
 }
 
 .kanban-meta {
     display: grid;
-    gap: 0.18rem;
+    gap: 0.24rem;
     color: var(--muted);
     font-size: 0.8rem;
 }
 
-.kanban-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem;
+.kanban-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
 }
 
-.kanban-actions .btn-secondary,
-.kanban-actions .btn-primary-solid,
-.kanban-actions .btn-danger {
-    padding: 0.4rem 0.7rem;
-    font-size: 0.78rem;
-    border-radius: 999px;
+.kanban-meta-label {
+    font-weight: 800;
+    color: var(--text);
+}
+
+.kanban-card-foot {
+    font-size: 0.76rem;
+    font-weight: 800;
+    color: #15803d;
+    padding-top: 0.15rem;
+}
+
+.kanban-empty {
+    min-height: 120px;
+    border: 1px dashed var(--table-border);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    text-align: center;
+    color: var(--muted);
+    background: rgba(255, 255, 255, 0.24);
 }
 
 .table-wrap {
@@ -467,13 +528,43 @@
     margin-top: 0.2rem;
 }
 
+.panel-glance {
+    margin-top: 0.95rem;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.7rem;
+}
+
+.glance-item {
+    border: 1px solid var(--table-border);
+    border-radius: 14px;
+    padding: 0.8rem 0.85rem;
+    background:
+        linear-gradient(180deg, rgba(21, 128, 61, 0.05), transparent),
+        var(--surface-soft);
+    display: grid;
+    gap: 0.24rem;
+}
+
+.glance-item strong {
+    font-size: 0.84rem;
+    color: var(--text);
+}
+
+.glance-item span {
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: var(--muted);
+}
+
 .section-block {
     border: 1px solid var(--table-border);
     background: var(--surface-soft);
-    border-radius: 12px;
-    padding: 0.9rem;
+    border-radius: 16px;
+    padding: 1rem;
     display: grid;
-    gap: 0.75rem;
+    gap: 0.85rem;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.04);
 }
 
 .section-block h3 {
@@ -515,6 +606,10 @@
     gap: 0.72rem;
 }
 
+.form-grid-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .field {
     display: grid;
     gap: 0.32rem;
@@ -531,12 +626,24 @@
 .field textarea {
     width: 100%;
     border: 1px solid var(--table-border);
-    border-radius: 10px;
+    border-radius: 12px;
     background: var(--surface);
     color: var(--text);
-    padding: 0.62rem 0.68rem;
+    padding: 0.72rem 0.8rem;
     font-size: 0.9rem;
     outline: none;
+    transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.field input::placeholder,
+.field textarea::placeholder {
+    color: rgba(96, 113, 98, 0.82);
+}
+
+.field-hint {
+    font-size: 0.74rem;
+    line-height: 1.45;
+    color: var(--muted);
 }
 
 .field input:focus,
@@ -558,6 +665,7 @@
 .inline-field {
     display: flex;
     gap: 0.5rem;
+    align-items: stretch;
 }
 
 .inline-field input {
@@ -592,10 +700,11 @@
 .summary-bar {
     border: 1px solid var(--table-border);
     background: var(--surface-soft);
-    border-radius: 10px;
-    padding: 0.56rem 0.7rem;
+    border-radius: 14px;
+    padding: 0.75rem 0.9rem;
     font-size: 0.86rem;
     color: var(--muted);
+    line-height: 1.55;
 }
 
 .upload-grid {
@@ -1165,21 +1274,141 @@
     flex-wrap: wrap;
 }
 
-.status-update {
-    margin-right: auto;
-    display: flex;
-    align-items: center;
-    gap: 0.55rem;
-    flex-wrap: wrap;
+.contract-modal-card {
+    width: min(700px, 96vw);
+    border-radius: 30px;
+    overflow: hidden;
+    background:
+        radial-gradient(720px 180px at 0% 0%, rgba(34, 197, 94, 0.08), transparent 48%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(247, 250, 246, 0.98)),
+        var(--surface);
 }
 
-.status-update select {
-    border: 1px solid var(--table-border);
-    border-radius: 10px;
-    padding: 0.55rem 0.7rem;
-    background: var(--surface);
+.contract-modal-head {
+    padding-top: 1.6rem;
+    padding-bottom: 1.25rem;
+    background:
+        linear-gradient(180deg, rgba(244, 248, 242, 0.95), rgba(244, 248, 242, 0.82));
+}
+
+.contract-modal-head h3 {
+    font-size: 2.1rem;
+    line-height: 1.04;
+}
+
+.contract-modal-head p {
+    max-width: 560px;
+    font-size: 1.02rem;
+}
+
+.contract-modal-body {
+    display: grid;
+    grid-template-columns: 88px minmax(0, 1fr);
+    gap: 1.15rem;
+    align-items: start;
+    padding: 0.65rem 0 0.4rem;
+}
+
+.contract-modal-icon {
+    width: 88px;
+    height: 88px;
+    border-radius: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background:
+        radial-gradient(circle at top, rgba(255, 255, 255, 0.5), transparent 45%),
+        linear-gradient(135deg, rgba(21, 128, 61, 0.16), rgba(34, 197, 94, 0.24));
+    color: #15803d;
+    font-size: 2.35rem;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.contract-modal-content {
+    display: grid;
+    gap: 0.72rem;
+    padding: 0.15rem 0;
+}
+
+.contract-modal-content strong {
+    font-size: 1.25rem;
+    font-family: "Montserrat", sans-serif;
     color: var(--text);
-    font-size: 0.85rem;
+    line-height: 1.2;
+}
+
+.contract-modal-content p {
+    color: var(--muted);
+    line-height: 1.55;
+}
+
+.contract-modal-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    padding: 0.34rem 0.7rem;
+    border-radius: 999px;
+    background: rgba(21, 128, 61, 0.08);
+    color: #166534;
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 0.4rem;
+}
+
+.contract-modal-note {
+    font-size: 0.96rem;
+    margin-top: -0.15rem;
+}
+
+.contract-modal-cta-row {
+    display: flex;
+    gap: 0.7rem;
+    flex-wrap: wrap;
+    margin-top: 0.25rem;
+}
+
+.contract-modal-feedback {
+    margin: 0;
+    padding: 0.85rem 1rem;
+    border-radius: 16px;
+    border: 1px solid rgba(21, 128, 61, 0.16);
+    background: rgba(21, 128, 61, 0.08);
+    color: #166534;
+    font-size: 0.92rem;
+    font-weight: 700;
+}
+
+.contract-modal-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    width: fit-content;
+    padding: 0.9rem 1.1rem;
+    border-radius: 18px;
+    border: 1px solid rgba(21, 128, 61, 0.18);
+    background: rgba(21, 128, 61, 0.06);
+    color: #166534;
+    text-decoration: none;
+    font-weight: 700;
+    transition: transform 0.16s ease, background-color 0.16s ease, border-color 0.16s ease;
+}
+
+.contract-modal-copy {
+    font: inherit;
+    cursor: pointer;
+}
+
+.contract-modal-link:hover {
+    transform: translateY(-1px);
+    background: rgba(21, 128, 61, 0.12);
+}
+
+.contract-modal-actions {
+    background: rgba(244, 248, 242, 0.8);
+    padding-top: 1.15rem;
+    padding-bottom: 1.35rem;
 }
 
 :root[data-theme="dark"] .dossier-doc-link {
@@ -1191,6 +1420,11 @@
 }
 
 @media (max-width: 960px) {
+    .panel-glance,
+    .form-grid-3 {
+        grid-template-columns: 1fr;
+    }
+
     .hero-card {
         flex-direction: column;
     }
@@ -1214,8 +1448,7 @@
         justify-content: stretch;
     }
 
-    .status-tools input,
-    .status-update select {
+    .status-tools input {
         width: 100%;
     }
 
@@ -1246,6 +1479,12 @@
 
     .kanban-board {
         grid-template-columns: 1fr;
+        overflow-x: visible;
+    }
+
+    .kanban-col {
+        min-width: 0;
+        min-height: 0;
     }
 
     .btn-secondary,
@@ -1307,5 +1546,9 @@
 
     .dossier-item.wide {
         grid-column: span 1;
+    }
+
+    .contract-modal-body {
+        grid-template-columns: 1fr;
     }
 }

@@ -230,6 +230,7 @@ function buildPayload(nowIso, authUid) {
       assinantes: permissions.assinantes === true,
       indicarAssinante: permissions.indicarAssinante === true,
       rateio: permissions.rateio === true,
+      desconto: permissions.desconto === true,
       geradoras: permissions.geradoras === true,
       faturas: permissions.faturas === true,
       procuracao: permissions.procuracao === true,
