@@ -1043,7 +1043,7 @@ function openInvoice(record) {
     })
   );
   window.open(
-    `invoice-preview.html?v=20260312-preview3&k=${encodeURIComponent(key)}`,
+    `invoice-preview.html?v=20260312-preview4&k=${encodeURIComponent(key)}`,
     "_blank",
     "noopener,noreferrer"
   );

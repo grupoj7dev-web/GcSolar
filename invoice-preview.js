@@ -1,7 +1,6 @@
 (function () {
   const titleText = document.getElementById("titleText");
   const stage = document.getElementById("stage");
-  const openOriginalBtn = document.getElementById("openOriginalBtn");
   const closeBtn = document.getElementById("closeBtn");
 
   function readPayload() {
@@ -22,7 +21,6 @@
 
   function renderEmpty(message) {
     stage.innerHTML = `<div class="empty">${message}</div>`;
-    openOriginalBtn.disabled = true;
   }
 
   function mountIframe(src, srcdoc) {
@@ -47,10 +45,6 @@
     else if (html) mountIframe("", html);
     else renderEmpty("Sem conteúdo de visualização para esta fatura.");
 
-    openOriginalBtn.addEventListener("click", () => {
-      if (!invoiceUrl) return;
-      window.open(invoiceUrl, "_blank", "noopener,noreferrer");
-    });
   }
 
   closeBtn.addEventListener("click", () => window.close());
