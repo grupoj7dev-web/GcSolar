@@ -416,7 +416,7 @@ function renderRecentInvoices(emitidasPeriodo) {
 
   if (ordered.length === 0) {
     recentInvoicesBody.innerHTML =
-      '<tr><td colspan="8" class="empty-row">Sem faturas recentes no período selecionado.</td></tr>';
+      '<tr><td colspan="7" class="empty-row">Sem faturas recentes no período selecionado.</td></tr>';
     return;
   }
 
@@ -428,9 +428,6 @@ function renderRecentInvoices(emitidasPeriodo) {
     const valor = brl(resolveValor(item));
     const emissao = formatDate(item.data_emissao || item.created_at || item.createdAt);
     const status = statusInfo(item.status_pagamento);
-    const viewUrl = item.fatura_url || "#";
-    const downloadAttr = viewUrl && viewUrl !== "#" ? "download" : "";
-
     return `
       <tr>
         <td>${uc}</td>
@@ -440,14 +437,6 @@ function renderRecentInvoices(emitidasPeriodo) {
         <td>${valor}</td>
         <td>${emissao}</td>
         <td><span class="status-badge ${status.cls}">${status.label}</span></td>
-        <td class="actions-cell">
-          <button class="actions-btn" type="button" data-action-toggle aria-label="Ações">...</button>
-          <div class="actions-menu hidden">
-            <a href="${viewUrl}" target="_blank" rel="noopener noreferrer">Visualizar</a>
-            <a href="${viewUrl}" ${downloadAttr}>Baixar</a>
-            <button type="button" data-action="delete-invoice" data-id="${item.id}">Excluir</button>
-          </div>
-        </td>
       </tr>
     `;
   });

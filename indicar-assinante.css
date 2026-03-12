@@ -297,6 +297,34 @@
     padding-top: 0.15rem;
 }
 
+.kanban-card-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+}
+
+.kanban-edit-btn {
+    border: 1px solid var(--table-border);
+    background: var(--surface-soft);
+    color: #166534;
+    border-radius: 999px;
+    min-height: 34px;
+    padding: 0.35rem 0.7rem;
+    font-size: 0.76rem;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.28rem;
+    cursor: pointer;
+    transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+}
+
+.kanban-edit-btn:hover {
+    transform: translateY(-1px);
+    border-color: rgba(21, 128, 61, 0.4);
+}
+
 .kanban-empty {
     min-height: 120px;
     border: 1px dashed var(--table-border);

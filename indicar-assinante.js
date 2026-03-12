@@ -64,6 +64,7 @@ const indicacaoModalBody = document.getElementById("indicacaoModalBody");
 const indicacaoModalStatus = document.getElementById("indicacaoModalStatus");
 const indicacaoModalCloseBtn = document.getElementById("indicacaoModalCloseBtn");
 const indicacaoModalCancelBtn = document.getElementById("indicacaoModalCancelBtn");
+const indicacaoEditBtn = document.getElementById("indicacaoEditBtn");
 const indicacaoRateioBtn = document.getElementById("indicacaoRateioBtn");
 const indicacaoAssinarBtn = document.getElementById("indicacaoAssinarBtn");
 const indicacaoApproveBtn = document.getElementById("indicacaoApproveBtn");
@@ -731,7 +732,13 @@ function renderKanbanBoard() {
                   <span><span class="kanban-meta-label">Doc</span> ${escapeHtml(doc || "-")}</span>
                   <span><span class="kanban-meta-label">UC</span> ${escapeHtml(uc || "-")}</span>
                 </div>
-                <div class="kanban-card-foot">Clique para abrir</div>
+                <div class="kanban-card-actions">
+                  <span class="kanban-card-foot">Clique para abrir</span>
+                  <button type="button" class="kanban-edit-btn" data-edit-id="${escapeHtml(item.id)}">
+                    <i class="ph ph-pencil-simple"></i>
+                    Editar
+                  </button>
+                </div>
               </article>
             `;
           }).join("") : `<div class="kanban-empty">Sem itens nesta etapa</div>`}
@@ -822,6 +829,12 @@ function populateFormForEdit(item) {
   updateSaveButtonLabel();
   setStatus("Modo edição: ajuste os dados e reenvie documentos se necessário.");
   setUpdated("edicao");
+}
+
+function startEditIndicacao(item) {
+  if (!item) return;
+  closeIndicacaoModal();
+  populateFormForEdit(item);
 }
 
 function buildDocLink(label, url, description = "") {
@@ -1023,6 +1036,7 @@ async function openIndicacaoModal(item) {
     }
   }
   indicacaoModalBody.innerHTML = buildIndicacaoDetails(item, signUrl);
+  indicacaoEditBtn?.classList.remove("hidden");
   indicacaoApproveBtn.classList.toggle("hidden", stage !== "aguardando_aprovacao");
   indicacaoRejectBtn.classList.toggle("hidden", stage !== "aguardando_aprovacao");
   indicacaoRateioBtn.classList.toggle("hidden", stage !== "pendente_rateio");
@@ -2232,37 +2246,37 @@ function bindEvents() {
   });
 
   indicacoesTableBody?.addEventListener("click", async (event) => {
+    const editBtn = event.target.closest("[data-edit-id]");
+    if (editBtn) {
+      const id = String(editBtn.getAttribute("data-edit-id") || "");
+      const item = indicacoesCache.find((x) => String(x.id) === id);
+      if (item) startEditIndicacao(item);
+      return;
+    }
+
     const viewBtn = event.target.closest("[data-view-id]");
     if (viewBtn) {
       const id = String(viewBtn.getAttribute("data-view-id") || "");
       const item = indicacoesCache.find((x) => String(x.id) === id);
       if (item) openIndicacaoModal(item);
-      return;
-    }
-
-    const editBtn = event.target.closest("[data-edit-id]");
-    if (editBtn) {
-      const id = String(editBtn.getAttribute("data-edit-id") || "");
-      const item = indicacoesCache.find((x) => String(x.id) === id);
-      if (item) populateFormForEdit(item);
       return;
     }
 
   });
 
   kanbanBoard?.addEventListener("click", async (event) => {
+    const editBtn = event.target.closest("[data-edit-id]");
+    if (editBtn) {
+      const id = String(editBtn.getAttribute("data-edit-id") || "");
+      const item = indicacoesCache.find((x) => String(x.id) === id);
+      if (item) startEditIndicacao(item);
+      return;
+    }
     const viewBtn = event.target.closest("[data-view-id]");
     if (viewBtn) {
       const id = String(viewBtn.getAttribute("data-view-id") || "");
       const item = indicacoesCache.find((x) => String(x.id) === id);
       if (item) openIndicacaoModal(item);
-      return;
-    }
-    const editBtn = event.target.closest("[data-edit-id]");
-    if (editBtn) {
-      const id = String(editBtn.getAttribute("data-edit-id") || "");
-      const item = indicacoesCache.find((x) => String(x.id) === id);
-      if (item) populateFormForEdit(item);
       return;
     }
   });
@@ -2339,6 +2353,11 @@ function bindEvents() {
 
   indicacaoModalCloseBtn?.addEventListener("click", closeIndicacaoModal);
   indicacaoModalCancelBtn?.addEventListener("click", closeIndicacaoModal);
+  indicacaoEditBtn?.addEventListener("click", () => {
+    if (!activeIndicacaoModalId) return;
+    const item = indicacoesCache.find((x) => String(x.id) === activeIndicacaoModalId);
+    if (item) startEditIndicacao(item);
+  });
   indicacaoModal?.addEventListener("click", (event) => {
     if (event.target === indicacaoModal) closeIndicacaoModal();
   });
