@@ -270,7 +270,7 @@ async function loadSigningSession() {
   }
 
   try {
-    const response = await callBackendGet(`/internal-api/contracts/sign-link/${encodeURIComponent(token)}`);
+    const response = await callBackendGet(`/api/contracts/sign-link/${encodeURIComponent(token)}`);
     const session = response.session || {};
     pendingId = session.pendingId || "";
     contractUrl = normalizePublicAppUrl(session.contractUrl || "");
@@ -295,7 +295,7 @@ async function requestSignCode() {
 
   if (sendCodeBtn) sendCodeBtn.disabled = true;
   try {
-    const response = await callBackend("/internal-api/contracts/request-sign-code", {
+    const response = await callBackend("/api/contracts/request-sign-code", {
       token,
       signerPhone: signerPhone || signerPhoneParam,
       senderUserId: senderUserParam,
@@ -328,7 +328,7 @@ async function ensureVerifiedCode() {
     throw new Error("CÃ³digo enviado. Digite os 6 dÃ­gitos recebidos no WhatsApp.");
   }
 
-  const response = await callBackend("/internal-api/contracts/verify-sign-code", {
+  const response = await callBackend("/api/contracts/verify-sign-code", {
     token,
     code,
   });
@@ -360,7 +360,7 @@ async function saveSignature() {
   try {
     await ensureVerifiedCode();
     statusMsg.textContent = "Registrando assinatura...";
-    const response = await callBackend("/internal-api/contracts/sign", {
+    const response = await callBackend("/api/contracts/sign", {
       token,
       pendingId,
       contractUrl,
