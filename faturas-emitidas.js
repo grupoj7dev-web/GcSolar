@@ -491,6 +491,7 @@ function rowTemplate(record) {
         <button class="actions-btn" type="button" data-menu-toggle aria-label="Acoes"><i class="ph ph-dots-three"></i></button>
         <div class="actions-menu hidden">
           <button class="menu-item download" type="button" data-action="download" data-id="${record.id}"><i class="ph ph-download-simple"></i>Baixar Fatura</button>
+          <button class="menu-item" type="button" data-action="view" data-id="${record.id}"><i class="ph ph-eye"></i>Visualizar Fatura</button>
           ${canMarkPaid ? `<button class="menu-item pay" type="button" data-action="mark-paid" data-id="${record.id}"><i class="ph ph-check-circle"></i>Tornar pago</button>` : ""}
           <button class="menu-item delete" type="button" data-action="delete" data-id="${record.id}"><i class="ph ph-trash"></i>Excluir</button>
         </div>
@@ -602,21 +603,23 @@ function findInvoice(id) {
 
 function openInvoice(record) {
   const url = resolveInvoiceUrl(record);
-  if (url) {
-    window.open(url, "_blank", "noopener,noreferrer");
-    return;
-  }
-
   const html = buildCombinedInvoiceHtml(record);
-  if (html) {
-    const blob = new Blob([html], { type: "text/html" });
-    const blobUrl = URL.createObjectURL(blob);
-    window.open(blobUrl, "_blank", "noopener,noreferrer");
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
+  if (!url && !html) {
+    window.alert("Não foi encontrado conteúdo de visualização para esta fatura.");
     return;
   }
 
-  window.alert("Não foi encontrado link de visualização para esta fatura.");
+  const key = `gcsolar_invoice_preview_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const title = `Fatura ${resolveUc(record)} - ${resolveReferencia(record)}`;
+  sessionStorage.setItem(
+    key,
+    JSON.stringify({
+      title,
+      invoiceUrl: url || "",
+      html: url ? "" : html,
+    })
+  );
+  window.open(`invoice-preview.html?k=${encodeURIComponent(key)}`, "_blank", "noopener,noreferrer");
 }
 
 function downloadInvoice(record) {
@@ -1029,6 +1032,7 @@ function bindEvents() {
 
     try {
       btn.disabled = true;
+      if (action === "view") openInvoice(record);
       if (action === "download") downloadInvoice(record);
       if (action === "mark-paid") await markAsPaid(record);
       if (action === "delete") await deleteInvoice(record);
