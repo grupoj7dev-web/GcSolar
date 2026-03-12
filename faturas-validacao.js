@@ -716,7 +716,7 @@ function tableRow(record) {
         <button class="actions-btn" type="button" data-menu-toggle aria-label="Ações"><i class="ph ph-dots-three"></i></button>
         <div class="actions-menu hidden">
           <button class="menu-item download" type="button" data-action="download" data-id="${record.id}"><i class="ph ph-download-simple"></i>Baixar Fatura</button>
-          <button class="menu-item" type="button" data-action="view" data-id="${record.id}"><i class="ph ph-eye"></i>Visualizar Fatura</button>
+          <button class="menu-item view" type="button" data-action="view" data-id="${record.id}"><i class="ph ph-eye"></i>Visualizar Fatura</button>
           <button class="menu-item approve" type="button" data-action="approve" data-id="${record.id}"><i class="ph ph-check"></i>Aprovar</button>
           <button class="menu-item reject" type="button" data-action="reject" data-id="${record.id}"><i class="ph ph-thumbs-down"></i>Rejeitar</button>
           <button class="menu-item delete" type="button" data-action="delete" data-id="${record.id}"><i class="ph ph-trash"></i>Excluir</button>
