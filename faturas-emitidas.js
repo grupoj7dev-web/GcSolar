@@ -152,6 +152,48 @@ function normalizeSearchText(value) {
     .trim();
 }
 
+function normalizeIdentityPart(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, "")
+    .toUpperCase()
+    .trim();
+}
+
+function getInvoiceIdentityKey(item) {
+  const uc = normalizeIdentityPart(resolveUc(item));
+  const referencia = normalizeIdentityPart(resolveReferencia(item));
+  const documento = onlyDigits(resolveDocumento(item));
+  if (!uc || !referencia || !documento) return "";
+  return `${uc}|${referencia}|${documento}`;
+}
+
+function getInvoiceSortTimestamp(item) {
+  return (
+    asDate(resolveEmissao(item))?.getTime() ||
+    asDate(item.created_at)?.getTime() ||
+    asDate(item.updated_at)?.getTime() ||
+    0
+  );
+}
+
+function dedupeInvoicesByIdentity(items) {
+  const map = new Map();
+  for (const item of items) {
+    const key = getInvoiceIdentityKey(item) || `id:${String(item.id || "")}`;
+    const current = map.get(key);
+    if (!current) {
+      map.set(key, item);
+      continue;
+    }
+    const nextTs = getInvoiceSortTimestamp(item);
+    const currTs = getInvoiceSortTimestamp(current);
+    if (nextTs >= currTs) map.set(key, item);
+  }
+  return [...map.values()];
+}
+
 function toNumber(value) {
   const n = Number(value);
   return Number.isFinite(n) ? n : 0;
@@ -615,10 +657,12 @@ function clearAsaasBackendOffline() {
 async function loadData() {
   const emitidasSnap = await getDocsFromServer(collection(db, COLL_EMITIDAS));
   const deletedIds = getLocallyDeletedIds();
-  emittedInvoices = emitidasSnap.docs
+  emittedInvoices = dedupeInvoicesByIdentity(
+    emitidasSnap.docs
     .map((d) => ({ id: d.id, ...d.data() }))
     .filter(belongsToScope)
-    .filter((x) => !deletedIds.has(String(x.id)));
+    .filter((x) => !deletedIds.has(String(x.id)))
+  );
 
   renderScoreboard();
   renderTable();

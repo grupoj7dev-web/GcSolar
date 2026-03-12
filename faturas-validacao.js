@@ -6,6 +6,7 @@ import {
   deleteDoc,
   doc,
   getDocs,
+  getDocsFromServer,
   getFirestore,
   limit,
   query,
@@ -180,6 +181,48 @@ function normalizeSearchText(value) {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim();
+}
+
+function normalizeIdentityPart(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, "")
+    .toUpperCase()
+    .trim();
+}
+
+function getInvoiceIdentityKey(item) {
+  const uc = normalizeIdentityPart(resolveUc(item));
+  const referencia = normalizeIdentityPart(resolveReferencia(item));
+  const documento = onlyDigits(resolveDocumento(item));
+  if (!uc || !referencia || !documento) return "";
+  return `${uc}|${referencia}|${documento}`;
+}
+
+function getInvoiceSortTimestamp(item) {
+  return (
+    asDate(item.updated_at)?.getTime() ||
+    asDate(item.created_at)?.getTime() ||
+    asDate(resolveVencimento(item))?.getTime() ||
+    0
+  );
+}
+
+function dedupeInvoicesByIdentity(items) {
+  const map = new Map();
+  for (const item of items) {
+    const key = getInvoiceIdentityKey(item) || `id:${String(item.id || "")}`;
+    const current = map.get(key);
+    if (!current) {
+      map.set(key, item);
+      continue;
+    }
+    const nextTs = getInvoiceSortTimestamp(item);
+    const currTs = getInvoiceSortTimestamp(current);
+    if (nextTs >= currTs) map.set(key, item);
+  }
+  return [...map.values()];
 }
 
 function normalizeStatus(item) {
@@ -782,8 +825,8 @@ async function loadData() {
   updatedAtLabel.textContent = "Atualizando...";
 
   const [validacaoSnap, emitidasSnap] = await Promise.all([
-    getDocs(collection(db, COLL_VALIDACAO)),
-    getDocs(collection(db, COLL_EMITIDAS)),
+    getDocsFromServer(collection(db, COLL_VALIDACAO)),
+    getDocsFromServer(collection(db, COLL_EMITIDAS)),
   ]);
 
   allValidacao = validacaoSnap.docs.map((d) => ({ id: d.id, ...d.data() })).filter(belongsToScope);
@@ -794,13 +837,13 @@ async function loadData() {
     .filter((x) => !deletedEmitidasIds.has(String(x.id)));
 
   const validatedIdSet = buildValidatedIdSet();
-  pendingInvoices = allValidacao.filter((x) => {
+  pendingInvoices = dedupeInvoicesByIdentity(allValidacao.filter((x) => {
     const id = String(x.id || "").trim();
     if (!id) return false;
     if (!isNotValidatedStatus(x)) return false;
     if (validatedIdSet.has(id)) return false;
     return true;
-  });
+  }));
 
   renderScoreboard();
   renderTable();

@@ -214,6 +214,15 @@ function onlyDigits(value) {
   return String(value || "").replace(/\D+/g, "");
 }
 
+function normalizeIdentityPart(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, "")
+    .toUpperCase()
+    .trim();
+}
+
 function brl(value) {
   return value.toLocaleString("pt-BR", {
     style: "currency",
@@ -259,6 +268,38 @@ function resolveNome(item) {
 
 function resolveValor(item) {
   return toNumber(item.invoice_value || item.valor_total || item.valor);
+}
+
+function getInvoiceIdentityKey(item) {
+  const uc = normalizeIdentityPart(resolveUc(item));
+  const referencia = normalizeIdentityPart(resolveReferencia(item));
+  const documento = onlyDigits(resolveDocumento(item));
+  if (!uc || !referencia || !documento) return "";
+  return `${uc}|${referencia}|${documento}`;
+}
+
+function getInvoiceSortTimestamp(item) {
+  return (
+    getDocDate(item)?.getTime() ||
+    asDate(item.updated_at)?.getTime() ||
+    0
+  );
+}
+
+function dedupeInvoicesByIdentity(items) {
+  const map = new Map();
+  for (const item of items) {
+    const key = getInvoiceIdentityKey(item) || `id:${String(item.id || "")}`;
+    const current = map.get(key);
+    if (!current) {
+      map.set(key, item);
+      continue;
+    }
+    const nextTs = getInvoiceSortTimestamp(item);
+    const currTs = getInvoiceSortTimestamp(current);
+    if (nextTs >= currTs) map.set(key, item);
+  }
+  return [...map.values()];
 }
 
 function isActiveStatus(statusValue) {
@@ -562,9 +603,10 @@ async function loadDashboardData(user) {
       (x) => belongsToScope(x, scope) || subscriberIds.has(String(x.subscriber_id || ""))
     );
     const deletedEmitidasIds = getLocallyDeletedEmitidasIds();
-    const scopedEmitidas = emitidas.filter(
+    const scopedEmitidasRaw = emitidas.filter(
       (x) => belongsToScope(x, scope) || subscriberIds.has(String(x.subscriber_id || ""))
     ).filter((x) => !deletedEmitidasIds.has(String(x.id)));
+    const scopedEmitidas = dedupeInvoicesByIdentity(scopedEmitidasRaw);
     const scopedValidacao = validacao.filter(
       (x) => belongsToScope(x, scope) || subscriberIds.has(String(x.subscriber_id || ""))
     );
