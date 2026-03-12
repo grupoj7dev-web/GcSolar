@@ -511,6 +511,8 @@ const buildContractParagraphs = (payload = {}) => {
     const geracaoCompartilhada = payload.modalidade === 'mudar_titularidade' ? '[ ]' : '[X]';
     const autoconsumoRemoto = payload.modalidade === 'mudar_titularidade' ? '[X]' : '[ ]';
     const dataAssinatura = normalizePdfText(formatLongDateBR(new Date()));
+    const documentLabel = cpfCnpj.length > 11 ? 'CNPJ' : 'CPF';
+    const assinanteDocRef = normalizePdfText(`${documentLabel}: ${cpfCnpj}`);
 
     return [
         { kind: 'title', text: 'CONTRATO DE ADESAO AO PROGRAMA DE ENERGIA POR ASSINATURA' },
@@ -620,6 +622,23 @@ const buildContractParagraphs = (payload = {}) => {
         { kind: 'spacer', text: '' },
         { kind: 'signature', text: `ASSINANTE: ${nome}` },
         { kind: 'paragraph', text: `CPF: ${cpfCnpj}` },
+        { kind: 'pagebreak', text: '' },
+        { kind: 'title', text: 'ANEXO I - INSTRUMENTO PARTICULAR DE PROCURACAO' },
+        {
+            kind: 'paragraph',
+            text: `OUTORGANTE: ${nome}, inscrito sob ${assinanteDocRef}, residente e domiciliado em ${endereco}.`,
+        },
+        {
+            kind: 'paragraph',
+            text: 'OUTORGADA: J7 EMPREENDIMENTOS E CONSULTORIA LTDA, CNPJ 14.375.534/0001-07. O OUTORGANTE concede poderes especificos para representar perante a distribuidora, solicitar ajustes cadastrais e praticar atos estritamente necessarios a operacionalizacao do SCEE vinculada a UC indicada neste contrato.',
+        },
+        { kind: 'paragraph', text: `UC vinculada: ${uc}.` },
+        { kind: 'spacer', text: '' },
+        { kind: 'signature', text: `OUTORGANTE: ${nome}` },
+        { kind: 'paragraph', text: assinanteDocRef },
+        { kind: 'spacer', text: '' },
+        { kind: 'signature', text: 'OUTORGADA: J7 EMPREENDIMENTOS E CONSULTORIA LTDA' },
+        { kind: 'paragraph', text: 'CNPJ: 14.375.534/0001-07' },
     ].map((block) => ({ ...block, text: normalizePdfText(block.text) }));
 };
 
@@ -690,6 +709,12 @@ const createContractPdfBuffer = async (payload = {}) => {
     };
 
     for (const block of paragraphs) {
+        if (block.kind === 'pagebreak') {
+            page = pdfDoc.addPage(pageSize);
+            cursorY = topY;
+            continue;
+        }
+
         if (block.kind === 'spacer') {
             cursorY -= 24;
             continue;
