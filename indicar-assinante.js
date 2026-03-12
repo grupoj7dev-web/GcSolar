@@ -1089,15 +1089,34 @@ async function buildContractSignUrl(contract, item) {
 async function openContractModal(contract, item) {
   if (!contractModal || !contract?.url) return;
   const nome = item?.nome || item?.razaoSocial || item?.nomeFantasia || "assinante";
-  const signUrl = await buildContractSignUrl(contract, item);
-  activeContractSignUrl = signUrl;
-  if (contractModalName) contractModalName.textContent = `Contrato de ${nome}`;
-  if (contractModalSubtitle) contractModalSubtitle.textContent = "O contrato foi gerado com sucesso e o link de assinatura já está disponível.";
-  if (contractModalMessage) contractModalMessage.textContent = "Contrato enviado para o WhatsApp do cliente.";
   const normalizedContractUrl = normalizePublicAppUrl(contract.url);
+  let signUrl = "";
+  try {
+    signUrl = await buildContractSignUrl(contract, item);
+  } catch (error) {
+    console.warn("Nao foi possivel gerar o link de assinatura. Abrindo modal com o contrato.", error);
+  }
+  activeContractSignUrl = signUrl || normalizedContractUrl;
+  if (contractModalName) contractModalName.textContent = `Contrato de ${nome}`;
+  if (contractModalSubtitle) {
+    contractModalSubtitle.textContent = signUrl
+      ? "O contrato foi gerado com sucesso e o link de assinatura já está disponível."
+      : "O contrato foi gerado, mas o link de assinatura não pôde ser criado agora.";
+  }
+  if (contractModalMessage) {
+    contractModalMessage.textContent = signUrl
+      ? "Contrato enviado para o WhatsApp do cliente."
+      : "Abra o contrato e tente gerar/copiar o link de assinatura novamente em instantes.";
+  }
   if (contractModalLink) contractModalLink.href = normalizedContractUrl;
   if (contractModalOpenBtn) contractModalOpenBtn.href = normalizedContractUrl;
-  if (contractModalFeedback) contractModalFeedback.classList.add("hidden");
+  if (contractModalCopyBtn) contractModalCopyBtn.disabled = !activeContractSignUrl;
+  if (contractModalFeedback) {
+    contractModalFeedback.classList.toggle("hidden", !!signUrl);
+    if (!signUrl) {
+      contractModalFeedback.textContent = "Link de assinatura indisponível no momento. O contrato pode ser aberto normalmente.";
+    }
+  }
   contractModal.classList.remove("hidden");
 }
 
@@ -1107,6 +1126,7 @@ function closeContractModal() {
   activeContractSignUrl = "";
   if (contractModalLink) contractModalLink.removeAttribute("href");
   if (contractModalOpenBtn) contractModalOpenBtn.removeAttribute("href");
+  if (contractModalCopyBtn) contractModalCopyBtn.disabled = false;
   if (contractModalFeedback) contractModalFeedback.classList.add("hidden");
   contractModal?.classList.add("hidden");
 }
