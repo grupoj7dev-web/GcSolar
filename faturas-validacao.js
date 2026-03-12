@@ -1021,8 +1021,13 @@ async function downloadCombinedAsPdf(record) {
 
 function openInvoice(record) {
   const url = resolveInvoiceUrl(record);
+  if (url) {
+    window.open(url, "_blank", "noopener,noreferrer");
+    return;
+  }
+
   const html = buildCombinedInvoiceHtml(record);
-  if (!url && !html) {
+  if (!html) {
     window.alert("Não foi encontrado conteúdo de visualização para esta fatura.");
     return;
   }
@@ -1033,8 +1038,8 @@ function openInvoice(record) {
     key,
     JSON.stringify({
       title,
-      invoiceUrl: url || "",
-      html: url ? "" : html,
+      invoiceUrl: "",
+      html,
     })
   );
   window.open(
