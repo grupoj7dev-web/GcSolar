@@ -1324,6 +1324,34 @@ app.get('/api/contracts/sign-link/:token', async (req, res) => {
     }
 });
 
+app.get('/api/contracts/sign-link/:token/document', async (req, res) => {
+    try {
+        const token = normalizeSpaces(req.params?.token || '');
+        if (!token) {
+            return res.status(400).json({ ok: false, error: 'token obrigatorio.' });
+        }
+
+        const { session } = await readContractSignSession(token);
+        const contractUrl = normalizeSpaces(session?.contractUrl || '');
+        if (!contractUrl) {
+            return res.status(404).json({ ok: false, error: 'Contrato nao encontrado para este link.' });
+        }
+
+        const buffer = await readContractPdfBuffer(contractUrl);
+        const parsed = new URL(contractUrl, buildPublicUrl(req, '/'));
+        const fileName = path.basename(decodeURIComponent(parsed.pathname || 'contrato.pdf')) || 'contrato.pdf';
+
+        res.setHeader('content-type', 'application/pdf');
+        res.setHeader('content-disposition', `inline; filename="${fileName.replace(/"/g, '')}"`);
+        return res.send(buffer);
+    } catch (error) {
+        return res.status(404).json({
+            ok: false,
+            error: error.message || 'Nao foi possivel carregar o contrato deste link.',
+        });
+    }
+});
+
 app.post('/api/contracts/request-sign-code', async (req, res) => {
     try {
         const token = normalizeSpaces(req.body?.token || '');

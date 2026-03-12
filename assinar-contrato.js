@@ -42,6 +42,12 @@ function buildViewerlessPdfUrl(url) {
   return `${url}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`;
 }
 
+function buildTokenDocumentUrl(valueToken) {
+  const safeToken = String(valueToken || "").trim();
+  if (!safeToken) return "";
+  return `${window.location.origin}/api/contracts/sign-link/${encodeURIComponent(safeToken)}/document`;
+}
+
 function normalizePublicAppUrl(value) {
   const raw = String(value || "").trim();
   if (!raw) return "";
@@ -280,8 +286,9 @@ async function loadSigningSession() {
     signerDocumentInput.value = session.signerDocument || "";
     if (typedSignatureInput) typedSignatureInput.value = session.signerName || signerNameInput.value || "";
     updateTypedPreview();
-    if (pdfExternalLink) pdfExternalLink.href = contractUrl;
-    contractFrame.src = buildViewerlessPdfUrl(contractUrl);
+    const tokenDocumentUrl = buildTokenDocumentUrl(token);
+    if (pdfExternalLink) pdfExternalLink.href = tokenDocumentUrl || contractUrl;
+    contractFrame.src = buildViewerlessPdfUrl(tokenDocumentUrl || contractUrl);
     refreshVerificationHelp();
   } catch (error) {
     console.error(error);

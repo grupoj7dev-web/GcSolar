@@ -894,7 +894,7 @@ function buildIndicacaoDetails(item, signUrl = "") {
     : "Conta em nome de terceiro";
   const contratoPdfUrl = normalizePublicAppUrl(item?.contrato?.pdfUrl || item?.contratoPdfUrl || docs.contratoPdfUrl || "");
   const stage = normalizeIndicacaoStatus(item.status || item.statusLabel);
-  const contractActionUrl = signUrl || contratoPdfUrl;
+  const contractActionUrl = stage === "pendente_assinatura" ? (signUrl || contratoPdfUrl) : "";
   const contractActionLabel = signUrl ? "Assinar contrato" : "Abrir contrato";
   const contractActionDescription = signUrl
     ? "Link da página de assinatura com confirmação por WhatsApp"
@@ -904,7 +904,7 @@ function buildIndicacaoDetails(item, signUrl = "") {
     buildDocLink("Documento principal", docs.cnhUrl, "CNH ou RG do titular"),
     buildDocLink("Contrato social", docs.contratoSocialUrl, "Documento societário da empresa"),
     buildDocLink("Documento do terceiro", docs.cnhDonoContaUrl, "CNH ou RG do titular da conta"),
-    buildDocLink(stage === "pendente_assinatura" ? contractActionLabel : "Contrato gerado", contractActionUrl, contractActionDescription),
+    buildDocLink(contractActionLabel, contractActionUrl, contractActionDescription),
   ].filter(Boolean);
   const contractActionCard = stage === "pendente_assinatura" && contractActionUrl
     ? `
@@ -1087,7 +1087,8 @@ async function buildContractSignUrl(contract, item) {
 }
 
 async function openContractModal(contract, item) {
-  if (!contractModal || !contract?.url) return;
+  const stage = normalizeIndicacaoStatus(item?.status || item?.statusLabel);
+  if (!contractModal || !contract?.url || stage !== "pendente_assinatura") return;
   const nome = item?.nome || item?.razaoSocial || item?.nomeFantasia || "assinante";
   const normalizedContractUrl = normalizePublicAppUrl(contract.url);
   let signUrl = "";
