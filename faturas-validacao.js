@@ -47,6 +47,7 @@ const scoreTaxa = document.getElementById("scoreTaxa");
 const updatedAtLabel = document.getElementById("updatedAtLabel");
 const pendingCounterLabel = document.getElementById("pendingCounterLabel");
 const invoiceTableBody = document.getElementById("invoiceTableBody");
+const invoiceSearchInput = document.getElementById("invoiceSearchInput");
 const LAST_VALIDACAO_KEY = "gcsolar_last_validacao_id";
 const LAST_EMITIDA_KEY = "gcsolar_last_emitida_id";
 const LOCAL_DELETED_EMITIDAS_KEY = "gcsolar_emitidas_deleted_ids";
@@ -61,6 +62,7 @@ let allEmitidas = [];
 let html2pdfLoader = null;
 let pdfLibsLoader = null;
 let asaasConfig = null;
+let invoiceSearchTerm = "";
 
 function isLocalDevHost() {
   const host = String(window.location.hostname || "").toLowerCase();
@@ -170,6 +172,14 @@ function formatDateTime(value) {
 
 function onlyDigits(value) {
   return String(value || "").replace(/\D+/g, "");
+}
+
+function normalizeSearchText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
 }
 
 function normalizeStatus(item) {
@@ -726,15 +736,33 @@ function tableRow(record) {
   `;
 }
 
-function renderTable() {
-  pendingCounterLabel.textContent = `${pendingInvoices.length} itens`;
+function getFilteredPendingInvoices() {
+  const term = normalizeSearchText(invoiceSearchTerm);
+  if (!term) return pendingInvoices;
 
-  if (!pendingInvoices.length) {
+  return pendingInvoices.filter((record) => {
+    const bucket = [
+      resolveUc(record),
+      resolveNome(record),
+      resolveDocumento(record),
+      resolveReferencia(record),
+    ]
+      .map(normalizeSearchText)
+      .join(" ");
+    return bucket.includes(term);
+  });
+}
+
+function renderTable() {
+  const filteredInvoices = getFilteredPendingInvoices();
+  pendingCounterLabel.textContent = `${filteredInvoices.length} itens`;
+
+  if (!filteredInvoices.length) {
     invoiceTableBody.innerHTML = '<tr><td colspan="8" class="empty-row">Nenhuma fatura pendente no momento.</td></tr>';
     return;
   }
 
-  invoiceTableBody.innerHTML = pendingInvoices.map(tableRow).join("");
+  invoiceTableBody.innerHTML = filteredInvoices.map(tableRow).join("");
 
   const lastId = localStorage.getItem(LAST_VALIDACAO_KEY) || "";
   if (lastId) {
@@ -1357,6 +1385,11 @@ function bindEvents() {
       console.error(error);
       window.alert("Falha ao atualizar dados.");
     });
+  });
+
+  invoiceSearchInput?.addEventListener("input", () => {
+    invoiceSearchTerm = invoiceSearchInput.value || "";
+    renderTable();
   });
 
   invoiceTableBody?.addEventListener("click", async (event) => {

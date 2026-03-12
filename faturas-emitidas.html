@@ -20,8 +20,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <link rel="stylesheet" href="dashboard.css?v=20260312-invoiceview2">
-    <link rel="stylesheet" href="faturas-emitidas.css?v=20260312-invoiceview2">
+    <link rel="stylesheet" href="dashboard.css?v=20260312-invoiceview6">
+    <link rel="stylesheet" href="faturas-emitidas.css?v=20260312-invoiceview6">
 </head>
 
 <body>
@@ -103,7 +103,10 @@
                 <section class="card invoice-table-card">
                     <div class="table-head-row">
                         <p class="table-title">Cobranças</p>
-                        <p class="table-subtitle" id="counterLabel">0 itens</p>
+                        <div class="table-tools">
+                            <input id="invoiceSearchInput" class="table-search" type="search" placeholder="Buscar por nome, documento, UC ou referência">
+                            <p class="table-subtitle" id="counterLabel">0 itens</p>
+                        </div>
                     </div>
                     <div class="table-wrap">
                         <table class="invoice-table">
@@ -131,8 +134,8 @@
         </div>
     </div>
 
-    <script type="module" src="access-control.js?v=20260312-invoiceview5"></script>
-    <script type="module" src="faturas-emitidas.js?v=20260312-invoiceview5"></script>
+    <script type="module" src="access-control.js?v=20260312-invoiceview6"></script>
+    <script type="module" src="faturas-emitidas.js?v=20260312-invoiceview6"></script>
 <script>
   (function(d,t) {
     var BASE_URL="https://crm.iasolar.io";

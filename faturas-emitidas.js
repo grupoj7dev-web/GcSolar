@@ -47,6 +47,7 @@ const scoreTaxa = document.getElementById("scoreTaxa");
 const updatedAtLabel = document.getElementById("updatedAtLabel");
 const counterLabel = document.getElementById("counterLabel");
 const invoiceTableBody = document.getElementById("invoiceTableBody");
+const invoiceSearchInput = document.getElementById("invoiceSearchInput");
 const LAST_EMITIDA_KEY = "gcsolar_last_emitida_id";
 const LOCAL_DELETED_KEY = "gcsolar_emitidas_deleted_ids";
 
@@ -61,6 +62,7 @@ let asaasConfig = null;
 let pdfLibsLoader = null;
 let asaasBackendOfflineUntil = 0;
 let asaasBackendLastError = "";
+let invoiceSearchTerm = "";
 
 const ASAAS_BACKEND_COOLDOWN_MS = 5 * 60 * 1000;
 
@@ -140,6 +142,14 @@ function formatDateTime(value) {
 
 function onlyDigits(value) {
   return String(value || "").replace(/\D+/g, "");
+}
+
+function normalizeSearchText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
 }
 
 function toNumber(value) {
@@ -500,14 +510,32 @@ function rowTemplate(record) {
   `;
 }
 
+function getFilteredEmittedInvoices() {
+  const term = normalizeSearchText(invoiceSearchTerm);
+  if (!term) return emittedInvoices;
+
+  return emittedInvoices.filter((record) => {
+    const bucket = [
+      resolveUc(record),
+      resolveNome(record),
+      resolveDocumento(record),
+      resolveReferencia(record),
+    ]
+      .map(normalizeSearchText)
+      .join(" ");
+    return bucket.includes(term);
+  });
+}
+
 function renderTable() {
-  counterLabel.textContent = `${emittedInvoices.length} itens`;
-  if (!emittedInvoices.length) {
+  const filteredInvoices = getFilteredEmittedInvoices();
+  counterLabel.textContent = `${filteredInvoices.length} itens`;
+  if (!filteredInvoices.length) {
     invoiceTableBody.innerHTML = '<tr><td colspan="8" class="empty-row">Nenhuma fatura emitida encontrada.</td></tr>';
     return;
   }
 
-  const ordered = [...emittedInvoices].sort((a, b) => {
+  const ordered = [...filteredInvoices].sort((a, b) => {
     const ad = asDate(resolveEmissao(a))?.getTime() || 0;
     const bd = asDate(resolveEmissao(b))?.getTime() || 0;
     return bd - ad;
@@ -1018,6 +1046,11 @@ function bindEvents() {
     } finally {
       refreshBtn.disabled = false;
     }
+  });
+
+  invoiceSearchInput?.addEventListener("input", () => {
+    invoiceSearchTerm = invoiceSearchInput.value || "";
+    renderTable();
   });
 
   invoiceTableBody?.addEventListener("click", async (event) => {
