@@ -8,10 +8,13 @@
     const params = new URLSearchParams(window.location.search);
     const key = String(params.get("k") || "").trim();
     if (!key) return null;
-    const raw = sessionStorage.getItem(key);
+    const raw = localStorage.getItem(key) || sessionStorage.getItem(key);
     if (!raw) return null;
     try {
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      localStorage.removeItem(key);
+      sessionStorage.removeItem(key);
+      return parsed;
     } catch (_) {
       return null;
     }

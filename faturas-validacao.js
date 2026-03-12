@@ -1029,7 +1029,7 @@ function openInvoice(record) {
 
   const key = `gcsolar_invoice_preview_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const title = `Fatura ${resolveUc(record)} - ${resolveReferencia(record)}`;
-  sessionStorage.setItem(
+  localStorage.setItem(
     key,
     JSON.stringify({
       title,
