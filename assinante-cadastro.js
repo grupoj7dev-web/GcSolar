@@ -187,7 +187,53 @@ function readAddress(group) {
   if (!root) return out;
   Object.keys(out).forEach((k) => { out[k] = clean(root.querySelector(`[data-address-field='${k}']`)?.value || ""); });
   out.state = out.state.toUpperCase();
-  return out;
+  return normalizeAddress(out);
+}
+
+function normalizeAddress(addr = {}) {
+  const cep = onlyDigits(addressValue(addr, "cep"));
+  const street = addressValue(addr, "street", "logradouro", "endereco");
+  const number = addressValue(addr, "number", "numero");
+  const complement = addressValue(addr, "complement", "complemento");
+  const district = addressValue(addr, "district", "bairro");
+  const city = addressValue(addr, "city", "cidade");
+  const state = addressValue(addr, "state", "uf", "estado").toUpperCase();
+
+  return {
+    cep,
+    street,
+    number,
+    complement,
+    district,
+    city,
+    state,
+    logradouro: street,
+    numero: number,
+    complemento: complement,
+    bairro: district,
+    cidade: city,
+    estado: state,
+    uf: state,
+  };
+}
+
+function writeAddress(group, addr = {}) {
+  const root = qs(`[data-address='${group}']`);
+  if (!root) return;
+  const normalized = normalizeAddress(addr);
+  const map = {
+    cep: normalized.cep,
+    street: normalized.street,
+    number: normalized.number,
+    complement: normalized.complement,
+    district: normalized.district,
+    city: normalized.city,
+    state: normalized.state,
+  };
+  Object.entries(map).forEach(([k, v]) => {
+    const input = root.querySelector(`[data-address-field='${k}']`);
+    if (input) input.value = v || "";
+  });
 }
 
 async function fillCep(group) {
@@ -682,7 +728,8 @@ async function uploadOptional(file, key) {
 
 function buildPayload() {
   const person = holderType() === "person";
-  const primaryAddress = getPrimaryAddress();
+  const ownerAddress = normalizeAddress(person ? readAddress("personAddress") : readAddress("companyAddress"));
+  const primaryAddress = ownerAddress;
   const ownerDoc = person ? onlyDigits(id("personCpf").value) : onlyDigits(id("companyCnpj").value);
   const ownerName = person ? clean(id("personName").value) : clean(id("companyRazao").value || id("companyFantasy").value);
   const ownerEmail = person ? clean(id("personEmail").value) : clean(id("companyEmail").value);
@@ -690,8 +737,8 @@ function buildPayload() {
   const discount = toNumber(id("planDiscountPercent").value || suggestedDiscount());
   const primaryAccount = state.accounts[0] || createAccount();
   const primaryAccountAddress = validateAddress(primaryAccount.address || {})
-    ? primaryAccount.address
-    : (primaryAddress || primaryAccount.address || {});
+    ? normalizeAddress(primaryAccount.address)
+    : normalizeAddress(primaryAddress || primaryAccount.address || {});
   const compensationMode = qsa('input[name="compensationMode"]').find((x) => x.checked)?.value || "autoconsumo-remoto";
   const transfer = transferEnabled() ? {
     enabled: true,
@@ -723,8 +770,19 @@ function buildPayload() {
       birthDate: clean(primaryAccount.birthDate || ""),
       uc: clean(primaryAccount.uc || ""),
       partnerNumber: clean(primaryAccount.partner || ""),
-      address: primaryAccountAddress,
+      address: normalizeAddress(primaryAccountAddress),
     },
+    endereco: {
+      cep: ownerAddress.cep,
+      logradouro: ownerAddress.street,
+      numero: ownerAddress.number,
+      complemento: ownerAddress.complement,
+      bairro: ownerAddress.district,
+      cidade: ownerAddress.city,
+      estado: ownerAddress.state,
+      uf: ownerAddress.state,
+    },
+    cidadeEstado: `${ownerAddress.city || ""}${ownerAddress.state ? `/${ownerAddress.state}` : ""}`,
     subscriber: {
       holderType: holderType(),
       fullName: person ? ownerName : "",
@@ -741,7 +799,7 @@ function buildPayload() {
       razaoSocial: person ? "" : clean(id("companyRazao").value),
       nomeFantasia: person ? "" : clean(id("companyFantasy").value),
       observations: person ? clean(id("personObs").value) : clean(id("companyObs").value),
-      address: person ? readAddress("personAddress") : readAddress("companyAddress"),
+      address: ownerAddress,
     },
     administrator: !person ? {
       cpf: onlyDigits(id("adminCpf").value),
@@ -764,7 +822,7 @@ function buildPayload() {
       birthDate: clean(a.birthDate),
       uc: clean(a.uc),
       partnerNumber: clean(a.partner),
-      address: validateAddress(a.address || {}) ? a.address : (primaryAddress || a.address || {}),
+      address: normalizeAddress(validateAddress(a.address || {}) ? a.address : (primaryAddress || a.address || {})),
     })),
     transfer,
     planContract: {
@@ -1002,6 +1060,9 @@ async function hydrateExisting(data) {
   id("companyEmail").value = s.email || "";
   id("personObs").value = s.observations || "";
   id("companyObs").value = s.observations || "";
+  const rootAddress = normalizeAddress(s.address || data.endereco || data.energy_account?.address || {});
+  writeAddress("personAddress", rootAddress);
+  writeAddress("companyAddress", rootAddress);
   const a = data.administrator || {};
   id("adminCpf").value = applyMask(a.cpf || "", "cpf");
   id("adminName").value = a.name || "";
@@ -1052,7 +1113,7 @@ async function hydrateExisting(data) {
       birthDate: x.birthDate || "",
       uc: x.uc || "",
       partner: x.partnerNumber || "",
-      address: x.address || { cep: "", street: "", number: "", complement: "", district: "", city: "", state: "" },
+      address: normalizeAddress(x.address || {}),
     }));
   } else if (energyAccount) {
     state.accounts = [createAccount({
@@ -1062,7 +1123,7 @@ async function hydrateExisting(data) {
       birthDate: energyAccount.birthDate || "",
       uc: energyAccount.uc || "",
       partner: energyAccount.partnerNumber || "",
-      address: energyAccount.address || { cep: "", street: "", number: "", complement: "", district: "", city: "", state: "" },
+      address: normalizeAddress(energyAccount.address || {}),
     })];
   } else {
     state.accounts = [createAccount()];
