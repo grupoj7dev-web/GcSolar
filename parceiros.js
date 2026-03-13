@@ -54,6 +54,7 @@ const closeModalBtn = document.getElementById("closeModalBtn");
 const cancelBtn = document.getElementById("cancelBtn");
 const formTitle = document.getElementById("formTitle");
 const form = document.getElementById("partnerForm");
+const saveBtn = document.getElementById("saveBtn");
 
 const partnerIdInput = document.getElementById("partnerId");
 const originalEmailInput = document.getElementById("originalEmail");
@@ -72,6 +73,7 @@ const permissionInputs = Array.from(document.querySelectorAll("[data-perm]"));
 let currentScope = null;
 let partners = [];
 let editingPartner = null;
+let saveInFlight = false;
 
 function cleanText(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -192,7 +194,7 @@ async function createAuthUser(email, password) {
     body: JSON.stringify({
       email,
       password,
-      returnSecureToken: false,
+      returnSecureToken: true,
     }),
   });
 
@@ -201,6 +203,15 @@ async function createAuthUser(email, password) {
     const code = body?.error?.message || "CREATE_AUTH_FAILED";
     if (code === "EMAIL_EXISTS") {
       throw new Error("Este e-mail ja esta cadastrado no Firebase Auth.");
+    }
+    if (code === "INVALID_EMAIL") {
+      throw new Error("E-mail inválido. Confira o endereço informado.");
+    }
+    if (code === "WEAK_PASSWORD" || code === "PASSWORD_DOES_NOT_MEET_REQUIREMENTS") {
+      throw new Error("Senha fraca. Use uma senha com pelo menos 6 caracteres.");
+    }
+    if (code === "OPERATION_NOT_ALLOWED") {
+      throw new Error("Cadastro por e-mail/senha está desativado no Firebase Auth deste projeto.");
     }
     throw new Error(`Falha ao criar usuario de login: ${code}`);
   }
@@ -386,6 +397,7 @@ function loadInForm(partner) {
 
 async function savePartner(event) {
   event.preventDefault();
+  if (saveInFlight) return;
   if (!currentScope?.isAdmin) {
     setStatus("Sem permissao para gerenciar parceiros.", "error");
     return;
@@ -416,6 +428,12 @@ async function savePartner(event) {
   const nowIso = new Date().toISOString();
 
   try {
+    saveInFlight = true;
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<i class="ph ph-spinner-gap"></i> Salvando...';
+    }
+
     let authUid = null;
     if (!isEditing) {
       const existsInScope = partners.some(
@@ -467,6 +485,12 @@ async function savePartner(event) {
       console.error(error);
     }
     setStatus(`Falha ao salvar parceiro: ${message}`, "error");
+  } finally {
+    saveInFlight = false;
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = '<i class="ph ph-floppy-disk"></i> Salvar';
+    }
   }
 }
 
