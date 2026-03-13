@@ -219,6 +219,12 @@ async function createAuthUser(email, password) {
   return { uid: body.localId };
 }
 
+function findPartnerByEmail(email) {
+  const target = cleanText(email).toLowerCase();
+  if (!target) return null;
+  return partners.find((partner) => cleanText(partner.email || partner.mail).toLowerCase() === target) || null;
+}
+
 async function authEmailAlreadyExists(email) {
   const response = await fetch(IDENTITY_CREATE_AUTH_URI_URL, {
     method: "POST",
@@ -481,6 +487,16 @@ async function savePartner(event) {
     await loadPartners();
   } catch (error) {
     const message = error?.message || "erro desconhecido";
+    if (/ja esta cadastrado no Firebase Auth/i.test(message)) {
+      const existingPartner = findPartnerByEmail(emailInput?.value || "");
+      if (existingPartner) {
+        loadInForm(existingPartner);
+        setStatus("Este e-mail já existe e o parceiro foi aberto para edição.", "error");
+        return;
+      }
+      setStatus("Este e-mail já tem login no Firebase Auth. Use outro e-mail ou edite o usuário já existente.", "error");
+      return;
+    }
     if (!/ja esta cadastrado no Firebase Auth/i.test(message)) {
       console.error(error);
     }
