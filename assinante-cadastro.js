@@ -382,7 +382,7 @@ function renderAccounts() {
         <label class='field'><span>Nome da PF / Empresa *</span><input data-acc='name' data-idx='${i}' value='${x.name || ""}'></label>
         <label class='field ${x.personType === "company" ? "hidden" : ""}'><span>Data de Nascimento *</span><input type='date' data-acc='birthDate' data-idx='${i}' value='${x.birthDate || ""}'></label>
         <label class='field'><span>UC - Unidade Consumidora *</span><input data-acc='uc' data-idx='${i}' value='${x.uc || ""}'></label>
-        <label class='field'><span>Numero do Parceiro *</span><input data-acc='partner' data-idx='${i}' value='${x.partner || ""}'></label>
+        <label class='field'><span>Numero do Parceiro</span><input data-acc='partner' data-idx='${i}' value='${x.partner || ""}'></label>
       </div>
       <h3>Endereço da Instalação</h3>
       <div class='grid cols-4 account-fields' data-account-address='${i}'>
@@ -599,7 +599,6 @@ function validateStep(step) {
       if (onlyDigits(id("personCpf").value).length !== 11) return "CPF inválido.";
       if (!clean(id("personName").value)) return "Nome obrigatório.";
       if (!clean(id("personBirth").value)) return "Data de nascimento obrigatória.";
-      if (!clean(id("personPartner").value)) return "Numero parceiro obrigatório.";
       if (!clean(id("personPhone").value)) return "Telefone obrigatório.";
       if (!clean(id("personEmail").value)) return "Email obrigatório.";
       if (!validateAddress(readAddress("personAddress"))) return "Endereço incompleto.";
@@ -628,7 +627,6 @@ function validateStep(step) {
       if (!clean(a.name)) return "Nome da conta obrigatório.";
       if (a.personType === "person" && !clean(a.birthDate)) return "Data de nascimento da conta obrigatória.";
       if (!clean(a.uc)) return "Preencha o numero da UC.";
-      if (!clean(a.partner)) return "Numero parceiro da conta obrigatório.";
       if (!validateAddress(a.address || {})) {
         if (!validateAddress(primaryAddress || {})) return "Endereço incompleto.";
         a.address = { ...(primaryAddress || {}) };
