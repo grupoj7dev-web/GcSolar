@@ -373,6 +373,28 @@ function toggleAdminBlock() {
   id("companyAdminBlock").classList.toggle("hidden", !show);
 }
 
+function clearPersonFields() {
+  id("personCpf").value = "";
+  id("personName").value = "";
+  id("personBirth").value = "";
+  id("personPhone").value = "";
+  id("personEmail").value = "";
+  id("personCivil").value = "";
+  id("personJob").value = "";
+  id("personObs").value = "";
+  writeAddress("personAddress", {});
+}
+
+function clearCompanyFields() {
+  id("companyCnpj").value = "";
+  id("companyRazao").value = "";
+  id("companyFantasy").value = "";
+  id("companyPhone").value = "";
+  id("companyEmail").value = "";
+  id("companyObs").value = "";
+  writeAddress("companyAddress", {});
+}
+
 function createAccount(seed = {}) {
   return {
     personType: seed.personType || holderType() || "person",
@@ -1278,23 +1300,28 @@ async function hydrateExisting(data) {
   if (radio) radio.checked = true;
   toggleStep3();
   const s = data.subscriber || {};
-  id("personCpf").value = applyMask(s.cpf || s.cpfCnpj || "", "cpf");
-  id("personName").value = s.fullName || "";
-  id("personBirth").value = s.birthDate || "";
-  id("personPhone").value = s.phone || "";
-  id("personEmail").value = s.email || "";
-  id("personCivil").value = s.civilStatus || "";
-  id("personJob").value = s.profession || "";
-  id("companyCnpj").value = applyMask(s.cnpj || s.cpfCnpj || "", "cnpj");
-  id("companyRazao").value = s.razaoSocial || s.companyName || "";
-  id("companyFantasy").value = s.nomeFantasia || "";
-  id("companyPhone").value = s.phone || "";
-  id("companyEmail").value = s.email || "";
-  id("personObs").value = s.observations || "";
-  id("companyObs").value = s.observations || "";
   const rootAddress = normalizeAddress(s.address || data.endereco || data.energy_account?.address || {});
-  writeAddress("personAddress", rootAddress);
-  writeAddress("companyAddress", rootAddress);
+  clearPersonFields();
+  clearCompanyFields();
+  if (type === "company") {
+    id("companyCnpj").value = applyMask(s.cnpj || s.cpfCnpj || "", "cnpj");
+    id("companyRazao").value = s.razaoSocial || s.companyName || "";
+    id("companyFantasy").value = s.nomeFantasia || "";
+    id("companyPhone").value = s.phone || "";
+    id("companyEmail").value = s.email || "";
+    id("companyObs").value = s.observations || "";
+    writeAddress("companyAddress", rootAddress);
+  } else {
+    id("personCpf").value = applyMask(s.cpf || s.cpfCnpj || "", "cpf");
+    id("personName").value = s.fullName || "";
+    id("personBirth").value = s.birthDate || "";
+    id("personPhone").value = s.phone || "";
+    id("personEmail").value = s.email || "";
+    id("personCivil").value = s.civilStatus || "";
+    id("personJob").value = s.profession || "";
+    id("personObs").value = s.observations || "";
+    writeAddress("personAddress", rootAddress);
+  }
   const a = data.administrator || {};
   id("adminCpf").value = applyMask(a.cpf || "", "cpf");
   id("adminName").value = a.name || "";
