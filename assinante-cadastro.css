@@ -281,6 +281,89 @@
   font-size: 1.95rem;
 }
 
+.company-contacts-wrap {
+  display: grid;
+  gap: 0.85rem;
+  margin: 0.75rem 0 1rem;
+}
+
+.company-contacts-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.company-contacts-kicker {
+  margin: 0 0 0.15rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #6b8a78;
+}
+
+.company-contacts-head h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #173426;
+}
+
+.company-contacts-list {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.company-contact-card {
+  position: relative;
+  border: 1px solid #d6e1d9;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fbfdfb 0%, #f5f9f6 100%);
+  padding: 1rem;
+}
+
+.company-contact-grid {
+  align-items: start;
+}
+
+.company-contact-remove {
+  position: absolute;
+  top: 0.7rem;
+  right: 0.7rem;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid #f0c9c9;
+  background: #fff;
+  color: #d34d4d;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.company-contact-remove:hover {
+  background: #fff5f5;
+}
+
+.company-contact-add {
+  min-height: 58px;
+  border: 2px dashed #d4dde2;
+  border-radius: 14px;
+  background: #fbfcfd;
+  color: #5c7193;
+  font: inherit;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  cursor: pointer;
+}
+
+.company-contact-add:hover {
+  border-color: #b8cad6;
+  background: #f6f9fb;
+}
+
 .step-pane h3 {
   margin: 0.8rem 0 0.52rem;
   font-size: 1.03rem;

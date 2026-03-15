@@ -20,7 +20,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
   <link rel="stylesheet" href="dashboard.css">
-  <link rel="stylesheet" href="assinante-cadastro.css?v=20260314-companyfield1">
+  <link rel="stylesheet" href="assinante-cadastro.css?v=20260314-companycontacts1">
 </head>
 <body>
   <div class="app-shell" id="appShell">
@@ -155,11 +155,12 @@
               <h2>Dados do Assinante PJ</h2>
               <div class="grid cols-2">
                 <label class="field"><span>CNPJ *</span><input id="companyCnpj" data-mask="cnpj"></label>
-                <label class="field"><span>Raz&#227;o Social *</span><input id="companyRazao"></label>
                 <label class="field"><span>Nome Fantasia</span><input id="companyFantasy"></label>
+                <label class="field"><span>Raz&#227;o Social *</span><input id="companyRazao"></label>
                 <label class="field"><span>Telefone *</span><input id="companyPhone" data-mask="phone"></label>
                 <label class="field"><span>E-mail *</span><input id="companyEmail" type="email"></label>
               </div>
+              <div id="companyContacts"></div>
               <label class="field"><span>Observa&#231;&#245;es</span><textarea id="companyObs" rows="3"></textarea></label>
 
               <h3>Endere&#231;o da Empresa</h3>
@@ -173,9 +174,6 @@
                 <label class="field"><span>Estado *</span><input data-address-field="state"></label>
               </div>
 
-              <h3>Contatos da Empresa</h3>
-              <div class="action-row"><button class="btn-secondary" type="button" id="addCompanyContactBtn">Adicionar Contato</button></div>
-              <div id="companyContacts"></div>
 
               <div id="companyAdminBlock">
                 <h3>Dados do Administrador</h3>
@@ -395,7 +393,7 @@
   </div>
 
   <script type="module" src="access-control.js?v=20260314-relatorios1"></script>
-    <script type="module" src="assinante-cadastro.js?v=20260314-companyfield1"></script></body>
+    <script type="module" src="assinante-cadastro.js?v=20260314-companycontacts1"></script></body>
 </html>
 
 

@@ -50,6 +50,15 @@ const DISCOUNT_RANGES = [
   { min: 3101, max: 7000, none: 22, m12: 25, m24: 27 },
 ];
 
+const COMPANY_CONTACT_ROLE_OPTIONS = [
+  "FINANCEIRO",
+  "SÓCIO",
+  "GERENTE",
+  "DIRETOR",
+  "ATENDENTE",
+  "Outro",
+];
+
 const stepTimeline = [
   { label: "Concessionária", icon: "ph-lightning" },
   { label: "Tipo", icon: "ph-identification-card" },
@@ -764,11 +773,91 @@ function renderNotifications() {
   saveDraft();
 }
 
+function normalizeContactEntry(entry = {}, kind = "person") {
+  const roleRaw = clean(entry.roleType || entry.role || "");
+  const roleOption = COMPANY_CONTACT_ROLE_OPTIONS.find((item) => normalizeText(item) === normalizeText(roleRaw));
+  const roleType = kind === "company"
+    ? (roleOption || (roleRaw ? "Outro" : ""))
+    : "";
+  const roleOther = kind === "company" && roleRaw && !roleOption
+    ? roleRaw
+    : clean(entry.roleOther || "");
+
+  return {
+    name: clean(entry.name || ""),
+    phone: clean(entry.phone || ""),
+    email: clean(entry.email || ""),
+    roleType,
+    roleOther,
+    role: kind === "company"
+      ? (roleType === "Outro" ? roleOther : roleType)
+      : clean(entry.role || ""),
+  };
+}
+
 function renderContacts(kind) {
   const isPerson = kind === "person";
-  const list = isPerson ? state.personContacts : state.companyContacts;
+  const list = (isPerson ? state.personContacts : state.companyContacts).map((item) => normalizeContactEntry(item, kind));
+  if (isPerson) state.personContacts = list;
+  else state.companyContacts = list;
   const root = id(isPerson ? "personContacts" : "companyContacts");
   if (!root) return;
+
+  if (!isPerson) {
+    root.innerHTML = `
+      <div class="company-contacts-wrap">
+        <div class="company-contacts-head">
+          <div>
+            <p class="company-contacts-kicker">Contatos Adicionais</p>
+            <h3>Contatos Adicionais</h3>
+          </div>
+        </div>
+        <div class="company-contacts-list">
+          ${list.map((c, i) => `
+            <article class="company-contact-card">
+              <button type="button" class="company-contact-remove" data-remove-contact="company:${i}" aria-label="Remover contato">
+                <i class="ph ph-trash"></i>
+              </button>
+              <div class="grid cols-2 company-contact-grid">
+                <label class="field span-2">
+                  <span>Nome</span>
+                  <input data-contact="name" data-kind="company" data-idx="${i}" placeholder="Nome do contato" value="${escapeHtml(c.name || "")}">
+                </label>
+                <label class="field">
+                  <span>Telefone</span>
+                  <input data-mask="phone" data-contact="phone" data-kind="company" data-idx="${i}" placeholder="(00) 00000-0000" value="${escapeHtml(c.phone || "")}">
+                </label>
+                <label class="field">
+                  <span>E-mail</span>
+                  <input type="email" data-contact="email" data-kind="company" data-idx="${i}" placeholder="email@exemplo.com" value="${escapeHtml(c.email || "")}">
+                </label>
+                <label class="field span-2">
+                  <span>Função</span>
+                  <select data-contact="roleType" data-kind="company" data-idx="${i}">
+                    <option value="">Selecione...</option>
+                    ${COMPANY_CONTACT_ROLE_OPTIONS.map((option) => `
+                      <option value="${escapeHtml(option)}" ${c.roleType === option ? "selected" : ""}>${escapeHtml(option)}</option>
+                    `).join("")}
+                  </select>
+                </label>
+                <label class="field span-2 ${c.roleType === "Outro" ? "" : "hidden"}" data-role-other-wrap="${i}">
+                  <span>Qual?</span>
+                  <input data-contact="roleOther" data-kind="company" data-idx="${i}" placeholder="Informe a função" value="${escapeHtml(c.roleOther || "")}">
+                </label>
+              </div>
+            </article>
+          `).join("")}
+        </div>
+        <button class="company-contact-add" type="button" id="addCompanyContactBtn" ${list.length ? "" : ""}>
+          <i class="ph ph-plus"></i>
+          Adicionar Contato
+        </button>
+      </div>
+    `;
+    bindMasks(root);
+    return;
+  }
+
   root.innerHTML = list.map((c, i) => `
     <article class='account-card'>
       <div class='grid cols-3'>
@@ -1112,7 +1201,6 @@ function bindEvents() {
   id("fillFromStep3Btn").addEventListener("click", fillPrimaryToFirstUc);
   id("addAccountBtn").addEventListener("click", () => { state.accounts.push(createAccount()); renderAccounts(); });
   id("addPersonContactBtn")?.addEventListener("click", () => { state.personContacts.push({ name: "", phone: "", role: "" }); renderContacts("person"); saveDraft(); });
-  id("addCompanyContactBtn")?.addEventListener("click", () => { state.companyContacts.push({ name: "", phone: "", role: "" }); renderContacts("company"); saveDraft(); });
 
   id("energyAccounts").addEventListener("click", (e) => {
     const b = e.target.closest("[data-remove-account]");
@@ -1160,10 +1248,39 @@ function bindEvents() {
     const i = Number(el.dataset.idx);
     if (!arr[i]) return;
     arr[i][el.dataset.contact] = clean(el.value);
+    if (el.dataset.kind === "company") {
+      const normalized = normalizeContactEntry(arr[i], "company");
+      arr[i] = normalized;
+      if (el.dataset.contact === "roleType") renderContacts("company");
+    }
+    saveDraft();
+  });
+
+  form.addEventListener("change", (e) => {
+    const el = e.target;
+    if (el.id === "addCompanyContactBtn") return;
+    if (el.id === "addPersonContactBtn") return;
+    if (el.id === "planFidelity") return;
+    if (!el.matches("[data-contact]")) return;
+    const arr = el.dataset.kind === "person" ? state.personContacts : state.companyContacts;
+    const i = Number(el.dataset.idx);
+    if (!arr[i]) return;
+    arr[i][el.dataset.contact] = clean(el.value);
+    if (el.dataset.kind === "company") {
+      arr[i] = normalizeContactEntry(arr[i], "company");
+      renderContacts("company");
+    }
     saveDraft();
   });
 
   form.addEventListener("click", (e) => {
+    const addCompanyBtn = e.target.closest("#addCompanyContactBtn");
+    if (addCompanyBtn) {
+      state.companyContacts.push(normalizeContactEntry({}, "company"));
+      renderContacts("company");
+      saveDraft();
+      return;
+    }
     const b = e.target.closest("[data-remove-contact]");
     if (!b) return;
     const [kind, idxRaw] = String(b.dataset.removeContact).split(":");
@@ -1374,8 +1491,8 @@ async function hydrateExisting(data) {
   id("transferPartner").value = data.transfer?.partnerNumber || "";
   id("transferDone").value = data.transfer?.done ? "yes" : "no";
   id("transferDate").value = data.transfer?.transferDate || "";
-  state.personContacts = Array.isArray(data.contacts?.person) ? data.contacts.person : [];
-  state.companyContacts = Array.isArray(data.contacts?.company) ? data.contacts.company : [];
+  state.personContacts = Array.isArray(data.contacts?.person) ? data.contacts.person.map((item) => normalizeContactEntry(item, "person")) : [];
+  state.companyContacts = Array.isArray(data.contacts?.company) ? data.contacts.company.map((item) => normalizeContactEntry(item, "company")) : [];
   state.notifications = data.notifications && typeof data.notifications === "object" ? data.notifications : {};
   const energyAccounts = Array.isArray(data.energyAccounts) ? data.energyAccounts : null;
   const energyAccount = data.energy_account || data.energyAccount || null;
