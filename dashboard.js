@@ -561,7 +561,7 @@ function renderByPeriod(period) {
       formatMonthShortLabel(previousMonthKey),
       `${previousMonthlyProgress.processed}/${previousMonthlyProgress.expected}`
     ),
-  ].join("<br>");
+  ].join("");
   cards.processadas.textContent = int(processadas);
   cards.processadasMeta.innerHTML = [
     buildMonthSummaryLine(
@@ -572,7 +572,7 @@ function renderByPeriod(period) {
       formatMonthShortLabel(previousMonthKey),
       `${previousMonthlyProgress.processed}/${previousMonthlyProgress.expected}`
     ),
-  ].join("<br>");
+  ].join("");
   cards.emitidas.textContent = int(emitidas);
   cards.emitidasMeta.textContent = "Faturas oficialmente emitidas";
   cards.pagas.textContent = int(pagas);
