@@ -249,7 +249,7 @@
                 <label class="field"><span>Data de Ades&#227;o *</span><input id="planAdhesionDate" type="date"></label>
                 <label class="field"><span>kWh Informado pelo Vendedor *</span><input id="planSellerKwh" type="number" min="0" step="0.01"></label>
                 <label class="field"><span>Média Consumo (kWh) *</span><input id="planContractedKwh" type="number" min="0" step="0.01"></label>
-                <label class="field"><span>Fidelidade</span><select id="planFidelity"><option value="none">Sem Fidelidade</option><option value="12">12 Meses</option><option value="24">24 Meses</option></select></label>
+                <label class="field"><span>Fidelidade</span><select id="planFidelity"><option value="none">Sem Fidelidade</option><option value="custom">Com Fidelidade</option></select></label><label class="field hidden" id="planFidelityMonthsWrap"><span>Prazo da Fidelidade (meses)</span><input id="planFidelityMonths" type="number" min="1" step="1" inputmode="numeric"></label>
                 <label class="field span-2"><span>Desconto (%)</span><input id="planDiscountPercent" type="number" min="0" max="100" step="0.01"></label>
               </div>
 
@@ -392,8 +392,9 @@
   </div>
 
   <script type="module" src="access-control.js?v=20260314-prevalidacao1"></script>
-    <script type="module" src="assinante-cadastro.js?v=20260314-assinante4"></script></body>
+    <script type="module" src="assinante-cadastro.js?v=20260314-assinante5"></script></body>
 </html>
+
 
 
 

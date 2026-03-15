@@ -146,6 +146,8 @@ function restoreDraft() {
     renderNotifications();
     renderTransfer();
     toggleAdminBlock();
+    migrateLegacyFidelityValue();
+    renderPlanFidelity();
     renderSummary();
     updateStepUI();
     return true;
@@ -477,19 +479,44 @@ function syncPlanKwhFields(source = "average") {
   if (sellerInput.value !== averageInput.value) sellerInput.value = averageInput.value;
 }
 
+function getFidelityMonths() {
+  const mode = clean(id("planFidelity")?.value || "none");
+  if (mode !== "custom") return 0;
+  return Math.max(0, Math.round(toNumber(id("planFidelityMonths")?.value)));
+}
+
+function renderPlanFidelity() {
+  const mode = clean(id("planFidelity")?.value || "none");
+  const wrap = id("planFidelityMonthsWrap");
+  if (wrap) wrap.classList.toggle("hidden", mode !== "custom");
+  if (mode !== "custom" && id("planFidelityMonths")) id("planFidelityMonths").value = "";
+}
+
+function migrateLegacyFidelityValue() {
+  const fidelitySelect = id("planFidelity");
+  const fidelityMonthsInput = id("planFidelityMonths");
+  if (!fidelitySelect || !fidelityMonthsInput) return;
+
+  const rawValue = clean(fidelitySelect.value);
+  if (rawValue === "12" || rawValue === "24") {
+    fidelitySelect.value = "custom";
+    if (!clean(fidelityMonthsInput.value)) fidelityMonthsInput.value = rawValue;
+  }
+}
+
 function suggestedDiscount() {
   const kwh = toNumber(id("planContractedKwh")?.value);
-  const fidelity = clean(id("planFidelity")?.value || "none");
+  const fidelityMonths = getFidelityMonths();
   const r = DISCOUNT_RANGES.find((x) => kwh >= x.min && kwh <= x.max) || DISCOUNT_RANGES[DISCOUNT_RANGES.length - 1];
-  if (fidelity === "24") return r.m24;
-  if (fidelity === "12") return r.m12;
+  if (fidelityMonths >= 24) return r.m24;
+  if (fidelityMonths >= 12) return r.m12;
   return r.none;
 }
 
 function getFidelityKey() {
-  const fidelity = clean(id("planFidelity")?.value || "none");
-  if (fidelity === "24") return "m24";
-  if (fidelity === "12") return "m12";
+  const fidelityMonths = getFidelityMonths();
+  if (fidelityMonths >= 24) return "m24";
+  if (fidelityMonths >= 12) return "m12";
   return "none";
 }
 
@@ -529,7 +556,9 @@ function renderPlanDiscountDemo() {
   }).join("");
 
   if (hint) {
-    hint.textContent = `Faixa ativa: ${formatRangeLabel(chosen.min, chosen.max)} kWh | Fidelidade selecionada | Desconto sugerido: ${Number(suggested).toFixed(2)}%.`;
+    const fidelityMonths = getFidelityMonths();
+    const fidelityLabel = fidelityMonths > 0 ? `Fidelidade: ${fidelityMonths} meses` : "Sem fidelidade";
+    hint.textContent = `Faixa ativa: ${formatRangeLabel(chosen.min, chosen.max)} kWh | ${fidelityLabel} | Desconto sugerido: ${Number(suggested).toFixed(2)}%.`;
   }
 }
 
@@ -699,6 +728,7 @@ function validateStep(step) {
   if (step === 6) {
     const filled = [clean(id("planAdhesionDate").value), clean(id("planContractedKwh").value)].filter(Boolean).length;
     if (filled < 2) return "Preencha Data de Adesão e Média Consumo (kWh).";
+    if (clean(id("planFidelity").value) === "custom" && getFidelityMonths() <= 0) return "Informe a fidelidade em meses.";
   }
   return "";
 }
@@ -796,6 +826,8 @@ function buildPayload() {
   const ownerEmail = person ? clean(id("personEmail").value) : clean(id("companyEmail").value);
   const ownerPhone = person ? clean(id("personPhone").value) : clean(id("companyPhone").value);
   const averageConsumptionKwh = toNumber(id("planContractedKwh").value || id("planSellerKwh").value);
+  const fidelityMonths = getFidelityMonths();
+  const fidelityValue = fidelityMonths > 0 ? String(fidelityMonths) : "none";
   const discount = toNumber(id("planDiscountPercent").value || suggestedDiscount());
   const primaryAccount = state.accounts[0] || createAccount();
   const primaryAccountAddress = validateAddress(primaryAccount.address || {})
@@ -895,7 +927,8 @@ function buildPayload() {
       compensationMode,
       sellerKwh: averageConsumptionKwh,
       contractedKwh: averageConsumptionKwh,
-      fidelity: clean(id("planFidelity").value),
+      fidelity: fidelityValue,
+      fidelityMonths,
       discountPercent: discount,
     },
     planDetails: {
@@ -910,7 +943,8 @@ function buildPayload() {
       compensationMode,
       informedKwh: averageConsumptionKwh,
       contractedKwh: averageConsumptionKwh,
-      loyalty: clean(id("planFidelity").value),
+      loyalty: fidelityValue,
+      loyaltyMonths: fidelityMonths,
       discountPercentage: discount,
     },
     plan_details: {
@@ -919,7 +953,8 @@ function buildPayload() {
       compensationMode,
       informedKwh: averageConsumptionKwh,
       contractedKwh: averageConsumptionKwh,
-      loyalty: clean(id("planFidelity").value),
+      loyalty: fidelityValue,
+      loyaltyMonths: fidelityMonths,
       discountPercentage: discount,
       paysPisAndCofins: id("detailPisCofins").checked,
       paysWireB: id("detailFioB").checked,
@@ -1017,9 +1052,10 @@ function bindEvents() {
     root?.addEventListener("change", (e) => { if (e.target.matches("[data-address-field='cep']")) fillCep(g); });
   });
 
-  ["planSellerKwh", "planContractedKwh", "planFidelity", "planDiscountPercent"].forEach((x) => id(x)?.addEventListener("input", () => {
+  ["planSellerKwh", "planContractedKwh", "planFidelity", "planFidelityMonths", "planDiscountPercent"].forEach((x) => id(x)?.addEventListener("input", () => {
     if (x === "planSellerKwh") syncPlanKwhFields("seller");
     if (x === "planContractedKwh") syncPlanKwhFields("average");
+    if (x === "planFidelity" || x === "planFidelityMonths") renderPlanFidelity();
     if (x !== "planDiscountPercent" && (!state.discountTouched || !clean(id("planDiscountPercent").value))) id("planDiscountPercent").value = suggestedDiscount().toFixed(2);
     if (x === "planDiscountPercent") state.discountTouched = true;
     renderSummary();
@@ -1027,6 +1063,7 @@ function bindEvents() {
   id("planSellerKwh")?.addEventListener("change", () => syncPlanKwhFields("seller"));
   id("planContractedKwh")?.addEventListener("change", () => syncPlanKwhFields("average"));
   id("planFidelity")?.addEventListener("change", () => {
+    renderPlanFidelity();
     if (!state.discountTouched || !clean(id("planDiscountPercent").value)) id("planDiscountPercent").value = suggestedDiscount().toFixed(2);
     renderSummary();
   });
@@ -1147,11 +1184,14 @@ async function hydrateExisting(data) {
   const plan = data.plan_contract || data.planContract || {};
   const planAverage = plan.contractedKwh || data.consumoMedio || data.averageConsumptionKwh || "";
   const planSeller = plan.sellerKwh || plan.informedKwh || planAverage;
+  const fidelityMonths = Math.max(0, Math.round(toNumber(plan.fidelityMonths ?? plan.loyaltyMonths ?? plan.fidelity ?? plan.loyalty)));
   id("planAdhesionDate").value = plan.adhesionDate || "";
   id("planSellerKwh").value = planSeller || "";
   id("planContractedKwh").value = planAverage || "";
   syncPlanKwhFields("average");
-  id("planFidelity").value = plan.fidelity || "none";
+  id("planFidelity").value = fidelityMonths > 0 ? "custom" : "none";
+  id("planFidelityMonths").value = fidelityMonths > 0 ? String(fidelityMonths) : "";
+  renderPlanFidelity();
   id("planDiscountPercent").value = plan.discountPercentage || plan.discountPercent || data.discountPercent || "";
   const comp = qsa('input[name="compensationMode"]').find((x) => x.value === (plan.compensationMode || "autoconsumo-remoto"));
   if (comp) comp.checked = true;
@@ -1218,6 +1258,7 @@ onAuthStateChanged(auth, async (user) => {
   renderContacts("company");
   renderNotifications();
   id("planDiscountPercent").value = suggestedDiscount().toFixed(2);
+  renderPlanFidelity();
   renderSummary();
   renderTransfer();
   updateStepUI();
