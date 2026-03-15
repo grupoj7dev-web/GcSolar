@@ -1,7 +1,6 @@
 ﻿import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import { getAuth, getIdTokenResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import { addDoc, collection, doc, getDoc, getDocs, getFirestore, limit, query, serverTimestamp, updateDoc, where } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
-import { getDownloadURL, getStorage, ref, uploadBytes } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAlBxFfzmhnapsLJbM1UeYOalrfWYOSr1I",
@@ -16,12 +15,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const storage = getStorage(app);
-const storageFallbacks = [
-  storage,
-  getStorage(app, "gs://gcredito.firebasestorage.app"),
-  getStorage(app, "gs://gcredito.appspot.com"),
-];
 const COLL = "gcredito_subscribers";
 const editingId = new URLSearchParams(window.location.search).get("id");
 
@@ -923,43 +916,8 @@ async function uploadOptional(file, key) {
     }
   }
 
-  if (backendError) {
-    console.warn("Fallback para Firebase Storage após falha no backend", {
-      key,
-      name: file.name,
-      error: backendError,
-    });
-  }
-
-  const safe = String(file.name || "arquivo").replace(/\s+/g, "-").replace(/[^a-zA-Z0-9._-]/g, "") || "arquivo";
-  const paths = [
-    `assinantes_pendentes/${state.scope.tenantId}/${state.scope.uid}/cadastro_assinante/${Date.now()}_${key}_${safe}`,
-    `assinantes_pendentes/${state.scope.tenantId}/${state.scope.uid}/${Date.now()}_${key}_${safe}`,
-  ];
-
-  let lastError = null;
-  for (const storageInstance of storageFallbacks) {
-    for (const path of paths) {
-      try {
-        const fileRef = ref(storageInstance, path);
-        await uploadBytes(fileRef, file, { contentType: file.type || "application/octet-stream" });
-        return { url: await getDownloadURL(fileRef), path, name: file.name, size: file.size, type: file.type };
-      } catch (error) {
-        lastError = error;
-        console.error("Falha no upload do arquivo", {
-          key,
-          name: file.name,
-          path,
-          bucket: storageInstance.app.options.storageBucket,
-          error,
-          serverResponse: error?.serverResponse_ || error?.customData || null,
-        });
-      }
-    }
-  }
-
-  const code = lastError?.code ? ` (${lastError.code})` : "";
-  throw new Error(`Falha ao enviar "${file.name}"${code}. Verifique as regras do Storage ou tente outro arquivo.`);
+  const detail = backendError?.message ? ` ${backendError.message}` : "";
+  throw new Error(`Falha ao enviar "${file.name}" pelo backend.${detail}`);
 }
 
 function buildPayload() {
