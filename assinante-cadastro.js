@@ -833,7 +833,7 @@ function buildPayload() {
   const primaryAccountAddress = validateAddress(primaryAccount.address || {})
     ? normalizeAddress(primaryAccount.address)
     : normalizeAddress(primaryAddress || primaryAccount.address || {});
-  const compensationMode = qsa('input[name="compensationMode"]').find((x) => x.checked)?.value || "autoconsumo-remoto";
+  const compensationMode = qsa('input[name="compensationMode"]').find((x) => x.checked)?.value || "geracao-compartilhada";
   const transfer = transferEnabled() ? {
     enabled: true,
     holderType: clean(id("transferHolderType").value),
@@ -1193,7 +1193,7 @@ async function hydrateExisting(data) {
   id("planFidelityMonths").value = fidelityMonths > 0 ? String(fidelityMonths) : "";
   renderPlanFidelity();
   id("planDiscountPercent").value = plan.discountPercentage || plan.discountPercent || data.discountPercent || "";
-  const comp = qsa('input[name="compensationMode"]').find((x) => x.value === (plan.compensationMode || "autoconsumo-remoto"));
+  const comp = qsa('input[name="compensationMode"]').find((x) => x.value === (plan.compensationMode || "geracao-compartilhada"));
   if (comp) comp.checked = true;
   const details = data.plan_details || data.planDetails || {};
   id("detailPisCofins").checked = !!(details.paysPisAndCofins ?? details.paysPisCofins);
