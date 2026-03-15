@@ -354,6 +354,8 @@
 
 .plan-grid {
   padding: 0.2rem 0;
+  grid-auto-flow: dense;
+  align-items: end;
 }
 
 .plan-grid .field input,
@@ -362,6 +364,10 @@
   border-radius: 14px;
   border-color: #b8d0c0;
   background: linear-gradient(180deg, #ffffff 0%, #f9fcfa 100%);
+}
+
+.plan-grid .field.span-2 {
+  min-width: 0;
 }
 
 .plan-mode-block {
