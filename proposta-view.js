@@ -32,14 +32,13 @@ function applySinglePagePrintFit() {
   if (!card) return;
 
   const mmToPx = 96 / 25.4;
-  const pageWidthPx = (210 - 12) * mmToPx;
-  const pageHeightPx = (297 - 12) * mmToPx;
-
+  const pageWidthPx = (210 - 10) * mmToPx;
+  const pageHeightPx = (297 - 10) * mmToPx;
   const contentWidth = card.scrollWidth || 1;
   const contentHeight = card.scrollHeight || 1;
-  const scale = Math.min(1, pageWidthPx / contentWidth, pageHeightPx / contentHeight) * 0.995;
+  const scale = Math.min(1, pageWidthPx / contentWidth, pageHeightPx / contentHeight) * 0.99;
 
-  document.documentElement.style.setProperty("--proposal-print-scale", String(Math.max(0.85, scale)));
+  document.documentElement.style.setProperty("--proposal-print-scale", String(Math.max(0.72, scale)));
 }
 
 function safeNum(value, fallback = 0) {
@@ -52,7 +51,10 @@ function fmtMoney(value) {
 }
 
 function fmtNum(value) {
-  return safeNum(value).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return safeNum(value).toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 function fmtPerc(value) {
@@ -79,7 +81,6 @@ function buildProposalHtml(proposal) {
   const clientName = data.clientName || proposal.client_name || "-";
   const cnpj = data.cnpj || proposal.cnpj || "-";
   const installationId = data.installationId || "-";
-  const distributor = data.distributor || "-";
 
   const monthlyConsumption = safeNum(data.monthlyConsumption);
   const currentRate = safeNum(data.currentRate);
@@ -88,22 +89,18 @@ function buildProposalHtml(proposal) {
   const publicLighting = safeNum(data.publicLighting);
   const gdRule = data.gdRule || "GD1";
 
-  const flagGreenCost =
-    data.flagGreenCost !== undefined && data.flagGreenCost !== null && data.flagGreenCost !== ""
-      ? safeNum(data.flagGreenCost)
-      : DEFAULT_FLAG_GREEN;
-  const flagYellowCost =
-    data.flagYellowCost !== undefined && data.flagYellowCost !== null && data.flagYellowCost !== ""
-      ? safeNum(data.flagYellowCost)
-      : DEFAULT_FLAG_YELLOW;
-  const flagRed1Cost =
-    data.flagRedICost !== undefined && data.flagRedICost !== null && data.flagRedICost !== ""
-      ? safeNum(data.flagRedICost)
-      : DEFAULT_FLAG_RED1;
-  const flagRed2Cost =
-    data.flagRedIICost !== undefined && data.flagRedIICost !== null && data.flagRedIICost !== ""
-      ? safeNum(data.flagRedIICost)
-      : DEFAULT_FLAG_RED2;
+  const flagGreenCost = data.flagGreenCost !== undefined && data.flagGreenCost !== null && data.flagGreenCost !== ""
+    ? safeNum(data.flagGreenCost)
+    : DEFAULT_FLAG_GREEN;
+  const flagYellowCost = data.flagYellowCost !== undefined && data.flagYellowCost !== null && data.flagYellowCost !== ""
+    ? safeNum(data.flagYellowCost)
+    : DEFAULT_FLAG_YELLOW;
+  const flagRed1Cost = data.flagRedICost !== undefined && data.flagRedICost !== null && data.flagRedICost !== ""
+    ? safeNum(data.flagRedICost)
+    : DEFAULT_FLAG_RED1;
+  const flagRed2Cost = data.flagRedIICost !== undefined && data.flagRedIICost !== null && data.flagRedIICost !== ""
+    ? safeNum(data.flagRedIICost)
+    : DEFAULT_FLAG_RED2;
 
   const networkType = String(data.networkType || "bifasico")
     .toLowerCase()
@@ -121,10 +118,8 @@ function buildProposalHtml(proposal) {
   const effectiveLighting = publicLighting > 0 ? publicLighting : DEFAULT_CIP;
   const computedMinCost = availabilityCost + effectiveLighting;
   const minCostDisplay = Math.max(dbMinCost, computedMinCost);
-
   const compensableConsumption = Math.max(0, monthlyConsumption - availabilityKwh);
   const currentMonthlyCost = monthlyConsumption * currentRate + minCostDisplay;
-
   const bcRate = currentRate * (1 - discountPercent / 100);
   const newMonthlyCost = compensableConsumption * bcRate + minCostDisplay;
 
@@ -148,7 +143,7 @@ function buildProposalHtml(proposal) {
     ? "GRUPO J7 - GESTORA E COMERCIALIZADORA DE ENERGIA"
     : "GRUPO GC SOLAR - ENERGIA POR ASSINATURA";
   const companyCnpj = useJ7Template ? "CNPJ: 33.333.398/0001-37" : "CNPJ: 00.000.000/0001-00";
-  const companyAddress = useJ7Template ? "Av. Antonio Fidelis, 205, Goiânia-GO" : "Goiânia-GO";
+  const companyAddress = useJ7Template ? "Av. Antonio Fidelis, 205, Goiania-GO" : "Goiania-GO";
 
   let html = `
     <div class="proposal-view-container">
@@ -179,60 +174,72 @@ function buildProposalHtml(proposal) {
         <div class="proposal-body">
           <div class="proposal-title-section">
             <h1>Proposta Comercial</h1>
-            <p class="proposal-subtitle">Energia Inteligente para seu Negócio</p>
+            <p class="proposal-subtitle">Energia Inteligente para seu Negocio</p>
           </div>
 
           <div class="client-grid">
             <div class="info-group"><label>Cliente</label><div class="value">${escapeHtml(clientName)}</div></div>
             <div class="info-group"><label>CNPJ / CPF</label><div class="value">${escapeHtml(cnpj)}</div></div>
-            <div class="info-group"><label>Código</label><div class="value">${escapeHtml(proposalCode)}</div></div>
-            <div class="info-group"><label>Instalação</label><div class="value">${escapeHtml(installationId)}</div></div>
+            <div class="info-group"><label>Codigo</label><div class="value">${escapeHtml(proposalCode)}</div></div>
+            <div class="info-group"><label>Instalacao</label><div class="value">${escapeHtml(installationId)}</div></div>
           </div>
 
           <div class="comparison-container">
             <div class="comp-column gray-col">
               <div class="col-header">CUSTO SEM A<br />J7 SOLAR</div>
               <div class="col-body">
-                <div class="data-box"><label>CONSUMO MENSAL</label><div class="value-pill gray">${fmtNum(monthlyConsumption)} kWh</div></div>
-                <div class="data-box"><label>CUSTO MÍNIMO</label><div class="value-pill gray">${fmtMoney(minCostDisplay)}</div></div>
-                <div class="data-box"><label>PREÇO ATUAL R$/KWH</label><div class="value-pill gray">R$ ${fmtNum(currentRate)}</div></div>
-                <div class="data-box"><label>CUSTO MÉDIO (MENSAL)</label><div class="value-pill gray">${fmtMoney(currentMonthlyCost)}</div></div>
+                <div class="data-box"><label>Consumo mensal</label><div class="value-pill gray">${fmtNum(monthlyConsumption)} kWh</div></div>
+                <div class="data-box"><label>Custo minimo</label><div class="value-pill gray">${fmtMoney(minCostDisplay)}</div></div>
+                <div class="data-box"><label>Preco atual R$/kWh</label><div class="value-pill gray">R$ ${fmtNum(currentRate)}</div></div>
+                <div class="data-box"><label>Custo medio mensal</label><div class="value-pill gray">${fmtMoney(currentMonthlyCost)}</div></div>
               </div>
             </div>
 
             <div class="comp-column teal-col">
               <div class="col-header">DESCONTO<br />J7 SOLAR</div>
               <div class="col-body">
-                <div class="data-box"><label>DESCONTO (%)</label><div class="value-pill teal">${fmtNum(discountPercent)}%</div></div>
-                <div class="data-box"><label>CUSTO MÍNIMO</label><div class="value-pill teal">${fmtMoney(minCostDisplay)}</div></div>
-                <div class="data-box"><label>PREÇO J7 R$/KWH</label><div class="value-pill teal">R$ ${fmtNum(bcRate)}</div></div>
-                <div class="data-box"><label>CUSTO MÉDIO (MENSAL)</label><div class="value-pill teal">${fmtMoney(newMonthlyCost)}</div></div>
+                <div class="data-box"><label>Desconto (%)</label><div class="value-pill teal">${fmtNum(discountPercent)}%</div></div>
+                <div class="data-box"><label>Custo minimo</label><div class="value-pill teal">${fmtMoney(minCostDisplay)}</div></div>
+                <div class="data-box"><label>Preco J7 R$/kWh</label><div class="value-pill teal">R$ ${fmtNum(bcRate)}</div></div>
+                <div class="data-box"><label>Custo medio mensal</label><div class="value-pill teal">${fmtMoney(newMonthlyCost)}</div></div>
               </div>
             </div>
 
             <div class="comp-column green-col">
               <div class="col-header">ECONOMIA MENSAL<br />POR BANDEIRA</div>
               <div class="col-body">
-                <div class="data-box"><label>BANDEIRA VERDE</label><div class="value-pill light"><span class="txt-green">${fmtMoney(savingsGreen)}</span><span class="txt-green-light">${fmtPerc(getPercent(savingsGreen))}</span></div></div>
-                <div class="data-box"><label>BANDEIRA AMARELA</label><div class="value-pill light"><span class="txt-orange">${fmtMoney(savingsYellow)}</span><span class="txt-orange-light">${fmtPerc(getPercent(savingsYellow))}</span></div></div>
-                <div class="data-box"><label>BANDEIRA VERMELHA I</label><div class="value-pill light"><span class="txt-red">${fmtMoney(savingsRed1)}</span><span class="txt-red-light">${fmtPerc(getPercent(savingsRed1))}</span></div></div>
-                <div class="data-box"><label>BANDEIRA VERMELHA II</label><div class="value-pill light"><span class="txt-darkred">${fmtMoney(savingsRed2)}</span><span class="txt-darkred-light">${fmtPerc(getPercent(savingsRed2))}</span></div></div>
+                <div class="data-box"><label>Bandeira verde</label><div class="value-pill light"><span class="txt-green">${fmtMoney(savingsGreen)}</span><span class="txt-green-light">${fmtPerc(getPercent(savingsGreen))}</span></div></div>
+                <div class="data-box"><label>Bandeira amarela</label><div class="value-pill light"><span class="txt-orange">${fmtMoney(savingsYellow)}</span><span class="txt-orange-light">${fmtPerc(getPercent(savingsYellow))}</span></div></div>
+                <div class="data-box"><label>Bandeira vermelha I</label><div class="value-pill light"><span class="txt-red">${fmtMoney(savingsRed1)}</span><span class="txt-red-light">${fmtPerc(getPercent(savingsRed1))}</span></div></div>
+                <div class="data-box"><label>Bandeira vermelha II</label><div class="value-pill light"><span class="txt-darkred">${fmtMoney(savingsRed2)}</span><span class="txt-darkred-light">${fmtPerc(getPercent(savingsRed2))}</span></div></div>
               </div>
             </div>
           </div>
 
           <div class="total-savings-banner">
-            <span class="label">ECONOMIA ANUAL SEM INVESTIMENTO</span>
+            <span class="label">Economia anual sem investimento</span>
             <span class="value">${fmtMoney(annualSavings)}</span>
           </div>
 
           <div class="tariff-explanation">
-            <h3>Entenda as Bandeiras</h3>
-            <p>A cor da bandeira indica se a energia está mais cara ou mais barata. Com a J7, você economiza sempre.</p>
-            <div class="flags-legend">
-              <div class="flag-item"><div class="dot green"></div> Verde: Sem acréscimo</div>
-              <div class="flag-item"><div class="dot yellow"></div> Amarela: Mais caro (+ custo)</div>
-              <div class="flag-item"><div class="dot red"></div> Vermelha: Muito caro (++ custo)</div>
+            <h3>Entenda as regras das bandeiras tarifarias</h3>
+            <div class="flags-grid">
+              <article class="flag-card green">
+                <div class="flag-card-title"><div class="dot green"></div><span>Bandeira Verde</span></div>
+                <p>Nao ha custo adicional na tarifa de energia. O kWh e cobrado em seu valor base, sem custos extras.</p>
+              </article>
+              <article class="flag-card yellow">
+                <div class="flag-card-title"><div class="dot yellow"></div><span>Bandeira Amarela</span></div>
+                <p>O custo do kWh deixa de ser fixo e passa a sofrer acrescimos na tarifa.</p>
+              </article>
+              <article class="flag-card red">
+                <div class="flag-card-title"><div class="dot red"></div><span>Bandeira Vermelha - Patamar I</span></div>
+                <p>Acrescimo elevado por kWh, refletindo em aumento expressivo da fatura mensal.</p>
+              </article>
+              <article class="flag-card red dark">
+                <div class="flag-card-title"><div class="dot red"></div><span>Bandeira Vermelha - Patamar II</span></div>
+                <p>O valor do kWh atinge o maior nivel de acrescimo, tornando a energia significativamente mais cara.</p>
+              </article>
             </div>
           </div>
         </div>
@@ -255,13 +262,12 @@ function buildProposalHtml(proposal) {
       .replace('Proposta Comercial', 'Proposta Comercial Goldtech')
       .replace('CUSTO SEM A<br />J7 SOLAR', 'CUSTO SEM A<br />GOLDTECH')
       .replace('DESCONTO<br />J7 SOLAR', 'DESCONTO<br />GOLDTECH')
-      .replace('PREÇO J7 R$/KWH', 'PREÇO GOLDTECH R$/KWH')
-      .replace('Com a J7, você economiza sempre.', 'Com a Goldtech, você economiza sempre.')
-      .replace('ECONOMIA ANUAL SEM INVESTIMENTO', 'ECONOMIA ANUAL COM GOLDTECH')
+      .replace('Preco J7 R$/kWh', 'Preco Goldtech R$/kWh')
+      .replace('Economia anual sem investimento', 'Economia anual com Goldtech')
       .replace('Gerado por GC Solar', 'Gerado por Goldtech')
       .replace(/GRUPO GC SOLAR - ENERGIA POR ASSINATURA/g, 'GOLDTECH ENGENHARIA')
       .replace(/CNPJ:\s*00\.000\.000\/0001-00/g, 'CNPJ: 48.467.586/0001-25')
-      .replace(/Goi[^<]*-GO/g, 'Av. Xingu, 388 - Parque Amazônia - Goiânia/GO');
+      .replace(/Goiania-GO/g, 'Av. Xingu, 388 - Parque Amazonia - Goiania/GO');
   }
 
   return html;
@@ -269,25 +275,26 @@ function buildProposalHtml(proposal) {
 
 async function loadProposal() {
   if (!proposalId) {
-    proposalRoot.innerHTML = '<div class="error-state">ID da proposta não informado.</div>';
+    proposalRoot.innerHTML = '<div class="error-state">ID da proposta nao informado.</div>';
     return;
   }
 
   const snap = await getDoc(doc(db, "proposals", proposalId));
   if (!snap.exists()) {
-    proposalRoot.innerHTML = '<div class="error-state">Proposta não encontrada.</div>';
+    proposalRoot.innerHTML = '<div class="error-state">Proposta nao encontrada.</div>';
     return;
   }
 
   const proposal = { id: snap.id, ...snap.data() };
   proposalRoot.innerHTML = buildProposalHtml(proposal);
   setTimeout(applySinglePagePrintFit, 60);
+  setTimeout(applySinglePagePrintFit, 250);
 
   const shareBtn = document.getElementById("shareBtn");
   if (shareBtn) {
     shareBtn.addEventListener("click", () => {
       const data = proposal.proposal_data || {};
-      const msg = `Olá! Segue em anexo a proposta comercial.\n\nCliente: ${data.clientName || proposal.client_name || "-"}`;
+      const msg = `Ola! Segue em anexo a proposta comercial.\n\nCliente: ${data.clientName || proposal.client_name || "-"}`;
       window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
     });
   }
@@ -314,5 +321,3 @@ onAuthStateChanged(auth, async (user) => {
     proposalRoot.innerHTML = '<div class="error-state">Falha ao carregar proposta.</div>';
   }
 });
-
-
