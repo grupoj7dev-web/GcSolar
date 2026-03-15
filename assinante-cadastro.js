@@ -1144,7 +1144,6 @@ function buildPayload() {
       address: normalizeAddress(validateAddress(a.address || {}) ? a.address : (primaryAddress || a.address || {})),
     })),
     planContract: {
-      planSelected: "",
       adhesionDate: clean(id("planAdhesionDate").value),
       compensationMode,
       sellerKwh: averageConsumptionKwh,
@@ -1163,7 +1162,6 @@ function buildPayload() {
       isExempt: id("detailIsento").checked,
     },
     plan_contract: {
-      selectedPlan: "",
       adhesionDate: clean(id("planAdhesionDate").value),
       compensationMode,
       informedKwh: averageConsumptionKwh,
@@ -1173,7 +1171,6 @@ function buildPayload() {
       discountPercentage: discount,
     },
     plan_details: {
-      selectedPlan: "",
       adhesionDate: clean(id("planAdhesionDate").value),
       compensationMode,
       informedKwh: averageConsumptionKwh,
