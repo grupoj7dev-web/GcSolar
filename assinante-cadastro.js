@@ -395,8 +395,60 @@ function renderAccounts() {
     </article>
   `).join("");
   bindMasks(id("energyAccounts"));
+  enhanceNoNumberButtons(id("energyAccounts"));
   renderTransfer();
   saveDraft();
+}
+
+function normalizeAddressNumber(value) {
+  const raw = clean(value).toUpperCase();
+  if (!raw) return "";
+  if (raw === "SN" || raw === "S/N" || raw === "SEM NUMERO") return "S/N";
+  return raw;
+}
+
+function updateNoNumberButtonState(input, button) {
+  const active = normalizeAddressNumber(input?.value) === "S/N";
+  button.classList.toggle("active", active);
+  button.setAttribute("aria-pressed", active ? "true" : "false");
+}
+
+function mountNoNumberButton(input) {
+  if (!input || input.dataset.noNumberMounted === "1") return;
+  const parent = input.parentElement;
+  if (!parent) return;
+
+  const wrap = document.createElement("div");
+  wrap.className = "field-action-wrap";
+  parent.insertBefore(wrap, input);
+  wrap.appendChild(input);
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "btn-secondary mini no-number-btn";
+  button.textContent = "Sem numero";
+  button.addEventListener("click", () => {
+    const active = normalizeAddressNumber(input.value) === "S/N";
+    input.value = active ? "" : "S/N";
+    updateNoNumberButtonState(input, button);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    input.focus();
+  });
+
+  input.addEventListener("input", () => updateNoNumberButtonState(input, button));
+  input.addEventListener("change", () => updateNoNumberButtonState(input, button));
+  wrap.appendChild(button);
+
+  input.dataset.noNumberMounted = "1";
+  updateNoNumberButtonState(input, button);
+}
+
+function enhanceNoNumberButtons(root = document) {
+  const inputs = root.querySelectorAll(
+    "[data-address-field='number'], [data-acc-addr='number']"
+  );
+  inputs.forEach((input) => mountNoNumberButton(input));
 }
 
 function transferEnabled() {
@@ -1148,12 +1200,14 @@ onAuthStateChanged(auth, async (user) => {
   renderTransfer();
   updateStepUI();
   bindEvents();
+  enhanceNoNumberButtons(document);
 
   if (editingId) {
     const snap = await getDoc(doc(db, COLL, editingId));
     if (snap.exists()) await hydrateExisting(snap.data());
   }
   restoreDraft();
+  enhanceNoNumberButtons(document);
   state.draftReady = true;
   updateStepUI();
 });

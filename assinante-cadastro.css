@@ -643,6 +643,16 @@
   font-size: 0.79rem;
 }
 
+.no-number-btn {
+  white-space: nowrap;
+}
+
+.no-number-btn.active {
+  border-color: var(--cad-primary);
+  background: var(--cad-success-bg);
+  color: var(--cad-success);
+}
+
 .radio-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
