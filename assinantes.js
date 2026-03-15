@@ -495,7 +495,7 @@ function buildSubscriberPayloadFromPending(item) {
     user_id: raw.createdBy || raw.user_id || scope.uid,
     tenantId: raw.tenantId || scope.tenantId,
     status: "active",
-    concessionaria: raw.concessionaria || "Equatorial",
+    concessionaria: normalizeConcessionariaLabel(raw.concessionaria || "Equatorial Goiás"),
     subscriber: {
       fullName: isCompany ? "" : holderName,
       companyName: isCompany ? holderName : "",
@@ -561,6 +561,25 @@ function formatDate(value) {
   return d.toLocaleDateString("pt-BR");
 }
 
+function normalizeConcessionariaLabel(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "Equatorial Goiás";
+
+  const normalized = raw
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (normalized === "equatorial" || normalized === "equatorial goias") {
+    return "Equatorial Goiás";
+  }
+
+  return raw;
+}
+
 function normalizeSubscriber(docData, id) {
   const subscriber = docData.subscriber || {};
   const energy = docData.energy_account || docData.energyAccount || {};
@@ -612,7 +631,7 @@ function normalizeSubscriber(docData, id) {
     raw: docData,
     status: docData.status || "active",
     statusType: statusType(docData.status, docData),
-    concessionaria: String(docData.concessionaria || ""),
+    concessionaria: normalizeConcessionariaLabel(docData.concessionaria),
     holderType: isCompany ? "company" : "person",
     name,
     cpfCnpj,
@@ -639,7 +658,7 @@ function normalizePendingSubscriber(docData, id) {
     raw: docData,
     status: docData.status || "cadastro_pendente",
     statusType: statusType(docData.status, docData),
-    concessionaria: String(docData.concessionaria || "Equatorial"),
+    concessionaria: normalizeConcessionariaLabel(docData.concessionaria || "Equatorial Goiás"),
     holderType: isCompany ? "company" : "person",
     name: nome,
     cpfCnpj,
@@ -730,7 +749,7 @@ function fillForm(item) {
     item.statusType === "awaiting_signature" || item.statusType === "awaiting_rateio"
       ? "pending"
       : item.statusType;
-  formConcessionaria.value = item.concessionaria;
+  formConcessionaria.value = normalizeConcessionariaLabel(item.concessionaria);
   formObs.value = item.observations;
 }
 
@@ -1026,7 +1045,7 @@ function buildPayloadFromForm(existingRaw = null) {
   const contractedKwh = Number(formContractedKwh.value || 0);
   const discountPercentage = Number(formDiscount.value || 0);
   const status = formStatus.value;
-  const concessionaria = formConcessionaria.value.trim();
+  const concessionaria = normalizeConcessionariaLabel(formConcessionaria.value);
   const observations = formObs.value.trim();
 
   const base = existingRaw ? { ...existingRaw } : {};
