@@ -64,7 +64,6 @@ const stepTimeline = [
   { label: "Tipo", icon: "ph-identification-card" },
   { label: "Dados", icon: "ph-user-list" },
   { label: "UCs", icon: "ph-plugs" },
-  { label: "Transferência", icon: "ph-arrows-left-right" },
   { label: "Contrato", icon: "ph-file-text" },
   { label: "Resumo", icon: "ph-chart-line-up" },
   { label: "Notificações", icon: "ph-bell-ringing" },
@@ -144,13 +143,12 @@ function restoreDraft() {
     state.companyContacts = Array.isArray(draft.companyContacts) ? draft.companyContacts : [];
     state.transfer = draft.transfer && typeof draft.transfer === "object" ? draft.transfer : {};
     state.notifications = draft.notifications && typeof draft.notifications === "object" ? draft.notifications : {};
-    state.step = Math.max(1, Math.min(9, Number(draft.step) || 1));
+    state.step = Math.max(1, Math.min(stepTitles.length, Number(draft.step) || 1));
 
     renderAccounts();
     renderContacts("person");
     renderContacts("company");
     renderNotifications();
-    renderTransfer();
     toggleAdminBlock();
     migrateLegacyFidelityValue();
     renderPlanFidelity();
@@ -342,11 +340,11 @@ function updateStepUI() {
     p.classList.toggle("hidden", !active);
     p.classList.toggle("is-active", active);
   });
-  id("stepLabel").textContent = `Etapa ${state.step} de 9`;
+  id("stepLabel").textContent = `Etapa ${state.step} de ${stepTitles.length}`;
   id("stepTitle").textContent = stepTitles[state.step - 1];
   id("prevStepBtn").disabled = state.step <= 1;
-  id("nextStepBtn").classList.toggle("hidden", state.step >= 9);
-  id("saveWizardBtn").classList.toggle("hidden", state.step < 9);
+  id("nextStepBtn").classList.toggle("hidden", state.step >= stepTitles.length);
+  id("saveWizardBtn").classList.toggle("hidden", state.step < stepTitles.length);
   const progress = ((state.step - 1) / (stepTitles.length - 1)) * 100;
   const dots = id("stepDots");
   dots.style.setProperty("--timeline-progress", `${Math.max(0, Math.min(100, progress))}%`);
@@ -538,7 +536,6 @@ function renderAccounts() {
   `).join("");
   bindMasks(id("energyAccounts"));
   enhanceNoNumberButtons(id("energyAccounts"));
-  renderTransfer();
   saveDraft();
 }
 
@@ -591,19 +588,6 @@ function enhanceNoNumberButtons(root = document) {
     "[data-address-field='number'], [data-acc-addr='number']"
   );
   inputs.forEach((input) => mountNoNumberButton(input));
-}
-
-function transferEnabled() {
-  return qsa('input[name="transferRequired"]').find((x) => x.checked)?.value === "yes";
-}
-
-function renderTransfer() {
-  const details = id("transferDetails");
-  if (details) details.classList.toggle("hidden", !transferEnabled());
-  id("transferBirthWrap")?.classList.toggle("hidden", clean(id("transferHolderType")?.value) !== "person");
-  id("transferDateWrap")?.classList.toggle("hidden", clean(id("transferDone")?.value) !== "yes");
-  id("fileTransferProtocolWrap")?.classList.toggle("hidden", !transferEnabled());
-  saveDraft();
 }
 
 function syncPlanKwhFields(source = "average") {
@@ -1011,7 +995,7 @@ function validateStep(step) {
       }
     }
   }
-  if (step === 6) {
+  if (step === 5) {
     const filled = [clean(id("planAdhesionDate").value), clean(id("planContractedKwh").value)].filter(Boolean).length;
     if (filled < 2) return "Preencha Data de Adesão e Média Consumo (kWh).";
     if (clean(id("planFidelity").value) === "custom" && getFidelityMonths() <= 0) return "Informe a fidelidade em meses.";
@@ -1085,17 +1069,6 @@ function buildPayload() {
     ? normalizeAddress(primaryAccount.address)
     : normalizeAddress(primaryAddress || primaryAccount.address || {});
   const compensationMode = qsa('input[name="compensationMode"]').find((x) => x.checked)?.value || "geracao-compartilhada";
-  const transfer = transferEnabled() ? {
-    enabled: true,
-    holderType: clean(id("transferHolderType").value),
-    doc: onlyDigits(id("transferDoc").value),
-    name: clean(id("transferName").value),
-    birthDate: clean(id("transferBirth").value),
-    partnerNumber: clean(id("transferPartner").value),
-    done: clean(id("transferDone").value) === "yes",
-    transferDate: clean(id("transferDate").value),
-  } : { enabled: false };
-
   return {
     concessionaria: clean(id("concessionaria").value || "equatorial-goias"),
     holderType: holderType(),
@@ -1170,7 +1143,6 @@ function buildPayload() {
       partnerNumber: clean(a.partner),
       address: normalizeAddress(validateAddress(a.address || {}) ? a.address : (primaryAddress || a.address || {})),
     })),
-    transfer,
     planContract: {
       planSelected: "",
       adhesionDate: clean(id("planAdhesionDate").value),
@@ -1228,7 +1200,7 @@ function bindEvents() {
     if (state.step === 3) fillPrimaryToFirstUcIfMissing();
     const err = validateStep(state.step);
     if (err) return alert(err);
-    state.step = Math.min(9, state.step + 1);
+    state.step = Math.min(stepTitles.length, state.step + 1);
     updateStepUI();
   });
   id("stepDots").addEventListener("click", (e) => { const b = e.target.closest("[data-dot-step]"); if (!b) return; const t = Number(b.dataset.dotStep); if (t > state.step) { const err = validateStep(state.step); if (err) return alert(err); } state.step = t; updateStepUI(); });
@@ -1329,10 +1301,6 @@ function bindEvents() {
     saveDraft();
   });
 
-  qsa('input[name="transferRequired"]').forEach((r) => r.addEventListener("change", renderTransfer));
-  id("transferHolderType")?.addEventListener("change", renderTransfer);
-  id("transferDone")?.addEventListener("change", renderTransfer);
-
   ["personAddress", "companyAddress", "adminAddress"].forEach((g) => {
     const root = qs(`[data-address='${g}']`);
     root?.addEventListener("change", (e) => { if (e.target.matches("[data-address-field='cep']")) fillCep(g); });
@@ -1406,7 +1374,6 @@ function bindEvents() {
         cnh: await uploadSafe(id("fileCnh")?.files?.[0], "doc_cnh_rg", "CNH/RG") || existingDocuments.cnh || null,
         contractSocial: await uploadSafe(id("fileContractSocial")?.files?.[0], "doc_contrato_social", "Contrato social") || existingDocuments.contractSocial || null,
         procuracao: await uploadSafe(id("fileProcuracao")?.files?.[0], "doc_procuracao", "Procuração") || existingDocuments.procuracao || null,
-        transferProtocol: await uploadSafe(id("fileTransferProtocol")?.files?.[0], "doc_transfer_protocol", "Protocolo de transferência") || existingDocuments.transferProtocol || null,
         thirdPartyDocument: existingDocuments.thirdPartyDocument || null,
       };
       payload.documentos = {
@@ -1418,9 +1385,6 @@ function bindEvents() {
         contratoPdfUrl: payload.documents.contract?.url || "",
       };
       payload.contratoPdfUrl = payload.documents.contract?.url || payload.contratoPdfUrl || "";
-      if (payload.transfer.enabled) {
-        payload.transfer.protocol = payload.documents.transferProtocol || null;
-      }
       payload.user_id = state.scope.uid;
       payload.tenantId = state.scope.tenantId;
       payload.updated_at = serverTimestamp();
@@ -1511,16 +1475,6 @@ async function hydrateExisting(data) {
   renderExistingFile("fileCnh", "CNH/RG", state.existingDocuments.cnh);
   renderExistingFile("fileContractSocial", "Contrato social", state.existingDocuments.contractSocial);
   renderExistingFile("fileProcuracao", "Procuracao", state.existingDocuments.procuracao);
-  renderExistingFile("fileTransferProtocol", "Protocolo de transferencia", state.existingDocuments.transferProtocol || state.existingDocuments.thirdPartyDocument);
-  if (data.transfer?.enabled === true) id("transferRequiredYes").checked = true;
-  else id("transferRequiredNo").checked = true;
-  id("transferHolderType").value = data.transfer?.holderType || "person";
-  id("transferDoc").value = applyMask(data.transfer?.doc || "", "cpfcnpj");
-  id("transferName").value = data.transfer?.name || "";
-  id("transferBirth").value = data.transfer?.birthDate || "";
-  id("transferPartner").value = data.transfer?.partnerNumber || "";
-  id("transferDone").value = data.transfer?.done ? "yes" : "no";
-  id("transferDate").value = data.transfer?.transferDate || "";
   state.personContacts = Array.isArray(data.contacts?.person) ? data.contacts.person.map((item) => normalizeContactEntry(item, "person")) : [];
   state.companyContacts = Array.isArray(data.contacts?.company) ? data.contacts.company.map((item) => normalizeContactEntry(item, "company")) : [];
   state.notifications = data.notifications && typeof data.notifications === "object" ? data.notifications : {};
@@ -1557,7 +1511,6 @@ async function hydrateExisting(data) {
   renderContacts("person");
   renderContacts("company");
   renderNotifications();
-  renderTransfer();
   toggleAdminBlock();
   renderSummary();
 }
@@ -1578,7 +1531,6 @@ onAuthStateChanged(auth, async (user) => {
   id("planDiscountPercent").value = suggestedDiscount().toFixed(2);
   renderPlanFidelity();
   renderSummary();
-  renderTransfer();
   updateStepUI();
   bindEvents();
   enhanceNoNumberButtons(document);

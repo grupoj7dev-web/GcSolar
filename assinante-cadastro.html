@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GC Solar | Cadastro de Assinante</title>
-  <meta name="description" content="Cadastro completo de assinantes em 9 etapas.">
+  <meta name="description" content="Cadastro completo de assinantes em 8 etapas.">
   <script>
     (function () {
       try {
@@ -69,10 +69,10 @@
           <div>
             <a class="back-link" href="assinantes.html"><i class="ph ph-arrow-left"></i> Voltar para assinantes</a>
             <h1>Cadastro Corporativo de Assinante</h1>
-            <p>Processo estruturado em 9 etapas para garantir consist&#234;ncia cadastral e contratual.</p>
+            <p>Processo estruturado em 8 etapas para garantir consist&#234;ncia cadastral e contratual.</p>
           </div>
           <div class="head-badge">
-            <span id="stepLabel">Etapa 1 de 9</span>
+            <span id="stepLabel">Etapa 1 de 8</span>
             <strong id="stepTitle">Concession&#225;ria</strong>
           </div>
         </section>
@@ -200,25 +200,6 @@
           </section>
 
           <section class="step-pane hidden" data-step="5">
-            <h2>Transfer&#234;ncia de Titularidade</h2>
-            <div class="transfer-choice">
-              <label class="radio-card compact-radio"><input type="radio" name="transferRequired" id="transferRequiredNo" value="no" checked><span>N&#227;o</span></label>
-              <label class="radio-card compact-radio"><input type="radio" name="transferRequired" id="transferRequiredYes" value="yes"><span>Sim</span></label>
-            </div>
-            <div id="transferDetails" class="hidden">
-              <div class="grid cols-2">
-                <label class="field"><span>Tipo de Titular *</span><select id="transferHolderType"><option value="person">Pessoa F&#237;sica</option><option value="company">Pessoa Jur&#237;dica</option></select></label>
-                <label class="field"><span>CPF ou CNPJ *</span><input id="transferDoc" data-mask="cpfcnpj"></label>
-                <label class="field"><span>Nome *</span><input id="transferName"></label>
-                <label class="field" id="transferBirthWrap"><span>Data de Nascimento</span><input id="transferBirth" type="date"></label>
-                <label class="field"><span>Numero do Parceiro</span><input id="transferPartner"></label>
-                <label class="field"><span>Troca Conclu&#237;da?</span><select id="transferDone"><option value="no">N&#227;o</option><option value="yes">Sim</option></select></label>
-                <label class="field hidden" id="transferDateWrap"><span>Data da Transfer&#234;ncia</span><input id="transferDate" type="date"></label>
-              </div>
-            </div>
-          </section>
-
-          <section class="step-pane hidden" data-step="6">
             <div class="plan-contract-shell">
               <div class="plan-contract-hero">
                 <div>
@@ -277,7 +258,7 @@
             </div>
           </section>
 
-          <section class="step-pane hidden" data-step="7">
+          <section class="step-pane hidden" data-step="6">
             <div class="detail-plan-shell">
               <div class="detail-plan-head">
                 <div>
@@ -298,7 +279,7 @@
             </div>
           </section>
 
-          <section class="step-pane hidden" data-step="8">
+          <section class="step-pane hidden" data-step="7">
             <div class="notify-shell">
               <div class="notify-hero">
                 <div>
@@ -316,7 +297,7 @@
             </div>
           </section>
 
-          <section class="step-pane hidden" data-step="9">
+          <section class="step-pane hidden" data-step="8">
             <div class="attachments-shell">
               <div class="attachments-hero">
                 <div>
@@ -357,11 +338,7 @@
                   <small>Procura&#231;&#227;o assinada, quando aplic&#225;vel ao processo operacional.</small>
                   <input type="file" id="fileProcuracao" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
                 </label>
-                <label class="field upload-card hidden" id="fileTransferProtocolWrap">
-                  <span>Protocolo de Transfer&#234;ncia</span>
-                  <small>Comprovante da troca de titularidade, quando existir.</small>
-                  <input type="file" id="fileTransferProtocol" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
-                </label>
+                
               </div>
 
               <div class="attachments-note">
@@ -382,7 +359,7 @@
   </div>
 
   <script type="module" src="access-control.js?v=20260314-relatorios1"></script>
-    <script type="module" src="assinante-cadastro.js?v=20260314-companycontacts1"></script></body>
+    <script type="module" src="assinante-cadastro.js?v=20260314-notransfer1"></script></body>
 </html>
 
 
