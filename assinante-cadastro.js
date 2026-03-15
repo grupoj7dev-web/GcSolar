@@ -377,7 +377,7 @@ function renderAccounts() {
       <div class='grid cols-3 account-fields'>
         <label class='field'><span>Tipo de Pessoa *</span><select data-acc='personType' data-idx='${i}'><option value='person' ${x.personType === "person" ? "selected" : ""}>Pessoa Física</option><option value='company' ${x.personType === "company" ? "selected" : ""}>Pessoa Jurídica</option></select></label>
         <label class='field'><span>CPF ou CNPJ *</span><input data-mask='cpfcnpj' data-acc='doc' data-idx='${i}' value='${x.doc || ""}'></label>
-        <label class='field'><span>Nome da PF / Empresa *</span><input data-acc='name' data-idx='${i}' value='${x.name || ""}'></label>
+        <label class='field'><span>${x.personType === "company" ? "Nome da Empresa" : "Nome do Titular"} *</span><input data-acc='name' data-idx='${i}' value='${x.name || ""}'></label>
         <label class='field ${x.personType === "company" ? "hidden" : ""}'><span>Data de Nascimento *</span><input type='date' data-acc='birthDate' data-idx='${i}' value='${x.birthDate || ""}'></label>
         <label class='field'><span>UC - Unidade Consumidora *</span><input data-acc='uc' data-idx='${i}' value='${x.uc || ""}'></label>
         <label class='field'><span>Numero do Parceiro</span><input data-acc='partner' data-idx='${i}' value='${x.partner || ""}'></label>
