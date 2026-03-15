@@ -34,6 +34,7 @@ const toNumber = (v) => { const n = Number(String(v || "").replace(",", ".")); r
 const clean = (v) => String(v || "").replace(/\s+/g, " ").trim();
 const onlyDigits = (v) => String(v || "").replace(/\D+/g, "");
 const brl = (v) => Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const escapeHtml = (v) => String(v || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 const state = {
   scope: null,
@@ -567,25 +568,90 @@ function renderSummary() {
   renderPlanDiscountDemo();
 }
 
+function getNotificationEntry(notifyKey) {
+  const value = state.notifications?.[notifyKey];
+  if (value && typeof value === "object") {
+    return {
+      enabled: value.enabled === true,
+      message: clean(value.message || ""),
+    };
+  }
+  return {
+    enabled: value === true,
+    message: "",
+  };
+}
+
+function setNotificationEntry(notifyKey, patch) {
+  const current = getNotificationEntry(notifyKey);
+  state.notifications[notifyKey] = {
+    ...current,
+    ...patch,
+  };
+}
+
 function renderNotifications() {
   const groups = [
-    { title: "WhatsApp - Básicas", key: "whatsapp_basic", items: ["Enviar Faturas de Energia por WhatsApp", "Informar Pagamento Recebido por WhatsApp"] },
-    { title: "Antes do Vencimento - WhatsApp", key: "whatsapp_before", items: ["Ao Criar Nova Cobrança", "Alteração de Valor ou Data de Vencimento", "Aviso 1 Dia Antes do Vencimento", "Aviso no Dia do Vencimento"] },
-    { title: "Antes do Vencimento - Email", key: "email_before", items: ["Ao Criar Nova Cobrança", "Alteração de Valor ou Data de Vencimento", "Aviso 1 Dia Antes do Vencimento", "Aviso no Dia do Vencimento"] },
-    { title: "Cobranças Vencidas - WhatsApp", key: "whatsapp_overdue", items: ["1 Dia Após", "3 Dias Após", "5 Dias Após", "7 Dias Após", "15 Dias Após", "20 Dias Após", "25 Dias Após", "30 Dias Após", "Após 30 Dias (de 5 em 5 dias)"] },
-    { title: "Cobranças Vencidas - Email", key: "email_overdue", items: ["1 Dia Após", "3 Dias Após", "5 Dias Após", "7 Dias Após", "15 Dias Após", "20 Dias Após", "25 Dias Após", "30 Dias Após", "Após 30 Dias (de 5 em 5 dias)"] },
+    {
+      title: "WhatsApp - Básicas",
+      key: "whatsapp_basic",
+      description: "Mensagens essenciais do dia a dia para envio e confirmação.",
+      channel: "WhatsApp",
+      items: ["Enviar Faturas de Energia por WhatsApp", "Informar Pagamento Recebido por WhatsApp"]
+    },
+    {
+      title: "Antes do Vencimento - WhatsApp",
+      key: "whatsapp_before",
+      description: "Lembretes preventivos para reduzir atraso antes do vencimento.",
+      channel: "WhatsApp",
+      items: ["Ao Criar Nova Cobrança", "Alteração de Valor ou Data de Vencimento", "Aviso 1 Dia Antes do Vencimento", "Aviso no Dia do Vencimento"]
+    },
+    {
+      title: "Antes do Vencimento - Email",
+      key: "email_before",
+      description: "Versões por email para reforçar os avisos prévios ao vencimento.",
+      channel: "E-mail",
+      items: ["Ao Criar Nova Cobrança", "Alteração de Valor ou Data de Vencimento", "Aviso 1 Dia Antes do Vencimento", "Aviso no Dia do Vencimento"]
+    },
+    {
+      title: "Cobranças Vencidas - WhatsApp",
+      key: "whatsapp_overdue",
+      description: "Cobrança progressiva por WhatsApp após o vencimento.",
+      channel: "WhatsApp",
+      items: ["1 Dia Após", "3 Dias Após", "5 Dias Após", "7 Dias Após", "15 Dias Após", "20 Dias Após", "25 Dias Após", "30 Dias Após", "Após 30 Dias (de 5 em 5 dias)"]
+    },
+    {
+      title: "Cobranças Vencidas - Email",
+      key: "email_overdue",
+      description: "Fluxo de email para reforçar as notificações em atraso.",
+      channel: "E-mail",
+      items: ["1 Dia Após", "3 Dias Após", "5 Dias Após", "7 Dias Após", "15 Dias Após", "20 Dias Após", "25 Dias Após", "30 Dias Após", "Após 30 Dias (de 5 em 5 dias)"]
+    },
   ];
 
   id("notifyGrid").innerHTML = groups.map((group) => {
-    const totalEnabled = group.items.filter((_, idx) => state.notifications[`${group.key}.${idx}`] === true).length;
+    const totalEnabled = group.items.filter((_, idx) => getNotificationEntry(`${group.key}.${idx}`).enabled).length;
     const checks = group.items.map((label, idx) => {
       const notifyKey = `${group.key}.${idx}`;
-      const checked = state.notifications[notifyKey] === true ? "checked" : "";
+      const entry = getNotificationEntry(notifyKey);
+      const checked = entry.enabled ? "checked" : "";
+      const messageValue = escapeHtml(entry.message || "");
       return `
-        <label class="notify-item">
-          <input type="checkbox" data-notify-key="${notifyKey}" ${checked}>
-          <span>${label}</span>
-        </label>
+        <article class="notify-item ${entry.enabled ? "is-active" : ""}">
+          <label class="notify-item-head">
+            <input type="checkbox" data-notify-key="${notifyKey}" ${checked}>
+            <span>${label}</span>
+          </label>
+          <div class="notify-item-body ${entry.enabled ? "" : "hidden"}">
+            <small class="notify-message-label">Mensagem personalizada</small>
+            <textarea
+              class="notify-message-input"
+              data-notify-message-key="${notifyKey}"
+              rows="3"
+              placeholder="Escreva a mensagem que deve ser enviada para esta notificação."
+            >${messageValue}</textarea>
+          </div>
+        </article>
       `;
     }).join("");
     return `
@@ -594,8 +660,12 @@ function renderNotifications() {
           <div>
             <p class="notify-kicker">Grupo de automação</p>
             <h4>${group.title}</h4>
+            <p class="notify-col-text">${group.description}</p>
           </div>
-          <span class="notify-count">${totalEnabled}/${group.items.length} ativos</span>
+          <div class="notify-col-meta">
+            <span class="notify-channel">${group.channel}</span>
+            <span class="notify-count">${totalEnabled}/${group.items.length} ativos</span>
+          </div>
         </div>
         <div class="notify-list">${checks}</div>
       </article>
@@ -1079,11 +1149,19 @@ function bindEvents() {
   });
 
   form.addEventListener("change", (e) => {
-    if (e.target.matches("input[data-notify-key]")) state.notifications[e.target.dataset.notifyKey] = e.target.checked;
+    if (e.target.matches("input[data-notify-key]")) {
+      setNotificationEntry(e.target.dataset.notifyKey, { enabled: e.target.checked });
+      renderNotifications();
+    }
     saveDraft();
   });
 
-  form.addEventListener("input", () => saveDraft());
+  form.addEventListener("input", (e) => {
+    if (e.target.matches("textarea[data-notify-message-key]")) {
+      setNotificationEntry(e.target.dataset.notifyMessageKey, { message: e.target.value });
+    }
+    saveDraft();
+  });
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -1220,6 +1298,7 @@ async function hydrateExisting(data) {
   id("transferDate").value = data.transfer?.transferDate || "";
   state.personContacts = Array.isArray(data.contacts?.person) ? data.contacts.person : [];
   state.companyContacts = Array.isArray(data.contacts?.company) ? data.contacts.company : [];
+  state.notifications = data.notifications && typeof data.notifications === "object" ? data.notifications : {};
   const energyAccounts = Array.isArray(data.energyAccounts) ? data.energyAccounts : null;
   const energyAccount = data.energy_account || data.energyAccount || null;
   if (energyAccounts && energyAccounts.length) {
@@ -1248,6 +1327,7 @@ async function hydrateExisting(data) {
   renderAccounts();
   renderContacts("person");
   renderContacts("company");
+  renderNotifications();
   renderTransfer();
   toggleAdminBlock();
   renderSummary();

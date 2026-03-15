@@ -1011,6 +1011,35 @@
   border-bottom: 1px solid #dbe6df;
 }
 
+.notify-col-text {
+  margin: 0.36rem 0 0;
+  color: #5c7568;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.notify-col-meta {
+  display: grid;
+  justify-items: end;
+  gap: 0.42rem;
+}
+
+.notify-channel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0.2rem 0.56rem;
+  border-radius: 999px;
+  border: 1px solid #d4e5db;
+  background: #f5faf7;
+  color: #35644a;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
 .notify-kicker {
   margin: 0 0 0.24rem;
   color: #4f6e5d;
@@ -1041,21 +1070,26 @@
 }
 
 .notify-item {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-  min-height: 56px;
+  display: grid;
+  gap: 0.72rem;
   padding: 0.78rem 0.82rem;
   border: 1px solid #d6e2db;
   border-radius: 14px;
   background: #fbfdfc;
-  cursor: pointer;
   transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease;
 }
 
 .notify-item:hover {
   transform: translateY(-1px);
   box-shadow: 0 12px 20px rgba(14, 61, 34, 0.05);
+}
+
+.notify-item-head {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-height: 32px;
+  cursor: pointer;
 }
 
 .notify-item input {
@@ -1066,17 +1100,51 @@
   flex: 0 0 auto;
 }
 
-.notify-item span {
+.notify-item-head span {
   color: #173c2a;
   font-size: 0.9rem;
   font-weight: 600;
   line-height: 1.4;
 }
 
+.notify-item.is-active,
 .notify-item:has(input:checked) {
   border-color: #15924a;
   background: linear-gradient(135deg, #ebf8f0 0%, #def2e6 100%);
   box-shadow: 0 14px 24px rgba(15, 138, 67, 0.08);
+}
+
+.notify-item-body {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.15rem 0 0 1.7rem;
+}
+
+.notify-message-label {
+  color: #467058;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.notify-message-input {
+  width: 100%;
+  min-height: 92px;
+  padding: 0.72rem 0.8rem;
+  border: 1px solid #bdd2c4;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #173c2a;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.notify-message-input:focus {
+  outline: none;
+  border-color: var(--cad-primary);
+  box-shadow: 0 0 0 3px rgba(15, 138, 67, 0.12);
 }
 
 .summary-cards {
