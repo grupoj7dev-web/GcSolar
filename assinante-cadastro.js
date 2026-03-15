@@ -949,12 +949,10 @@ function validateStep(step) {
       if (!clean(id("companyPhone").value)) return "Telefone da empresa obrigatório.";
       if (!clean(id("companyEmail").value)) return "Email da empresa obrigatório.";
       if (!validateAddress(readAddress("companyAddress"))) return "Endereço da empresa incompleto.";
-      if (onlyDigits(id("adminCpf").value).length !== 11) return "CPF do administrador inválido.";
-      if (!clean(id("adminName").value)) return "Nome do administrador obrigatório.";
-      if (!clean(id("adminBirth").value)) return "Data de nascimento do administrador obrigatória.";
-      if (!clean(id("adminPhone").value)) return "Telefone do administrador obrigatório.";
-      if (!clean(id("adminEmail").value)) return "Email do administrador obrigatório.";
-      if (!validateAddress(readAddress("adminAddress"))) return "Endereço do administrador incompleto.";
+      if (onlyDigits(id("adminCpf").value).length !== 11) return "CPF do representante inválido.";
+      if (!clean(id("adminName").value)) return "Nome do representante obrigatório.";
+      if (!clean(id("adminBirth").value)) return "Data de nascimento do representante obrigatória.";
+      if (!validateAddress(readAddress("adminAddress"))) return "Endereço do representante incompleto.";
     }
   }
   if (step === 4) {
@@ -1116,7 +1114,6 @@ function buildPayload() {
       name: clean(id("adminName").value),
       birthDate: id("adminBirth").value || "",
       civilStatus: clean(id("adminCivil").value),
-      profession: clean(id("adminJob").value),
       phone: clean(id("adminPhone").value),
       email: clean(id("adminEmail").value),
       address: readAddress("adminAddress"),
@@ -1446,7 +1443,6 @@ async function hydrateExisting(data) {
   id("adminPhone").value = a.phone || "";
   id("adminEmail").value = a.email || "";
   id("adminCivil").value = a.civilStatus || "";
-  id("adminJob").value = a.profession || "";
   if (a.address) {
     const root = qs("[data-address='adminAddress']");
     Object.entries(a.address).forEach(([k, v]) => {
