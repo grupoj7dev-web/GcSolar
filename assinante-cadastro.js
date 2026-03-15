@@ -98,6 +98,8 @@ function saveDraft() {
         name: a.name || "",
         birthDate: a.birthDate || "",
         uc: a.uc || "",
+        nickname: a.nickname || "",
+        nicknameTouched: a.nicknameTouched === true,
         partner: a.partner || "",
         address: a.address || { cep: "", street: "", number: "", complement: "", district: "", city: "", state: "" },
       })),
@@ -405,15 +407,46 @@ function clearCompanyFields() {
 }
 
 function createAccount(seed = {}) {
+  const defaultPersonType = holderType() === "company" ? "company" : "person";
   return {
-    personType: seed.personType || holderType() || "person",
+    personType: seed.personType || defaultPersonType,
     doc: seed.doc || "",
     name: seed.name || "",
     birthDate: seed.birthDate || "",
     uc: seed.uc || "",
+    nickname: seed.nickname || "",
+    nicknameTouched: seed.nicknameTouched === true,
     partner: seed.partner || "",
-    address: seed.address || { cep: "", street: "", number: "", complement: "", district: "", city: "", state: "" },
+    address: normalizeAddress(seed.address || getPrimaryAddress() || {}),
   };
+}
+
+function getAccountDocLabel(personType) {
+  return personType === "company" ? "CNPJ" : "CPF";
+}
+
+function getAccountNameLabel(personType) {
+  return personType === "company" ? "Nome do Titular PJ" : "Nome do Titular PF";
+}
+
+function buildAccountNickname(name, uc) {
+  const cleanName = clean(name);
+  const cleanUc = clean(uc);
+  if (!cleanName || !cleanUc) return "";
+  const firstName = cleanName.split(" ").find(Boolean) || cleanName;
+  return `${firstName} - ${cleanUc}`;
+}
+
+function syncAccountNickname(account) {
+  if (!account) return;
+  const generated = buildAccountNickname(account.name, account.uc);
+  if (!generated) {
+    if (!account.nicknameTouched) account.nickname = "";
+    return;
+  }
+  if (!account.nicknameTouched || !clean(account.nickname)) {
+    account.nickname = generated;
+  }
 }
 
 function fillPrimaryToFirstUc() {
@@ -424,6 +457,7 @@ function fillPrimaryToFirstUc() {
   state.accounts[0].name = person ? id("personName").value : (id("companyRazao").value || id("companyFantasy").value);
   state.accounts[0].birthDate = person ? (id("personBirth").value || "") : "";
   state.accounts[0].address = person ? readAddress("personAddress") : readAddress("companyAddress");
+  syncAccountNickname(state.accounts[0]);
   renderAccounts();
 }
 
@@ -443,6 +477,7 @@ function fillPrimaryToFirstUcIfMissing() {
   Object.keys(primaryAddress).forEach((key) => {
     if (!clean(account.address[key])) account.address[key] = primaryAddress[key];
   });
+  syncAccountNickname(account);
 }
 
 function fillPrimaryToAccountsIfMissing() {
@@ -458,28 +493,33 @@ function fillPrimaryToAccountsIfMissing() {
     Object.keys(primaryAddress).forEach((key) => {
       if (!clean(current[key])) current[key] = primaryAddress[key];
     });
+    syncAccountNickname(account);
   });
 }
 
 function renderAccounts() {
   if (!state.accounts.length) state.accounts = [createAccount()];
+  state.accounts.forEach((account) => syncAccountNickname(account));
   const canRemove = state.accounts.length > 1;
   id("energyAccounts").innerHTML = state.accounts.map((x, i) => `
     <article class='account-card'>
       <header class='account-card-head'>
         <div>
           <p class='account-kicker'>Conta de Energia</p>
-          <h4>Conta ${i + 1}</h4>
+          <h4>Local ${i + 1}</h4>
         </div>
         <div class='action-row'>
-          ${i > 0 ? `<button type='button' class='btn-secondary' data-copy-account-address='${i}'>Copiar endereco da conta 1</button>` : ""}
           ${canRemove ? `<button type='button' class='btn-secondary uc-remove-btn' data-remove-account='${i}'>Remover Conta</button>` : ""}
         </div>
       </header>
+      <label class='field'>
+        <span>Apelido da Unidade</span>
+        <input data-acc='nickname' data-idx='${i}' value='${escapeHtml(x.nickname || "")}' ${clean(x.name) && clean(x.uc) ? "" : "disabled"} placeholder='Preencha Titular e UC para gerar automaticamente'>
+      </label>
       <div class='grid cols-3 account-fields'>
         <label class='field'><span>Tipo de Pessoa *</span><select data-acc='personType' data-idx='${i}'><option value='person' ${x.personType === "person" ? "selected" : ""}>Pessoa Física</option><option value='company' ${x.personType === "company" ? "selected" : ""}>Pessoa Jurídica</option></select></label>
-        <label class='field'><span>CPF ou CNPJ *</span><input data-mask='cpfcnpj' data-acc='doc' data-idx='${i}' value='${x.doc || ""}'></label>
-        <label class='field'><span>${x.personType === "company" ? "Nome da Empresa" : "Nome do Titular"} *</span><input data-acc='name' data-idx='${i}' value='${x.name || ""}'></label>
+        <label class='field'><span>${getAccountDocLabel(x.personType)} *</span><input data-mask='${x.personType === "company" ? "cnpj" : "cpf"}' data-acc='doc' data-idx='${i}' value='${escapeHtml(x.doc || "")}'></label>
+        <label class='field'><span>${getAccountNameLabel(x.personType)} *</span><input data-acc='name' data-idx='${i}' value='${escapeHtml(x.name || "")}'></label>
         <label class='field ${x.personType === "company" ? "hidden" : ""}'><span>Data de Nascimento *</span><input type='date' data-acc='birthDate' data-idx='${i}' value='${x.birthDate || ""}'></label>
         <label class='field'><span>UC - Unidade Consumidora *</span><input data-acc='uc' data-idx='${i}' value='${x.uc || ""}'></label>
         <label class='field'><span>Numero do Parceiro</span><input data-acc='partner' data-idx='${i}' value='${x.partner || ""}'></label>
@@ -1126,6 +1166,7 @@ function buildPayload() {
       name: clean(a.name),
       birthDate: clean(a.birthDate),
       uc: clean(a.uc),
+      nickname: clean(a.nickname),
       partnerNumber: clean(a.partner),
       address: normalizeAddress(validateAddress(a.address || {}) ? a.address : (primaryAddress || a.address || {})),
     })),
@@ -1206,12 +1247,6 @@ function bindEvents() {
       renderAccounts();
       return;
     }
-    const copyB = e.target.closest("[data-copy-account-address]");
-    if (copyB) {
-      const i = Number(copyB.dataset.copyAccountAddress);
-      state.accounts[i].address = { ...(state.accounts[0]?.address || createAccount().address) };
-      renderAccounts();
-    }
   });
 
   id("energyAccounts").addEventListener("input", (e) => {
@@ -1221,11 +1256,19 @@ function bindEvents() {
     if (el.matches("[data-acc]")) {
       const k = el.dataset.acc;
       state.accounts[i][k] = clean(el.value);
+      if (k === "nickname") {
+        state.accounts[i].nicknameTouched = true;
+        saveDraft();
+        return;
+      }
       if (k === "personType") {
         if (state.accounts[i].personType === "company") state.accounts[i].birthDate = "";
+        state.accounts[i].doc = "";
+        syncAccountNickname(state.accounts[i]);
         renderAccounts();
         return;
       }
+      if (k === "name" || k === "uc") syncAccountNickname(state.accounts[i]);
       saveDraft();
     }
     if (el.matches("[data-acc-addr]")) {
@@ -1485,21 +1528,25 @@ async function hydrateExisting(data) {
   const energyAccount = data.energy_account || data.energyAccount || null;
   if (energyAccounts && energyAccounts.length) {
     state.accounts = energyAccounts.map((x) => createAccount({
-      personType: x.personType || "person",
-      doc: applyMask(x.cpfCnpj || "", "cpfcnpj"),
+      personType: x.personType || holderType() || "person",
+      doc: applyMask(x.cpfCnpj || "", (x.personType || holderType()) === "company" ? "cnpj" : "cpf"),
       name: x.name || "",
       birthDate: x.birthDate || "",
       uc: x.uc || "",
+      nickname: x.nickname || x.alias || "",
+      nicknameTouched: !!(x.nicknameTouched || x.nickname || x.alias),
       partner: x.partnerNumber || "",
       address: normalizeAddress(x.address || {}),
     }));
   } else if (energyAccount) {
     state.accounts = [createAccount({
-      personType: energyAccount.holderType || "person",
-      doc: applyMask(energyAccount.cpfCnpj || "", "cpfcnpj"),
+      personType: energyAccount.holderType || holderType() || "person",
+      doc: applyMask(energyAccount.cpfCnpj || "", (energyAccount.holderType || holderType()) === "company" ? "cnpj" : "cpf"),
       name: energyAccount.holderName || "",
       birthDate: energyAccount.birthDate || "",
       uc: energyAccount.uc || "",
+      nickname: energyAccount.nickname || energyAccount.alias || "",
+      nicknameTouched: !!(energyAccount.nicknameTouched || energyAccount.nickname || energyAccount.alias),
       partner: energyAccount.partnerNumber || "",
       address: normalizeAddress(energyAccount.address || {}),
     })];
