@@ -388,8 +388,8 @@ function formatMonthShortLabel(targetMonthKey) {
   return `${monthLabel.charAt(0).toUpperCase()}${monthLabel.slice(1)}/${String(year).slice(-2)}`;
 }
 
-function buildMonthSummaryLine(label, primary, secondary) {
-  return `<span class="status-meta-line"><strong>${label}</strong><span>${primary}</span><em>${secondary}</em></span>`;
+function buildMonthSummaryLine(label, primary) {
+  return `<span class="status-meta-line"><strong>${label}</strong><span>${primary}</span></span>`;
 }
 
 function getInvoiceIdentityKey(item) {
@@ -555,26 +555,22 @@ function renderByPeriod(period) {
   cards.pendentesMeta.innerHTML = [
     buildMonthSummaryLine(
       formatMonthShortLabel(currentMonthKey),
-      `${currentMonthlyProgress.processed}/${currentMonthlyProgress.expected} processadas`,
-      `Faltam ${currentMonthlyProgress.missing}`
+      `${currentMonthlyProgress.processed}/${currentMonthlyProgress.expected}`
     ),
     buildMonthSummaryLine(
       formatMonthShortLabel(previousMonthKey),
-      `${previousMonthlyProgress.processed}/${previousMonthlyProgress.expected} processadas`,
-      `Faltaram ${previousMonthlyProgress.missing}`
+      `${previousMonthlyProgress.processed}/${previousMonthlyProgress.expected}`
     ),
   ].join("<br>");
   cards.processadas.textContent = int(processadas);
   cards.processadasMeta.innerHTML = [
     buildMonthSummaryLine(
       formatMonthShortLabel(currentMonthKey),
-      `${currentMonthlyProgress.processed}/${currentMonthlyProgress.expected}`,
-      `${pct(currentMonthlyProgress.processedPct)} processado`
+      `${currentMonthlyProgress.processed}/${currentMonthlyProgress.expected}`
     ),
     buildMonthSummaryLine(
       formatMonthShortLabel(previousMonthKey),
-      `${previousMonthlyProgress.processed}/${previousMonthlyProgress.expected}`,
-      `${pct(previousMonthlyProgress.processedPct)} processado`
+      `${previousMonthlyProgress.processed}/${previousMonthlyProgress.expected}`
     ),
   ].join("<br>");
   cards.emitidas.textContent = int(emitidas);

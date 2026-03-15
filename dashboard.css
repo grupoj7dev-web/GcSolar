@@ -378,35 +378,26 @@ body {
 }
 
 .status-meta {
-    font-size: 0.8rem;
-    color: var(--muted);
     display: grid;
-    gap: 0.42rem;
+    gap: 0.7rem;
 }
 
 .status-meta-line {
     display: grid;
-    gap: 0.1rem;
-    padding: 0.22rem 0;
+    gap: 0.02rem;
 }
 
 .status-meta-line strong {
-    font-size: 0.74rem;
+    font-size: 0.82rem;
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: #567160;
 }
 
 .status-meta-line span {
-    font-size: 0.92rem;
+    font-size: 1.05rem;
     font-weight: 600;
     color: var(--text);
-}
-
-.status-meta-line em {
-    font-size: 0.76rem;
-    font-style: normal;
-    color: var(--muted);
 }
 
 .status-card.pending {
