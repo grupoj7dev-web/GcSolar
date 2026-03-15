@@ -952,7 +952,6 @@ function validateStep(step) {
       if (onlyDigits(id("adminCpf").value).length !== 11) return "CPF do representante inválido.";
       if (!clean(id("adminName").value)) return "Nome do representante obrigatório.";
       if (!clean(id("adminBirth").value)) return "Data de nascimento do representante obrigatória.";
-      if (!validateAddress(readAddress("adminAddress"))) return "Endereço do representante incompleto.";
     }
   }
   if (step === 4) {
@@ -1116,7 +1115,6 @@ function buildPayload() {
       civilStatus: clean(id("adminCivil").value),
       phone: clean(id("adminPhone").value),
       email: clean(id("adminEmail").value),
-      address: readAddress("adminAddress"),
     } : null,
     contacts: {
       person: state.personContacts,
@@ -1443,13 +1441,6 @@ async function hydrateExisting(data) {
   id("adminPhone").value = a.phone || "";
   id("adminEmail").value = a.email || "";
   id("adminCivil").value = a.civilStatus || "";
-  if (a.address) {
-    const root = qs("[data-address='adminAddress']");
-    Object.entries(a.address).forEach(([k, v]) => {
-      const input = root?.querySelector(`[data-address-field='${k}']`);
-      if (input) input.value = v || "";
-    });
-  }
   const plan = data.plan_contract || data.planContract || {};
   const planAverage = plan.contractedKwh || data.consumoMedio || data.averageConsumptionKwh || "";
   const planSeller = plan.sellerKwh || plan.informedKwh || planAverage;
