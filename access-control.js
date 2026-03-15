@@ -62,6 +62,7 @@ const PAGE_PERMISSION_MAP = {
   "faturas-pre-validacao.html": "faturasPreValidacao",
   "faturas-validacao.html": "faturas",
   "faturas-emitidas.html": "faturas",
+  "relatorios.html": "relatorios",
   "procuracao.html": "procuracao",
   "procuracao-nova.html": "procuracao",
   "whatsapp.html": "whatsapp",
@@ -83,6 +84,7 @@ const NAV_PERMISSION_BY_HREF = {
   "procuracao.html": "procuracao",
   "faturas-validacao.html": "faturas",
   "faturas-emitidas.html": "faturas",
+  "relatorios.html": "relatorios",
   "whatsapp.html": "whatsapp",
   "parceiros.html": "representantes",
   "asaas-config.html": "asaas",
@@ -95,6 +97,7 @@ const DEFAULT_ENTRY_ORDER = [
   "geradoras.html",
   "cadastrar-rateio.html",
   "faturas-validacao.html",
+  "relatorios.html",
   "procuracao.html",
 ];
 
@@ -212,6 +215,27 @@ function ensureSpecialNavLinks(profile) {
   link.setAttribute("data-gc-dynamic", "faturas-pre-validacao");
   link.innerHTML = '<i class="ph ph-shield-check"></i><span>Faturas Pré-validação</span>';
   nav.insertBefore(link, anchor);
+}
+
+function ensureReportsNavLink() {
+  const nav = document.querySelector(".sidebar-nav");
+  if (!nav) return;
+
+  const existing = nav.querySelector('a.nav-item[href="relatorios.html"]');
+  if (existing) return;
+
+  const anchor =
+    nav.querySelector('a.nav-item[href="geradoras.html"]') ||
+    nav.querySelector('a.nav-item[href="faturas-validacao.html"]');
+  if (!anchor) return;
+
+  const link = document.createElement("a");
+  link.href = "relatorios.html";
+  link.className = "nav-item";
+  link.setAttribute("data-gc-dynamic", "relatorios");
+  if (getPageName() === "relatorios.html") link.classList.add("active");
+  link.innerHTML = '<i class="ph ph-chart-line-up"></i><span>Relatorios</span>';
+  anchor.insertAdjacentElement("afterend", link);
 }
 
 // Bloqueio imediato para evitar flicker de menu completo antes da validacao.
@@ -436,6 +460,7 @@ onAuthStateChanged(auth, async (user) => {
       return;
     }
 
+    ensureReportsNavLink();
     ensureSpecialNavLinks(profile);
     applyNavPermissions(profile);
 

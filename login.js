@@ -67,6 +67,7 @@ const ENTRY_BY_PERMISSION_ORDER = [
   ["indicarAssinante", "indicar-assinante.html"],
   ["assinantes", "assinantes.html"],
   ["geradoras", "geradoras.html"],
+  ["relatorios", "relatorios.html"],
   ["rateio", "cadastrar-rateio.html"],
   ["faturas", "faturas-validacao.html"],
   ["procuracao", "procuracao.html"],

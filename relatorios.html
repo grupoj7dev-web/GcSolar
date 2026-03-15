@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GC Solar | Relatórios</title>
+    <meta name="description" content="Relatórios operacionais e financeiros da GC Solar.">
+    <script>
+        (function () {
+            try {
+                var saved = localStorage.getItem("gcsolar_theme");
+                var dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+                var theme = saved || (dark ? "dark" : "light");
+                document.documentElement.setAttribute("data-theme", theme);
+            } catch (e) { }
+        })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" href="dashboard.css?v=20260314-relatorios1">
+    <link rel="stylesheet" href="relatorios.css?v=20260314-relatorios1">
+</head>
+
+<body>
+    <div class="app-shell" id="appShell">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="dashboard.html" class="sidebar-logo-link" aria-label="Ir para dashboard">
+                    <img src="logo6.png" alt="GC Solar" class="sidebar-logo sidebar-logo-full">
+                    <img src="gc_icon_final.png" alt="GC" class="sidebar-logo sidebar-logo-gc">
+                </a>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item"><i class="ph ph-squares-four"></i><span>Dashboard</span></a>
+                <a href="assinantes.html" class="nav-item"><i class="ph ph-users-three"></i><span>Assinantes</span></a>
+                <a href="indicar-assinante.html" class="nav-item"><i class="ph ph-user-plus"></i><span>Pré-assinante</span></a>
+                <a href="cadastrar-rateio.html" class="nav-item"><i class="ph ph-share-network"></i><span>Cadastrar Rateio</span></a>
+                <a href="calcular-desconto.html" class="nav-item"><i class="ph ph-percent"></i><span>Calcular Desconto</span></a>
+                <a href="geradoras.html" class="nav-item"><i class="ph ph-solar-panel"></i><span>Geradoras</span></a>
+                <a href="relatorios.html" class="nav-item active"><i class="ph ph-chart-line-up"></i><span>Relatórios</span></a>
+                <a href="fatura-manual.html" class="nav-item"><i class="ph ph-file-plus"></i><span>Fatura Manual</span></a>
+                <a href="procuracao.html" class="nav-item"><i class="ph ph-file-text"></i><span>Procuração</span></a>
+                <a href="faturas-validacao.html" class="nav-item"><i class="ph ph-seal-warning"></i><span>Faturas em Validação</span></a>
+                <a href="faturas-emitidas.html" class="nav-item"><i class="ph ph-receipt"></i><span>Faturas Emitidas</span></a>
+                <a href="whatsapp.html" class="nav-item"><i class="ph ph-whatsapp-logo"></i><span>WhatsApp</span></a>
+                <a href="parceiros.html" class="nav-item"><i class="ph ph-handshake"></i><span>Parceiros</span></a>
+            </nav>
+        </aside>
+
+        <div class="content-wrap">
+            <header class="topbar">
+                <button class="toggle-btn" id="toggleSidebar" aria-label="Recolher menu lateral">
+                    <i class="ph ph-list"></i>
+                </button>
+                <div class="topbar-actions">
+                    <button class="settings-btn" id="themeBtn" aria-label="Alternar tema">
+                        <i class="ph ph-moon"></i>
+                    </button>
+                    <button class="settings-btn" id="refreshBtn" aria-label="Atualizar relatório">
+                        <i class="ph ph-arrow-clockwise"></i>
+                    </button>
+                    <button class="logout-btn" id="logoutBtn">Sair</button>
+                </div>
+            </header>
+
+            <main class="reports-main">
+                <section class="card reports-head">
+                    <div>
+                        <p class="reports-kicker">Relatórios</p>
+                        <h1>Relatório do Investidor</h1>
+                        <p class="reports-copy">Acompanhe faturamento por geradora com visão de desconto, encargos, gestão e valor líquido do investidor.</p>
+                    </div>
+                    <div class="reports-head-meta">
+                        <span class="report-chip">Investidor</span>
+                        <p id="updatedAtLabel">Atualizando...</p>
+                    </div>
+                </section>
+
+                <section class="card filters-card">
+                    <div class="filters-grid">
+                        <label class="field">
+                            <span>Geradora</span>
+                            <select id="generatorFilter">
+                                <option value="">Todas</option>
+                            </select>
+                        </label>
+                        <label class="field">
+                            <span>Ano</span>
+                            <select id="yearFilter">
+                                <option value="">Todos</option>
+                            </select>
+                        </label>
+                        <label class="field">
+                            <span>Ref. da fatura</span>
+                            <select id="referenceFilter">
+                                <option value="">Todas</option>
+                            </select>
+                        </label>
+                        <label class="field">
+                            <span>Buscar</span>
+                            <input id="searchInput" type="search" placeholder="Nome, documento, UC ou geradora">
+                        </label>
+                        <label class="field">
+                            <span>Vencimento de</span>
+                            <input id="dueStartFilter" type="date">
+                        </label>
+                        <label class="field">
+                            <span>Vencimento até</span>
+                            <input id="dueEndFilter" type="date">
+                        </label>
+                        <label class="field">
+                            <span>Pagamento de</span>
+                            <input id="paymentStartFilter" type="date">
+                        </label>
+                        <label class="field">
+                            <span>Pagamento até</span>
+                            <input id="paymentEndFilter" type="date">
+                        </label>
+                    </div>
+                    <div class="filters-actions">
+                        <p class="filters-note">O valor do investidor usa a parcela da gestora líquida de taxa, quando houver taxa configurada na geradora.</p>
+                        <button class="btn btn-ghost" id="clearFiltersBtn" type="button">
+                            <i class="ph ph-funnel-simple-x"></i>
+                            Limpar filtros
+                        </button>
+                    </div>
+                </section>
+
+                <section class="report-kpis">
+                    <article class="card kpi-card">
+                        <p class="kpi-label">Linhas no relatório</p>
+                        <p class="kpi-value" id="kpiCount">0</p>
+                        <p class="kpi-meta">Faturas emitidas dentro do filtro</p>
+                    </article>
+                    <article class="card kpi-card">
+                        <p class="kpi-label">Total pago</p>
+                        <p class="kpi-value" id="kpiPaid">R$ 0,00</p>
+                        <p class="kpi-meta">Somente faturas marcadas como pagas</p>
+                    </article>
+                    <article class="card kpi-card">
+                        <p class="kpi-label">Gestão da gestora</p>
+                        <p class="kpi-value" id="kpiManagement">R$ 0,00</p>
+                        <p class="kpi-meta">Conforme taxa configurada na geradora</p>
+                    </article>
+                    <article class="card kpi-card highlight">
+                        <p class="kpi-label">Total a receber do investidor</p>
+                        <p class="kpi-value" id="kpiInvestor">R$ 0,00</p>
+                        <p class="kpi-meta">Soma líquida do investidor no filtro</p>
+                    </article>
+                </section>
+
+                <section class="card report-table-card">
+                    <div class="table-head-row">
+                        <div>
+                            <p class="table-title">Base do investidor</p>
+                            <p class="table-subtitle" id="resultsLabel">0 itens</p>
+                        </div>
+                    </div>
+
+                    <div class="table-wrap">
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th>Geradora</th>
+                                    <th>UC</th>
+                                    <th>Nome</th>
+                                    <th>CPF/CNPJ</th>
+                                    <th>Energia injetada</th>
+                                    <th>Valor desconto 20%</th>
+                                    <th>Valor desc Fio B e impostos</th>
+                                    <th>Valor fatura a pagar</th>
+                                    <th>Valor pago</th>
+                                    <th>Valor gestão da gestora</th>
+                                    <th>Valor do investidor a receber</th>
+                                    <th>Referência</th>
+                                    <th>Vencimento</th>
+                                    <th>Pagamento</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reportTableBody">
+                                <tr>
+                                    <td colspan="14" class="empty-row">Carregando relatório...</td>
+                                </tr>
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="10" class="report-total-label">Valor total a receber do investidor</td>
+                                    <td id="footerInvestorTotal" class="report-total-value">R$ 0,00</td>
+                                    <td colspan="3"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script type="module" src="access-control.js?v=20260314-relatorios1"></script>
+    <script type="module" src="relatorios.js?v=20260314-relatorios1"></script>
+<script>
+  (function(d,t) {
+    var BASE_URL="https://crm.iasolar.io";
+    var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
+    g.src=BASE_URL+"/packs/js/sdk.js";
+    g.async = true;
+    s.parentNode.insertBefore(g,s);
+    g.onload=function(){
+      window.chatwootSDK.run({
+        websiteToken: 'pzehqfPmoUJqsmNUvKStcyWx',
+        baseUrl: BASE_URL
+      })
+    }
+  })(document,"script");
+</script></body>
+
+</html>

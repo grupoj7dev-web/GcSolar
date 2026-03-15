@@ -269,6 +269,7 @@ function buildPayload(nowIso, authUid) {
       rateio: permissions.rateio === true,
       desconto: permissions.desconto === true,
       geradoras: permissions.geradoras === true,
+      relatorios: permissions.relatorios === true,
       faturas: permissions.faturas === true,
       procuracao: permissions.procuracao === true,
       whatsapp: permissions.whatsapp === true,
