@@ -684,8 +684,8 @@ function validateStep(step) {
     }
   }
   if (step === 6) {
-    const filled = [clean(id("planSelected").value), clean(id("planAdhesionDate").value), clean(id("planContractedKwh").value)].filter(Boolean).length;
-    if (filled < 2) return "Preencha ao menos 2 campos entre Plano, Data de Adesão e kWh Contratado.";
+    const filled = [clean(id("planAdhesionDate").value), clean(id("planContractedKwh").value)].filter(Boolean).length;
+    if (filled < 2) return "Preencha Data de Adesão e kWh Contratado.";
   }
   return "";
 }
@@ -874,7 +874,7 @@ function buildPayload() {
     })),
     transfer,
     planContract: {
-      planSelected: clean(id("planSelected").value),
+      planSelected: "",
       adhesionDate: clean(id("planAdhesionDate").value),
       compensationMode,
       sellerKwh: toNumber(id("planSellerKwh").value),
@@ -889,7 +889,7 @@ function buildPayload() {
       isExempt: id("detailIsento").checked,
     },
     plan_contract: {
-      selectedPlan: clean(id("planSelected").value),
+      selectedPlan: "",
       adhesionDate: clean(id("planAdhesionDate").value),
       compensationMode,
       informedKwh: toNumber(id("planSellerKwh").value),
@@ -898,7 +898,7 @@ function buildPayload() {
       discountPercentage: discount,
     },
     plan_details: {
-      selectedPlan: clean(id("planSelected").value),
+      selectedPlan: "",
       adhesionDate: clean(id("planAdhesionDate").value),
       compensationMode,
       informedKwh: toNumber(id("planSellerKwh").value),
@@ -1125,7 +1125,6 @@ async function hydrateExisting(data) {
     });
   }
   const plan = data.plan_contract || data.planContract || {};
-  id("planSelected").value = plan.planSelected || "";
   id("planAdhesionDate").value = plan.adhesionDate || "";
   id("planSellerKwh").value = plan.sellerKwh || "";
   id("planContractedKwh").value = plan.contractedKwh || "";
