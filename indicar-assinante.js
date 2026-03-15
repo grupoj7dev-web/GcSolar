@@ -1897,8 +1897,8 @@ async function applyExtractedData() {
 
 async function getUserScope(user) {
   const token = await getIdTokenResult(user, true);
-  const role = String(token?.claims?.role || "").toLowerCase();
-  const isSuperAdmin = token?.claims?.superadmin === true || role === "superadmin";
+  const email = String(user?.email || "").toLowerCase().trim();
+  const isSuperAdmin = email === "jheferson@gmail.com";
   const result = {
     uid: user.uid,
     tenantId: user.uid,

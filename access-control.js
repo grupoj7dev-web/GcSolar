@@ -96,7 +96,7 @@ const DEFAULT_ENTRY_ORDER = [
   "procuracao.html",
 ];
 
-const GLOBAL_ADMIN_EMAILS = new Set(["projetos@goldtechenergia.com"]);
+const SUPER_SUPER_ADMIN_EMAIL = "jheferson@gmail.com";
 const ACL_CACHE_KEY = "gcsolar_acl_cache_v1";
 const ACL_ACTIVE_UID_KEY = "gcsolar_acl_active_uid";
 
@@ -114,6 +114,10 @@ function isBlockedStatus(value) {
   if (normalized.includes("bloque")) return true;
   if (normalized.includes("suspens")) return true;
   return false;
+}
+
+function isSuperSuperAdminEmail(email) {
+  return String(email || "").toLowerCase().trim() === SUPER_SUPER_ADMIN_EMAIL;
 }
 
 function getPageName() {
@@ -316,28 +320,14 @@ function applyCachedNavPermissionsIfPossible() {
 
 async function buildProfile(user) {
   const token = await getIdTokenResult(user, true);
-  const role = token.claims.role;
-  const isSuperAdmin = token.claims.superadmin === true || role === "superadmin";
   const email = String(user?.email || "").toLowerCase().trim();
-  const isGlobalAdmin = GLOBAL_ADMIN_EMAILS.has(email);
-  if (isSuperAdmin) {
+  if (isSuperSuperAdminEmail(email)) {
     return {
       uid: user.uid,
       isSuperAdmin: true,
       isAdmin: true,
       isBlocked: false,
       permissions: {},
-    };
-  }
-
-  if (isGlobalAdmin) {
-    return {
-      uid: user.uid,
-      isSuperAdmin: false,
-      isAdmin: true,
-      isBlocked: false,
-      permissions: {},
-      tenantId: user.uid,
     };
   }
 

@@ -38,7 +38,7 @@ const themeKey = "gcsolar_theme";
 const collapsedKey = "gcsolar_sidebar_collapsed";
 const IDENTITY_SIGNUP_URL = `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${firebaseConfig.apiKey}`;
 const IDENTITY_CREATE_AUTH_URI_URL = `https://identitytoolkit.googleapis.com/v1/accounts:createAuthUri?key=${firebaseConfig.apiKey}`;
-const GLOBAL_ADMIN_EMAILS = new Set(["projetos@goldtechenergia.com"]);
+const SUPER_SUPER_ADMIN_EMAIL = "jheferson@gmail.com";
 
 const appShell = document.getElementById("appShell");
 const toggleSidebarBtn = document.getElementById("toggleSidebar");
@@ -82,6 +82,10 @@ function cleanText(value) {
 function toNumber(value) {
   const n = Number(value);
   return Number.isFinite(n) ? n : 0;
+}
+
+function isSuperSuperAdminEmail(email) {
+  return String(email || "").toLowerCase().trim() === SUPER_SUPER_ADMIN_EMAIL;
 }
 
 function isMobile() {
@@ -165,15 +169,8 @@ function resetForm() {
 }
 
 async function getUserScope(user) {
-  const token = await getIdTokenResult(user, true);
-  const role = token.claims.role;
   const email = String(user?.email || "").toLowerCase().trim();
-  if (GLOBAL_ADMIN_EMAILS.has(email)) {
-    return { uid: user.uid, email, tenantId: user.uid, isAdmin: true };
-  }
-  const isSuperAdmin = token.claims.superadmin === true || role === "superadmin";
-
-  if (isSuperAdmin) {
+  if (isSuperSuperAdminEmail(email)) {
     return { uid: user.uid, email, tenantId: user.uid, isAdmin: true };
   }
 

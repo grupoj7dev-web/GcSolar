@@ -72,7 +72,11 @@ const ENTRY_BY_PERMISSION_ORDER = [
   ["procuracao", "procuracao.html"],
   ["whatsapp", "whatsapp.html"],
 ];
-const GLOBAL_ADMIN_EMAILS = new Set(["projetos@goldtechenergia.com"]);
+const SUPER_SUPER_ADMIN_EMAIL = "jheferson@gmail.com";
+
+function isSuperSuperAdminEmail(email) {
+  return String(email || "").toLowerCase().trim() === SUPER_SUPER_ADMIN_EMAIL;
+}
 
 function normalizeStatus(value) {
   return String(value || "").trim().toLowerCase();
@@ -121,12 +125,8 @@ async function getRedirectByUser(user) {
   debugLog("get-redirect-start", { uid: user?.uid || null, email: user?.email || null });
   const token = await getIdTokenResult(user, true);
   const email = String(user?.email || "").toLowerCase().trim();
-  if (GLOBAL_ADMIN_EMAILS.has(email)) {
-    debugLog("redirect-global-admin", { target: "dashboard.html", email });
-    return { target: "dashboard.html", blocked: false };
-  }
-  if (token.claims.superadmin === true || token.claims.role === "superadmin") {
-    debugLog("redirect-superadmin", { target: "dashboard.html" });
+  if (isSuperSuperAdminEmail(email)) {
+    debugLog("redirect-super-super-admin", { target: "dashboard.html", email });
     return { target: "dashboard.html", blocked: false };
   }
 
