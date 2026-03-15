@@ -531,7 +531,7 @@ function renderPlanDiscountDemo() {
   const hint = id("planDiscountDemoHint");
   if (!panel || !body) return;
 
-  const show = id("planShowDiscountTable")?.checked !== false;
+  const show = id("planShowDiscountTable")?.checked === true;
   panel.classList.toggle("hidden", !show);
   if (!show) return;
 
