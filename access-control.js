@@ -198,13 +198,19 @@ function ensureSpecialNavLinks(profile) {
   const nav = document.querySelector(".sidebar-nav");
   if (!nav) return;
 
-  const existing = nav.querySelector('[data-gc-dynamic="faturas-pre-validacao"]');
+  const dynamicExisting = nav.querySelector('[data-gc-dynamic="faturas-pre-validacao"]');
+  const allExisting = Array.from(nav.querySelectorAll('a.nav-item[href="faturas-pre-validacao.html"]'));
   if (!profile?.isSuperSuperAdmin) {
-    existing?.remove();
+    dynamicExisting?.remove();
     return;
   }
 
-  if (existing) return;
+  if (allExisting.length) {
+    const [first, ...duplicates] = allExisting;
+    first.classList.toggle("active", getPageName() === "faturas-pre-validacao.html");
+    duplicates.forEach((item) => item.remove());
+    return;
+  }
 
   const anchor = nav.querySelector('a.nav-item[href="faturas-validacao.html"]');
   if (!anchor) return;
