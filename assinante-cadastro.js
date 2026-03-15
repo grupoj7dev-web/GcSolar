@@ -933,6 +933,9 @@ function buildPayload() {
     },
     planDetails: {
       paysPisCofins: id("detailPisCofins").checked,
+      paysIcms: id("detailIcms").checked,
+      paysOtherTaxes: id("detailOtherTaxes").checked,
+      paysFlagSurcharge: id("detailFlagSurcharge").checked,
       paysFioB: id("detailFioB").checked,
       addDistributorValue: id("detailAddDistributor").checked,
       isExempt: id("detailIsento").checked,
@@ -957,6 +960,9 @@ function buildPayload() {
       loyaltyMonths: fidelityMonths,
       discountPercentage: discount,
       paysPisAndCofins: id("detailPisCofins").checked,
+      paysIcms: id("detailIcms").checked,
+      paysOtherTaxes: id("detailOtherTaxes").checked,
+      paysFlagSurcharge: id("detailFlagSurcharge").checked,
       paysWireB: id("detailFioB").checked,
       addDistributorValue: id("detailAddDistributor").checked,
       exemptFromPayment: id("detailIsento").checked,
@@ -1197,6 +1203,9 @@ async function hydrateExisting(data) {
   if (comp) comp.checked = true;
   const details = data.plan_details || data.planDetails || {};
   id("detailPisCofins").checked = !!(details.paysPisAndCofins ?? details.paysPisCofins);
+  id("detailIcms").checked = !!details.paysIcms;
+  id("detailOtherTaxes").checked = !!details.paysOtherTaxes;
+  id("detailFlagSurcharge").checked = !!details.paysFlagSurcharge;
   id("detailFioB").checked = !!(details.paysWireB ?? details.paysFioB);
   id("detailAddDistributor").checked = !!details.addDistributorValue;
   id("detailIsento").checked = !!(details.exemptFromPayment ?? details.isExempt);
