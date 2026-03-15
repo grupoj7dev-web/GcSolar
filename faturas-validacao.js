@@ -479,6 +479,16 @@ function resolveInvoiceUrl(item) {
   );
 }
 
+function isFirebaseStorageUrl(url) {
+  const value = String(url || "").toLowerCase();
+  return value.includes("firebasestorage.googleapis.com") || value.includes("googleapis.com/v0/b/");
+}
+
+function hasUsableInvoiceUrl(record) {
+  const url = resolveInvoiceUrl(record);
+  return Boolean(url) && !isFirebaseStorageUrl(url);
+}
+
 function belongsToScope(item) {
   const itemUser = String(item.user_id || item.uid || "");
   const itemTenant = String(item.tenantId || item.tenant_id || "");
@@ -1269,7 +1279,7 @@ async function downloadCombinedAsPdf(record) {
 
 function openInvoice(record) {
   const url = resolveInvoiceUrl(record);
-  if (url) {
+  if (hasUsableInvoiceUrl(record)) {
     window.open(url, "_blank", "noopener,noreferrer");
     return;
   }
@@ -1299,7 +1309,7 @@ function openInvoice(record) {
 
 function downloadInvoice(record) {
   const url = resolveInvoiceUrl(record);
-  if (url) {
+  if (hasUsableInvoiceUrl(record)) {
     const a = document.createElement("a");
     a.href = url;
     a.target = "_blank";
