@@ -321,7 +321,6 @@ function fillPrimaryToFirstUc() {
   state.accounts[0].doc = person ? id("personCpf").value : id("companyCnpj").value;
   state.accounts[0].name = person ? id("personName").value : (id("companyRazao").value || id("companyFantasy").value);
   state.accounts[0].birthDate = person ? (id("personBirth").value || "") : "";
-  state.accounts[0].partner = person ? id("personPartner").value : id("companyPartnerSocio").value;
   state.accounts[0].address = person ? readAddress("personAddress") : readAddress("companyAddress");
   renderAccounts();
 }
@@ -337,7 +336,6 @@ function fillPrimaryToFirstUcIfMissing() {
   if (!clean(account.doc)) account.doc = person ? id("personCpf").value : id("companyCnpj").value;
   if (!clean(account.name)) account.name = person ? id("personName").value : (id("companyRazao").value || id("companyFantasy").value);
   if (person && !clean(account.birthDate)) account.birthDate = id("personBirth").value || "";
-  if (!clean(account.partner)) account.partner = person ? id("personPartner").value : id("companyPartnerSocio").value;
 
   account.address = account.address || { cep: "", street: "", number: "", complement: "", district: "", city: "", state: "" };
   Object.keys(primaryAddress).forEach((key) => {
@@ -793,7 +791,7 @@ function buildPayload() {
       profession: person ? clean(id("personJob").value) : "",
       email: ownerEmail,
       phone: ownerPhone,
-      partnerNumber: person ? clean(id("personPartner").value) : clean(id("companyPartnerSocio").value),
+      partnerNumber: "",
       razaoSocial: person ? "" : clean(id("companyRazao").value),
       nomeFantasia: person ? "" : clean(id("companyFantasy").value),
       observations: person ? clean(id("personObs").value) : clean(id("companyObs").value),
@@ -1043,7 +1041,6 @@ async function hydrateExisting(data) {
   toggleStep3();
   const s = data.subscriber || {};
   id("personCpf").value = applyMask(s.cpf || s.cpfCnpj || "", "cpf");
-  id("personPartner").value = s.partnerNumber || "";
   id("personName").value = s.fullName || "";
   id("personBirth").value = s.birthDate || "";
   id("personPhone").value = s.phone || "";
@@ -1051,7 +1048,6 @@ async function hydrateExisting(data) {
   id("personCivil").value = s.civilStatus || "";
   id("personJob").value = s.profession || "";
   id("companyCnpj").value = applyMask(s.cnpj || s.cpfCnpj || "", "cnpj");
-  id("companyPartnerSocio").value = s.partnerNumber || "";
   id("companyRazao").value = s.razaoSocial || s.companyName || "";
   id("companyFantasy").value = s.nomeFantasia || "";
   id("companyPhone").value = s.phone || "";
