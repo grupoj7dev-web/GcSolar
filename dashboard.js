@@ -378,6 +378,20 @@ function formatMonthLabel(targetMonthKey) {
   return d.toLocaleDateString("pt-BR", { month: "short", year: "numeric" });
 }
 
+function formatMonthShortLabel(targetMonthKey) {
+  const [yearRaw, monthRaw] = String(targetMonthKey || "").split("-");
+  const year = Number(yearRaw);
+  const month = Number(monthRaw);
+  if (!year || !month) return "-";
+  const d = new Date(year, month - 1, 1);
+  const monthLabel = d.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "");
+  return `${monthLabel.charAt(0).toUpperCase()}${monthLabel.slice(1)}/${String(year).slice(-2)}`;
+}
+
+function buildMonthSummaryLine(label, primary, secondary) {
+  return `<span class="status-meta-line"><strong>${label}</strong><span>${primary}</span><em>${secondary}</em></span>`;
+}
+
 function getInvoiceIdentityKey(item) {
   const uc = normalizeIdentityPart(resolveUc(item));
   const referencia = normalizeIdentityPart(resolveReferencia(item));
@@ -539,13 +553,29 @@ function renderByPeriod(period) {
 
   cards.pendentes.textContent = int(pendentes);
   cards.pendentesMeta.innerHTML = [
-    `Atual (${formatMonthLabel(currentMonthKey)}): ${currentMonthlyProgress.processed}/${currentMonthlyProgress.expected} processadas, faltam ${currentMonthlyProgress.missing}`,
-    `Anterior (${formatMonthLabel(previousMonthKey)}): ${previousMonthlyProgress.processed}/${previousMonthlyProgress.expected} processadas, faltaram ${previousMonthlyProgress.missing}`,
+    buildMonthSummaryLine(
+      formatMonthShortLabel(currentMonthKey),
+      `${currentMonthlyProgress.processed}/${currentMonthlyProgress.expected} processadas`,
+      `Faltam ${currentMonthlyProgress.missing}`
+    ),
+    buildMonthSummaryLine(
+      formatMonthShortLabel(previousMonthKey),
+      `${previousMonthlyProgress.processed}/${previousMonthlyProgress.expected} processadas`,
+      `Faltaram ${previousMonthlyProgress.missing}`
+    ),
   ].join("<br>");
   cards.processadas.textContent = int(processadas);
   cards.processadasMeta.innerHTML = [
-    `Atual (${formatMonthLabel(currentMonthKey)}): ${pct(currentMonthlyProgress.processedPct)} das UCs processadas`,
-    `Anterior (${formatMonthLabel(previousMonthKey)}): ${pct(previousMonthlyProgress.processedPct)} das UCs processadas`,
+    buildMonthSummaryLine(
+      formatMonthShortLabel(currentMonthKey),
+      `${currentMonthlyProgress.processed}/${currentMonthlyProgress.expected}`,
+      `${pct(currentMonthlyProgress.processedPct)} processado`
+    ),
+    buildMonthSummaryLine(
+      formatMonthShortLabel(previousMonthKey),
+      `${previousMonthlyProgress.processed}/${previousMonthlyProgress.expected}`,
+      `${pct(previousMonthlyProgress.processedPct)} processado`
+    ),
   ].join("<br>");
   cards.emitidas.textContent = int(emitidas);
   cards.emitidasMeta.textContent = "Faturas oficialmente emitidas";
