@@ -295,7 +295,7 @@ function buildActiveSubscriberModal(item) {
           <strong>${escHtml(numberFmt(discount))}%</strong>
         </div>
         <div class="subscriber-metric">
-          <small>kWh contratado</small>
+          <small>Media consumo</small>
           <strong>${escHtml(numberFmt(contractedKwh))} kWh</strong>
         </div>
         <div class="subscriber-metric">
@@ -321,7 +321,7 @@ function buildActiveSubscriberModal(item) {
         ${dossierField("UC", firstFilled(item.uc, energy.uc))}
         ${dossierField("Titular da conta", firstFilled(energy.holderName, subscriber.fullName, subscriber.companyName, item.name))}
         ${dossierField("Número parceiro", firstFilled(item.partnerNumber, energy.partnerNumber, subscriber.partnerNumber))}
-        ${dossierField("kWh contratado", `${numberFmt(contractedKwh)} kWh`)}
+        ${dossierField("Media consumo", `${numberFmt(contractedKwh)} kWh`)}
         ${dossierField("Desconto contratado", `${numberFmt(discount)}%`)}
         ${dossierField("Observações", firstFilled(item.observations, subscriber.observations))}
       </div>
@@ -868,7 +868,7 @@ function renderCards(list) {
             <p class="mini-item-value">${item.uc || "-"}</p>
           </div>
           <div class="mini-item consumption">
-            <p class="mini-item-label">kWh Contratado</p>
+            <p class="mini-item-label">Media Consumo</p>
             <p class="mini-item-value">${numberFmt(item.contractedKwh)} kWh/mês</p>
           </div>
           <div class="mini-item discount">

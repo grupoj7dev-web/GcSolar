@@ -31,6 +31,7 @@ const db = getFirestore(app);
 
 const COLL_VALIDACAO = "gcredito_faturas_validacao";
 const COLL_EMITIDAS = "gcredito_faturas_emitidas";
+const COLL_SUBSCRIBERS = "gcredito_subscribers";
 const COLL_INVOICE_DATA = "invoice_data";
 const COLL_INVOICE_DATA_ALT = "gcredito_invoice_data";
 const COLL_ASAAS_KEYS = "asaas_keys";
@@ -549,6 +550,145 @@ function normalizeDoc(value) {
   const digits = onlyDigits(value);
   if (digits.length === 11 || digits.length === 14) return digits;
   return "";
+}
+
+function normalizeUcKey(value) {
+  const raw = String(value || "").trim();
+  const digits = onlyDigits(raw);
+  return digits || raw.replace(/\s+/g, "").toUpperCase();
+}
+
+function resolveConsumptionKwh(record) {
+  const extracted =
+    record?.extraction_result?.dados_extraidos ||
+    record?.dados_calculados?.full_result?.dados_extraidos ||
+    record?.dados_calculados?.dadosExtraidos ||
+    {};
+
+  const measured = toNumber(
+    extracted.measured_energy ??
+    extracted.energia_medida ??
+    extracted.energy_measured ??
+    0
+  );
+  const compensated = toNumber(
+    extracted.compensated_energy ??
+    extracted.energia_compensada ??
+    extracted.energy_compensated ??
+    0
+  );
+  const summed = measured + compensated;
+  if (summed > 0) return summed;
+
+  return toNumber(
+    record?.consumoMes ??
+    record?.consumo_mes ??
+    extracted.consumo_mes ??
+    extracted.total_kwh ??
+    extracted.total_kwh_month ??
+    extracted.consumoMedio ??
+    0
+  );
+}
+
+function subscriberMatchesInvoice(docData, targetUc, targetDoc) {
+  const rootUc = normalizeUcKey(docData?.uc);
+  const energyUc = normalizeUcKey(docData?.energy_account?.uc);
+  const accountUcs = Array.isArray(docData?.energyAccounts)
+    ? docData.energyAccounts.map((account) => normalizeUcKey(account?.uc)).filter(Boolean)
+    : [];
+  const ucCandidates = [rootUc, energyUc, ...accountUcs].filter(Boolean);
+
+  if (targetUc && ucCandidates.includes(targetUc)) return true;
+
+  const docCandidates = [
+    normalizeDoc(docData?.cpfCnpj),
+    normalizeDoc(docData?.subscriber?.cpfCnpj),
+    normalizeDoc(docData?.subscriber?.cpf),
+    normalizeDoc(docData?.subscriber?.cnpj),
+    normalizeDoc(docData?.energy_account?.cpfCnpj),
+  ].filter(Boolean);
+
+  return !!targetDoc && docCandidates.includes(targetDoc);
+}
+
+async function syncSubscriberAverageConsumption(record) {
+  const tenantId = String(record?.tenantId || record?.tenant_id || scope?.tenantId || "").trim();
+  const targetUc = normalizeUcKey(resolveUc(record));
+  const targetDoc = normalizeDoc(resolveDocumento(record));
+  if (!tenantId || (!targetUc && !targetDoc)) return;
+
+  const emitidasSnap = await getDocs(query(collection(db, COLL_EMITIDAS), where("tenantId", "==", tenantId)));
+  const matchingInvoices = emitidasSnap.docs
+    .map((snap) => ({ id: snap.id, ...snap.data() }))
+    .filter((item) => {
+      const sameUc = targetUc && normalizeUcKey(resolveUc(item)) === targetUc;
+      const sameDoc = targetDoc && normalizeDoc(resolveDocumento(item)) === targetDoc;
+      return sameUc || sameDoc;
+    });
+
+  const currentMatchesInvoice =
+    (targetUc && normalizeUcKey(resolveUc(record)) === targetUc) ||
+    (targetDoc && normalizeDoc(resolveDocumento(record)) === targetDoc);
+  if (currentMatchesInvoice && !matchingInvoices.some((item) => String(item.id || "") === String(record.id || ""))) {
+    matchingInvoices.push(record);
+  }
+
+  const latestByReference = new Map();
+  for (const item of matchingInvoices) {
+    const key = String(resolveReferencia(item) || item.id || "").trim().toUpperCase() || item.id;
+    const current = latestByReference.get(key);
+    if (!current || getInvoiceSortTimestamp(item) >= getInvoiceSortTimestamp(current)) {
+      latestByReference.set(key, item);
+    }
+  }
+
+  const consumptions = [...latestByReference.values()]
+    .map((item) => resolveConsumptionKwh(item))
+    .filter((value) => value > 0);
+
+  if (!consumptions.length) return;
+
+  const average = Number((consumptions.reduce((sum, value) => sum + value, 0) / consumptions.length).toFixed(2));
+  const subscribersSnap = await getDocs(query(collection(db, COLL_SUBSCRIBERS), where("tenantId", "==", tenantId)));
+  const matchingSubscribers = subscribersSnap.docs.filter((snap) =>
+    subscriberMatchesInvoice(snap.data(), targetUc, targetDoc)
+  );
+
+  if (!matchingSubscribers.length) return;
+
+  await Promise.all(matchingSubscribers.map((snap) => {
+    const data = snap.data();
+    return updateDoc(doc(db, COLL_SUBSCRIBERS, snap.id), {
+      contractedKwh: average,
+      consumoMedio: average,
+      averageConsumptionKwh: average,
+      average_consumption_kwh: average,
+      averageConsumptionMonths: consumptions.length,
+      average_consumption_months: consumptions.length,
+      planContract: {
+        ...(data.planContract || {}),
+        sellerKwh: average,
+        contractedKwh: average,
+      },
+      plan_contract: {
+        ...(data.plan_contract || {}),
+        informedKwh: average,
+        contractedKwh: average,
+      },
+      planDetails: {
+        ...(data.planDetails || {}),
+        contractedKwh: average,
+      },
+      plan_details: {
+        ...(data.plan_details || {}),
+        informedKwh: average,
+        contractedKwh: average,
+      },
+      updated_at: serverTimestamp(),
+      lastConsumptionAverageUpdateAt: serverTimestamp(),
+    });
+  }));
 }
 
 async function loadAsaasConfig() {
@@ -1311,6 +1451,12 @@ async function approveInvoice(record, markAsPaid = false) {
     ...emitidaPayload,
     id: emitidaRef.id,
   };
+
+  try {
+    await syncSubscriberAverageConsumption(emittedRecord);
+  } catch (error) {
+    console.error("Falha ao atualizar media de consumo do assinante:", error);
+  }
 
   const customerPhone = billingCustomer.phone;
   if (customerPhone) {

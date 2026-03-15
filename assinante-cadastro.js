@@ -464,6 +464,19 @@ function renderTransfer() {
   saveDraft();
 }
 
+function syncPlanKwhFields(source = "average") {
+  const averageInput = id("planContractedKwh");
+  const sellerInput = id("planSellerKwh");
+  if (!averageInput || !sellerInput) return;
+
+  if (source === "seller") {
+    if (averageInput.value !== sellerInput.value) averageInput.value = sellerInput.value;
+    return;
+  }
+
+  if (sellerInput.value !== averageInput.value) sellerInput.value = averageInput.value;
+}
+
 function suggestedDiscount() {
   const kwh = toNumber(id("planContractedKwh")?.value);
   const fidelity = clean(id("planFidelity")?.value || "none");
@@ -685,7 +698,7 @@ function validateStep(step) {
   }
   if (step === 6) {
     const filled = [clean(id("planAdhesionDate").value), clean(id("planContractedKwh").value)].filter(Boolean).length;
-    if (filled < 2) return "Preencha Data de Adesão e kWh Contratado.";
+    if (filled < 2) return "Preencha Data de Adesão e Média Consumo (kWh).";
   }
   return "";
 }
@@ -782,6 +795,7 @@ function buildPayload() {
   const ownerName = person ? clean(id("personName").value) : clean(id("companyRazao").value || id("companyFantasy").value);
   const ownerEmail = person ? clean(id("personEmail").value) : clean(id("companyEmail").value);
   const ownerPhone = person ? clean(id("personPhone").value) : clean(id("companyPhone").value);
+  const averageConsumptionKwh = toNumber(id("planContractedKwh").value || id("planSellerKwh").value);
   const discount = toNumber(id("planDiscountPercent").value || suggestedDiscount());
   const primaryAccount = state.accounts[0] || createAccount();
   const primaryAccountAddress = validateAddress(primaryAccount.address || {})
@@ -809,7 +823,9 @@ function buildPayload() {
     email: ownerEmail,
     phone: ownerPhone,
     uc: clean(state.accounts[0]?.uc || ""),
-    contractedKwh: toNumber(id("planContractedKwh").value),
+    contractedKwh: averageConsumptionKwh,
+    consumoMedio: averageConsumptionKwh,
+    averageConsumptionKwh,
     discountPercent: discount,
     energy_account: {
       holderType: clean(primaryAccount.personType || holderType()),
@@ -877,8 +893,8 @@ function buildPayload() {
       planSelected: "",
       adhesionDate: clean(id("planAdhesionDate").value),
       compensationMode,
-      sellerKwh: toNumber(id("planSellerKwh").value),
-      contractedKwh: toNumber(id("planContractedKwh").value),
+      sellerKwh: averageConsumptionKwh,
+      contractedKwh: averageConsumptionKwh,
       fidelity: clean(id("planFidelity").value),
       discountPercent: discount,
     },
@@ -892,8 +908,8 @@ function buildPayload() {
       selectedPlan: "",
       adhesionDate: clean(id("planAdhesionDate").value),
       compensationMode,
-      informedKwh: toNumber(id("planSellerKwh").value),
-      contractedKwh: toNumber(id("planContractedKwh").value),
+      informedKwh: averageConsumptionKwh,
+      contractedKwh: averageConsumptionKwh,
       loyalty: clean(id("planFidelity").value),
       discountPercentage: discount,
     },
@@ -901,8 +917,8 @@ function buildPayload() {
       selectedPlan: "",
       adhesionDate: clean(id("planAdhesionDate").value),
       compensationMode,
-      informedKwh: toNumber(id("planSellerKwh").value),
-      contractedKwh: toNumber(id("planContractedKwh").value),
+      informedKwh: averageConsumptionKwh,
+      contractedKwh: averageConsumptionKwh,
       loyalty: clean(id("planFidelity").value),
       discountPercentage: discount,
       paysPisAndCofins: id("detailPisCofins").checked,
@@ -1001,11 +1017,15 @@ function bindEvents() {
     root?.addEventListener("change", (e) => { if (e.target.matches("[data-address-field='cep']")) fillCep(g); });
   });
 
-  ["planContractedKwh", "planFidelity", "planDiscountPercent"].forEach((x) => id(x)?.addEventListener("input", () => {
+  ["planSellerKwh", "planContractedKwh", "planFidelity", "planDiscountPercent"].forEach((x) => id(x)?.addEventListener("input", () => {
+    if (x === "planSellerKwh") syncPlanKwhFields("seller");
+    if (x === "planContractedKwh") syncPlanKwhFields("average");
     if (x !== "planDiscountPercent" && (!state.discountTouched || !clean(id("planDiscountPercent").value))) id("planDiscountPercent").value = suggestedDiscount().toFixed(2);
     if (x === "planDiscountPercent") state.discountTouched = true;
     renderSummary();
   }));
+  id("planSellerKwh")?.addEventListener("change", () => syncPlanKwhFields("seller"));
+  id("planContractedKwh")?.addEventListener("change", () => syncPlanKwhFields("average"));
   id("planFidelity")?.addEventListener("change", () => {
     if (!state.discountTouched || !clean(id("planDiscountPercent").value)) id("planDiscountPercent").value = suggestedDiscount().toFixed(2);
     renderSummary();
@@ -1125,9 +1145,12 @@ async function hydrateExisting(data) {
     });
   }
   const plan = data.plan_contract || data.planContract || {};
+  const planAverage = plan.contractedKwh || data.consumoMedio || data.averageConsumptionKwh || "";
+  const planSeller = plan.sellerKwh || plan.informedKwh || planAverage;
   id("planAdhesionDate").value = plan.adhesionDate || "";
-  id("planSellerKwh").value = plan.sellerKwh || "";
-  id("planContractedKwh").value = plan.contractedKwh || "";
+  id("planSellerKwh").value = planSeller || "";
+  id("planContractedKwh").value = planAverage || "";
+  syncPlanKwhFields("average");
   id("planFidelity").value = plan.fidelity || "none";
   id("planDiscountPercent").value = plan.discountPercentage || plan.discountPercent || data.discountPercent || "";
   const comp = qsa('input[name="compensationMode"]').find((x) => x.value === (plan.compensationMode || "autoconsumo-remoto"));
