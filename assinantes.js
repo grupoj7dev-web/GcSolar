@@ -211,6 +211,24 @@ function escHtml(value) {
     .replace(/'/g, "&#039;");
 }
 
+function formatCpfCnpj(value) {
+  let digits = String(value || "").replace(/[^\d]/g, "");
+  if (!digits) return String(value || "").trim() || "-";
+
+  if (digits.length <= 11) {
+    digits = digits.padStart(11, "0");
+    return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+  }
+
+  if (digits.length > 14) {
+    digits = digits.slice(-14);
+  }
+  if (digits.length < 14) {
+    digits = digits.padStart(14, "0");
+  }
+  return digits.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+}
+
 function dossierField(label, value) {
   return `
     <div class="dossier-item">
@@ -294,7 +312,7 @@ function buildActiveSubscriberModal(item) {
         <div>
           <p class="subscriber-hero-eyebrow">Visão geral do assinante</p>
           <h4>${escHtml(item.name || "-")}</h4>
-          <p class="subscriber-hero-sub">${escHtml(holderTypeLabel(item.holderType))} • Documento ${escHtml(item.cpfCnpj || "-")} • UC ${escHtml(item.uc || "-")}</p>
+          <p class="subscriber-hero-sub">${escHtml(holderTypeLabel(item.holderType))} • Documento ${escHtml(formatCpfCnpj(item.cpfCnpj))} • UC ${escHtml(item.uc || "-")}</p>
         </div>
       </div>
       <div class="subscriber-hero-metrics">
@@ -316,7 +334,7 @@ function buildActiveSubscriberModal(item) {
       <h4>Cadastro e Contato</h4>
       <div class="dossier-grid dossier-grid-3">
         ${dossierField("Nome completo / Razão social", item.name)}
-        ${dossierField("CPF/CNPJ", item.cpfCnpj)}
+        ${dossierField("CPF/CNPJ", formatCpfCnpj(item.cpfCnpj))}
         ${dossierField("Tipo", holderTypeLabel(item.holderType))}
         ${dossierField("E-mail", firstFilled(item.email, subscriber.email))}
         ${dossierField("Telefone", firstFilled(item.phone, subscriber.phone))}
@@ -403,7 +421,7 @@ function openDossierModal(item) {
         <div>
           <p class="subscriber-hero-eyebrow">Cadastro em análise</p>
           <h4>${escHtml(item.name || "-")}</h4>
-          <p class="subscriber-hero-sub">${escHtml(holderTypeLabel(item.holderType))} • Documento ${escHtml(item.cpfCnpj || "-")} • UC ${escHtml(item.uc || "-")}</p>
+          <p class="subscriber-hero-sub">${escHtml(holderTypeLabel(item.holderType))} • Documento ${escHtml(formatCpfCnpj(item.cpfCnpj))} • UC ${escHtml(item.uc || "-")}</p>
         </div>
       </div>
       <div class="subscriber-hero-metrics">
@@ -428,7 +446,7 @@ function openDossierModal(item) {
         ${dossierField("Nome", raw.nome || raw.razaoSocial)}
         ${dossierField("Nome fantasia", raw.nomeFantasia)}
         ${dossierField("Representante", raw.nomeRepresentante)}
-        ${dossierField("CPF/CNPJ", raw.cpfCnpj)}
+        ${dossierField("CPF/CNPJ", formatCpfCnpj(raw.cpfCnpj))}
         ${dossierField("Nascimento/Fundação", raw.dataNascimento || raw.dataFundacao)}
       </div>
     </section>
@@ -454,7 +472,7 @@ function openDossierModal(item) {
         ${dossierField("Bairro", endereco.bairro)}
         ${dossierField("Titularidade", titularConta)}
         ${dossierField("Nome do titular na conta", raw.nomeDonoConta)}
-        ${dossierField("CPF/CNPJ do titular na conta", raw.cpfCnpjDonoConta)}
+        ${dossierField("CPF/CNPJ do titular na conta", formatCpfCnpj(raw.cpfCnpjDonoConta))}
         ${dossierField("Nascimento do titular na conta", raw.dataNascimentoDonoConta)}
       </div>
     </section>
@@ -488,6 +506,7 @@ function buildSubscriberPayloadFromPending(item) {
   const isCompany = String(raw.tipoPessoa || "").toLowerCase() === "juridica";
   const holderType = isCompany ? "company" : "person";
   const holderName = raw.nome || raw.razaoSocial || raw.nomeFantasia || "";
+  const fantasyName = firstFilled(raw.nomeFantasia, raw.fantasyName, raw.tradeName);
   const cpfCnpj = raw.cpfCnpj || "";
   const nowIso = new Date().toISOString();
 
@@ -496,9 +515,11 @@ function buildSubscriberPayloadFromPending(item) {
     tenantId: raw.tenantId || scope.tenantId,
     status: "active",
     concessionaria: normalizeConcessionariaLabel(raw.concessionaria || "Equatorial Goiás"),
+    nomeFantasia: fantasyName || undefined,
     subscriber: {
       fullName: isCompany ? "" : holderName,
       companyName: isCompany ? holderName : "",
+      fantasyName: fantasyName || "",
       cpf: isCompany ? "" : cpfCnpj,
       cnpj: isCompany ? cpfCnpj : "",
       email: raw.email || "",
@@ -634,6 +655,16 @@ function normalizeSubscriber(docData, id) {
     concessionaria: normalizeConcessionariaLabel(docData.concessionaria),
     holderType: isCompany ? "company" : "person",
     name,
+    fantasyName: firstFilled(
+      subscriber.nomeFantasia,
+      subscriber.nome_fantasia,
+      subscriber.fantasyName,
+      subscriber.tradeName,
+      subscriber.trade_name,
+      docData.nomeFantasia,
+      docData.fantasyName,
+      docData.tradeName
+    ),
     cpfCnpj,
     email,
     phone: subscriber.phone || "",
@@ -661,6 +692,7 @@ function normalizePendingSubscriber(docData, id) {
     concessionaria: normalizeConcessionariaLabel(docData.concessionaria || "Equatorial Goiás"),
     holderType: isCompany ? "company" : "person",
     name: nome,
+    fantasyName: firstFilled(docData.nomeFantasia, docData.fantasyName, docData.tradeName),
     cpfCnpj,
     email: docData.email || "",
     phone: docData.telefone || "",
@@ -821,7 +853,7 @@ function renderTable(list) {
     return `
       <tr>
         <td>${item.name || "-"}</td>
-        <td>${item.cpfCnpj || "-"}</td>
+        <td>${formatCpfCnpj(item.cpfCnpj)}</td>
         <td>${item.email || "-"}</td>
         <td>${item.uc || "-"}</td>
         <td>${numberFmt(item.contractedKwh)} kWh</td>
@@ -857,6 +889,10 @@ function renderCards(list) {
 
   const cards = list.map((item) => {
     const avatarIcon = item.holderType === "company" ? "ph-buildings" : "ph-user-circle";
+    const fantasyLine =
+      item.holderType === "company" && item.fantasyName && item.fantasyName !== item.name
+        ? `<p class="subscriber-fantasy-name">${item.fantasyName}</p>`
+        : "";
     const dossierButton = isAwaitingItem(item)
       ? `<button class="card-action-btn dossier" type="button" data-action="dossier" data-id="${item.id}">
             <i class="ph ph-folder-open"></i>
@@ -877,6 +913,7 @@ function renderCards(list) {
             <span class="subscriber-avatar-icon"><i class="ph ${avatarIcon}"></i></span>
             <div>
               <p class="subscriber-name">${item.name || "-"}</p>
+              ${fantasyLine}
             </div>
           </div>
           <div class="card-badges">
@@ -888,7 +925,7 @@ function renderCards(list) {
         <div class="subscriber-mini-grid">
           <div class="mini-item document">
             <p class="mini-item-label">CPF/CNPJ</p>
-            <p class="mini-item-value">${item.cpfCnpj || "-"}</p>
+            <p class="mini-item-value">${formatCpfCnpj(item.cpfCnpj)}</p>
           </div>
           <div class="mini-item uc">
             <p class="mini-item-label">UC</p>
@@ -991,7 +1028,7 @@ function renderCurrentPage() {
 function applyFilters() {
   const q = (searchInput.value || "").toLowerCase().trim();
   const filtered = allSubscribers.filter((item) => {
-    const haystack = `${item.name} ${item.cpfCnpj} ${item.email} ${item.uc}`.toLowerCase();
+    const haystack = `${item.name} ${item.fantasyName || ""} ${item.cpfCnpj} ${item.email} ${item.uc}`.toLowerCase();
     const matchesSearch = !q || haystack.includes(q);
     const matchesStatus = activeStatusFilter === "all" || item.statusType === activeStatusFilter;
     return matchesSearch && matchesStatus;

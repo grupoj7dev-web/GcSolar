@@ -231,11 +231,33 @@ function extractExistingDocuments(data) {
     data?.transferProtocol ||
     data?.documents?.transferProtocol ||
     null;
+  const energyBillsRaw =
+    (Array.isArray(docs.energyBills) && docs.energyBills) ||
+    (Array.isArray(docs.energyBillList) && docs.energyBillList) ||
+    (Array.isArray(data?.energyBills) && data.energyBills) ||
+    (Array.isArray(docsLegacy.contasEnergia) && docsLegacy.contasEnergia) ||
+    (Array.isArray(data?.contasEnergia) && data.contasEnergia) ||
+    [];
+  const energyBills = energyBillsRaw.map((entry) => {
+    if (!entry) return null;
+    if (typeof entry === "string") {
+      const doc = normalizeDocumentEntry(entry, "Conta de energia");
+      return doc ? { ...doc, uc: "" } : null;
+    }
+    if (typeof entry === "object") {
+      const doc = normalizeDocumentEntry(entry, "Conta de energia");
+      const uc = clean(entry.uc || entry.ucNumber || entry.unidadeConsumidora || "");
+      return doc ? { ...doc, uc } : null;
+    }
+    return null;
+  }).filter(Boolean);
 
   return {
     contract: normalizeDocumentEntry(firstFilled(docs.contract, contrato.pdfUrl, data?.contratoPdfUrl), "Contrato"),
     energyBill: normalizeDocumentEntry(firstFilled(docs.energyBill, docsLegacy.contaEnergiaUrl, data?.contaEnergiaUrl), "Conta de energia"),
+    energyBills,
     cnh: normalizeDocumentEntry(firstFilled(docs.cnh, docsLegacy.cnhUrl, data?.cnhUrl), "CNH/RG"),
+    adminCnh: normalizeDocumentEntry(firstFilled(docs.adminCnh, docsLegacy.cnhSocioAdminUrl, data?.cnhSocioAdminUrl, data?.adminCnhUrl), "CNH do sócio administrador"),
     contractSocial: normalizeDocumentEntry(firstFilled(docs.contractSocial, docsLegacy.contratoSocialUrl, data?.contratoSocialUrl), "Contrato social"),
     procuracao: normalizeDocumentEntry(firstFilled(docs.procuracao, docsLegacy.procuracaoUrl, data?.procuracaoUrl), "Procuracao"),
     transferProtocol: normalizeDocumentEntry(firstFilled(docs.transferProtocol, transferProtocol), "Protocolo de transferencia"),
@@ -268,6 +290,51 @@ function renderExistingFile(inputId, label, entry) {
   }
   slot.innerHTML = `<span>Arquivo atual</span><a href="${doc.url}" target="_blank" rel="noopener noreferrer">${escapeHtml(doc.name || label)}</a>`;
   slot.classList.remove("hidden");
+}
+
+function updateEnergyBillExtraLabels() {
+  const wrap = id("energyBillExtraWrap");
+  if (!wrap) return;
+  const inputs = Array.from(wrap.querySelectorAll("input[data-energy-bill-extra]"));
+  inputs.forEach((input) => {
+    const idx = Number(input.dataset.extraIndex || 0);
+    const account = state.accounts[idx + 1];
+    const uc = clean(account?.uc || "");
+    const label = input.closest("label");
+    const span = label?.querySelector("span");
+    if (span) span.textContent = `Conta de Energia${uc ? ` - UC ${uc}` : ""}`;
+    input.dataset.uc = uc;
+  });
+}
+
+function renderEnergyBillExtras() {
+  const wrap = id("energyBillExtraWrap");
+  if (!wrap) return;
+  const extraAccounts = Array.isArray(state.accounts) ? state.accounts.slice(1) : [];
+  if (!extraAccounts.length) {
+    wrap.innerHTML = "";
+    return;
+  }
+
+  wrap.innerHTML = extraAccounts.map((account, idx) => {
+    const uc = clean(account?.uc || "");
+    const inputId = `fileEnergyBillExtra_${idx + 1}`;
+    return `
+      <label class="field upload-card">
+        <span>Conta de Energia${uc ? ` - UC ${escapeHtml(uc)}` : ""}</span>
+        <small>Fatura da unidade consumidora adicional.</small>
+        <input type="file" id="${inputId}" data-energy-bill-extra="1" data-extra-index="${idx}" data-uc="${escapeHtml(uc)}" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+      </label>
+    `;
+  }).join("");
+
+  const existing = Array.isArray(state.existingDocuments?.energyBills) ? state.existingDocuments.energyBills : [];
+  extraAccounts.forEach((account, idx) => {
+    const uc = clean(account?.uc || "");
+    const inputId = `fileEnergyBillExtra_${idx + 1}`;
+    const existingEntry = existing.find((e) => clean(e?.uc || "") === uc) || existing[idx] || null;
+    renderExistingFile(inputId, `Conta de energia${uc ? ` - UC ${uc}` : ""}`, existingEntry);
+  });
 }
 
 function normalizeAddress(addr = {}) {
@@ -374,6 +441,7 @@ function toggleStep3() {
   id("companyStepBlock").classList.toggle("hidden", person);
   id("fileCnhWrap").classList.toggle("hidden", !person);
   id("fileContractSocialWrap").classList.toggle("hidden", person);
+  id("fileAdminCnhWrap").classList.toggle("hidden", person);
   toggleAdminBlock();
 }
 
@@ -400,6 +468,7 @@ function clearCompanyFields() {
   id("companyFantasy").value = "";
   id("companyPhone").value = "";
   id("companyEmail").value = "";
+  id("companyFinanceName").value = "";
   id("companyObs").value = "";
   writeAddress("companyAddress", {});
 }
@@ -536,6 +605,7 @@ function renderAccounts() {
   `).join("");
   bindMasks(id("energyAccounts"));
   enhanceNoNumberButtons(id("energyAccounts"));
+  renderEnergyBillExtras();
   saveDraft();
 }
 
@@ -705,6 +775,36 @@ function getNotificationEntry(notifyKey) {
   };
 }
 
+function notificationsToGrouped(flat = {}) {
+  const grouped = {};
+  Object.entries(flat || {}).forEach(([key, value]) => {
+    const [groupKey, idxRaw] = String(key).split(".");
+    const idx = Number(idxRaw);
+    if (!groupKey || Number.isNaN(idx)) return;
+    if (!grouped[groupKey]) grouped[groupKey] = {};
+    grouped[groupKey][String(idx)] = {
+      enabled: value?.enabled === true,
+      message: clean(value?.message || ""),
+    };
+  });
+  return grouped;
+}
+
+function notificationsFromGrouped(grouped = {}) {
+  const flat = {};
+  Object.entries(grouped || {}).forEach(([groupKey, items]) => {
+    if (!items || typeof items !== "object") return;
+    Object.entries(items).forEach(([idx, value]) => {
+      const key = `${groupKey}.${idx}`;
+      flat[key] = {
+        enabled: value?.enabled === true,
+        message: clean(value?.message || ""),
+      };
+    });
+  });
+  return flat;
+}
+
 function setNotificationEntry(notifyKey, patch) {
   const current = getNotificationEntry(notifyKey);
   state.notifications[notifyKey] = {
@@ -795,6 +895,20 @@ function renderNotifications() {
     `;
   }).join("");
   saveDraft();
+}
+
+function setSaveNotice(noticeId, text, variant = "success") {
+  const el = id(noticeId);
+  if (!el) return;
+  if (!text) {
+    el.textContent = "";
+    el.classList.add("hidden");
+    el.classList.remove("warn");
+    return;
+  }
+  el.textContent = text;
+  el.classList.remove("hidden");
+  el.classList.toggle("warn", variant === "warn");
 }
 
 function normalizeContactEntry(entry = {}, kind = "person") {
@@ -1060,7 +1174,13 @@ function buildPayload() {
   const ownerName = person ? clean(id("personName").value) : clean(id("companyRazao").value || id("companyFantasy").value);
   const ownerEmail = person ? clean(id("personEmail").value) : clean(id("companyEmail").value);
   const ownerPhone = person ? clean(id("personPhone").value) : clean(id("companyPhone").value);
-  const averageConsumptionKwh = toNumber(id("planContractedKwh").value || id("planSellerKwh").value);
+  const financeName = person ? "" : clean(id("companyFinanceName").value);
+  const sellerKwh = toNumber(id("planSellerKwh")?.value);
+  const contractedKwhInput = toNumber(id("planContractedKwh")?.value);
+  const contractedKwh = contractedKwhInput || sellerKwh;
+  const averageConsumptionKwh = contractedKwh;
+  const selectedPlan = clean(id("planSelected")?.value || id("planSelectedPlan")?.value || "");
+  const showDiscountTable = id("planShowDiscountTable")?.checked === true;
   const fidelityMonths = getFidelityMonths();
   const fidelityValue = fidelityMonths > 0 ? String(fidelityMonths) : "none";
   const discount = toNumber(id("planDiscountPercent").value || suggestedDiscount());
@@ -1069,7 +1189,9 @@ function buildPayload() {
     ? normalizeAddress(primaryAccount.address)
     : normalizeAddress(primaryAddress || primaryAccount.address || {});
   const compensationMode = qsa('input[name="compensationMode"]').find((x) => x.checked)?.value || "geracao-compartilhada";
-  return {
+    const notificationsFlat = state.notifications || {};
+    const notificationsGrouped = notificationsToGrouped(notificationsFlat);
+    return {
     concessionaria: clean(id("concessionaria").value || "equatorial-goias"),
     holderType: holderType(),
     status: "active",
@@ -1079,7 +1201,7 @@ function buildPayload() {
     email: ownerEmail,
     phone: ownerPhone,
     uc: clean(state.accounts[0]?.uc || ""),
-    contractedKwh: averageConsumptionKwh,
+    contractedKwh,
     consumoMedio: averageConsumptionKwh,
     averageConsumptionKwh,
     discountPercent: discount,
@@ -1118,9 +1240,11 @@ function buildPayload() {
       partnerNumber: "",
       razaoSocial: person ? "" : clean(id("companyRazao").value),
       nomeFantasia: person ? "" : clean(id("companyFantasy").value),
+      financeResponsibleName: financeName,
       observations: person ? clean(id("personObs").value) : clean(id("companyObs").value),
       address: ownerAddress,
     },
+    financeResponsibleName: financeName,
     administrator: !person ? {
       cpf: onlyDigits(id("adminCpf").value),
       name: clean(id("adminName").value),
@@ -1146,13 +1270,16 @@ function buildPayload() {
     planContract: {
       adhesionDate: clean(id("planAdhesionDate").value),
       compensationMode,
-      sellerKwh: averageConsumptionKwh,
-      contractedKwh: averageConsumptionKwh,
+      selectedPlan,
+      sellerKwh,
+      contractedKwh,
       fidelity: fidelityValue,
       fidelityMonths,
       discountPercent: discount,
+      showDiscountTable,
     },
     planDetails: {
+      selectedPlan,
       paysPisCofins: id("detailPisCofins").checked,
       paysIcms: id("detailIcms").checked,
       paysOtherTaxes: id("detailOtherTaxes").checked,
@@ -1160,21 +1287,25 @@ function buildPayload() {
       paysFioB: id("detailFioB").checked,
       addDistributorValue: id("detailAddDistributor").checked,
       isExempt: id("detailIsento").checked,
+      showDiscountTable,
     },
     plan_contract: {
       adhesionDate: clean(id("planAdhesionDate").value),
       compensationMode,
-      informedKwh: averageConsumptionKwh,
-      contractedKwh: averageConsumptionKwh,
+      selectedPlan,
+      informedKwh: sellerKwh,
+      contractedKwh,
       loyalty: fidelityValue,
       loyaltyMonths: fidelityMonths,
       discountPercentage: discount,
+      showDiscountTable,
     },
     plan_details: {
       adhesionDate: clean(id("planAdhesionDate").value),
       compensationMode,
-      informedKwh: averageConsumptionKwh,
-      contractedKwh: averageConsumptionKwh,
+      selectedPlan,
+      informedKwh: sellerKwh,
+      contractedKwh,
       loyalty: fidelityValue,
       loyaltyMonths: fidelityMonths,
       discountPercentage: discount,
@@ -1185,9 +1316,12 @@ function buildPayload() {
       paysWireB: id("detailFioB").checked,
       addDistributorValue: id("detailAddDistributor").checked,
       exemptFromPayment: id("detailIsento").checked,
+      showDiscountTable,
     },
-    notifications: state.notifications,
-  };
+      notifications: notificationsFlat,
+      notificationsFlat,
+      notificationsGrouped,
+    };
 }
 
 function bindEvents() {
@@ -1238,6 +1372,7 @@ function bindEvents() {
         return;
       }
       if (k === "name" || k === "uc") syncAccountNickname(state.accounts[i]);
+      if (k === "uc") updateEnergyBillExtraLabels();
       saveDraft();
     }
     if (el.matches("[data-acc-addr]")) {
@@ -1365,17 +1500,41 @@ function bindEvents() {
         }
       };
       const existingDocuments = state.existingDocuments || {};
+      const extraEnergyBills = [];
+      const extraInputs = Array.from(document.querySelectorAll("input[data-energy-bill-extra]"));
+      const existingExtraEnergy = Array.isArray(existingDocuments.energyBills) ? existingDocuments.energyBills : [];
+      for (let i = 0; i < extraInputs.length; i += 1) {
+        const input = extraInputs[i];
+        const uc = clean(input.dataset.uc || "");
+        const existingEntry =
+          existingExtraEnergy.find((e) => clean(e?.uc || "") === uc) ||
+          existingExtraEnergy[i] ||
+          null;
+        const uploaded = await uploadSafe(
+          input.files?.[0],
+          `doc_energy_bill_${uc || i + 2}`,
+          uc ? `Conta de energia UC ${uc}` : "Conta de energia extra"
+        );
+        const doc = uploaded || existingEntry || null;
+        if (doc && doc.url) extraEnergyBills.push({ ...doc, uc });
+      }
       payload.documents = {
-        contract: await uploadSafe(id("fileContractRequired")?.files?.[0], "doc_contract", "Contrato") || existingDocuments.contract || null,
+        contract: await uploadSafe(id("fileContractRequired")?.files?.[0], "doc_contract", "Contrato do assinante") || existingDocuments.contract || null,
         energyBill: await uploadSafe(id("fileEnergyBillRequired")?.files?.[0], "doc_energy_bill", "Conta de energia") || existingDocuments.energyBill || null,
+        energyBills: extraEnergyBills,
         cnh: await uploadSafe(id("fileCnh")?.files?.[0], "doc_cnh_rg", "CNH/RG") || existingDocuments.cnh || null,
+        adminCnh: await uploadSafe(id("fileAdminCnh")?.files?.[0], "doc_cnh_admin", "CNH do sócio administrador") || existingDocuments.adminCnh || null,
         contractSocial: await uploadSafe(id("fileContractSocial")?.files?.[0], "doc_contrato_social", "Contrato social") || existingDocuments.contractSocial || null,
         procuracao: await uploadSafe(id("fileProcuracao")?.files?.[0], "doc_procuracao", "Procuração") || existingDocuments.procuracao || null,
         thirdPartyDocument: existingDocuments.thirdPartyDocument || null,
       };
+      payload.notifications = payload.notifications || {};
+      payload.notificationsGrouped = payload.notificationsGrouped || notificationsToGrouped(payload.notifications);
       payload.documentos = {
         contaEnergiaUrl: payload.documents.energyBill?.url || "",
+        contasEnergia: extraEnergyBills.map((doc) => ({ uc: doc.uc || "", url: doc.url || "", name: doc.name || "" })),
         cnhUrl: payload.documents.cnh?.url || "",
+        cnhSocioAdminUrl: payload.documents.adminCnh?.url || "",
         contratoSocialUrl: payload.documents.contractSocial?.url || "",
         cnhDonoContaUrl: payload.documents.thirdPartyDocument?.url || "",
         procuracaoUrl: payload.documents.procuracao?.url || "",
@@ -1394,11 +1553,45 @@ function bindEvents() {
         console.log("[assinante-cadastro] addDoc ok", docRef.id);
       }
       clearDraft();
+      const notificationEntries = Object.values(payload.notifications || {});
+      const notificationsEnabled = notificationEntries.filter((x) => x?.enabled === true).length;
+      const notificationsTotal = notificationEntries.length;
+      const savedDocs = [
+        payload.documents?.contract,
+        payload.documents?.energyBill,
+        payload.documents?.cnh,
+        payload.documents?.adminCnh,
+        payload.documents?.contractSocial,
+        payload.documents?.procuracao,
+        payload.documents?.thirdPartyDocument,
+        ...(Array.isArray(payload.documents?.energyBills) ? payload.documents.energyBills : []),
+      ].filter((doc) => doc && doc.url).length;
+      const extraBills = Array.isArray(payload.documents?.energyBills) ? payload.documents.energyBills.length : 0;
+
+      setSaveNotice(
+        "notificationsSaveNotice",
+        `Notificações salvas: ${notificationsEnabled}/${notificationsTotal} ativas.`
+      );
+      setSaveNotice(
+        "attachmentsSaveNotice",
+        `Anexos salvos: ${savedDocs}${extraBills ? ` (contas extras: ${extraBills})` : ""}.`,
+        uploadErrors.length ? "warn" : "success"
+      );
+
       if (uploadErrors.length) {
-        alert(`Assinante salvo, mas alguns anexos falharam:\n- ${uploadErrors.join("\n- ")}`);
-      } else {
-        alert("Assinante salvo com sucesso.");
+        alert(
+          `Assinante salvo, mas alguns anexos falharam:\n- ${uploadErrors.join("\n- ")}\n\n` +
+          `Notificações ativas: ${notificationsEnabled}/${notificationsTotal}\n` +
+          `Anexos salvos: ${savedDocs}${extraBills ? ` (contas extras: ${extraBills})` : ""}.\n\n` +
+          `Você permanecerá nesta tela para corrigir os anexos.`
+        );
+        return;
       }
+      alert(
+        `Assinante salvo com sucesso.\n\n` +
+        `Notificações ativas: ${notificationsEnabled}/${notificationsTotal}\n` +
+        `Anexos salvos: ${savedDocs}${extraBills ? ` (contas extras: ${extraBills})` : ""}.`
+      );
       window.location.href = "assinantes.html";
     } catch (err) { console.error(err); alert(`Falha ao salvar: ${err.message || "erro inesperado"}`); }
     finally { id("saveWizardBtn").disabled = false; id("saveWizardBtn").textContent = "Salvar Assinante"; }
@@ -1425,6 +1618,8 @@ async function hydrateExisting(data) {
     id("companyFantasy").value = s.nomeFantasia || "";
     id("companyPhone").value = s.phone || "";
     id("companyEmail").value = s.email || "";
+    id("companyFinanceName").value =
+      s.financeResponsibleName || s.responsavelFinanceiro || data.financeResponsibleName || "";
     id("companyObs").value = s.observations || "";
     writeAddress("companyAddress", rootAddress);
   } else {
@@ -1449,9 +1644,17 @@ async function hydrateExisting(data) {
   const planAverage = plan.contractedKwh || data.consumoMedio || data.averageConsumptionKwh || "";
   const planSeller = plan.sellerKwh || plan.informedKwh || planAverage;
   const fidelityMonths = Math.max(0, Math.round(toNumber(plan.fidelityMonths ?? plan.loyaltyMonths ?? plan.fidelity ?? plan.loyalty)));
+  const planSelected = plan.selectedPlan || data.planSelected || data.plan?.selectedPlan || "";
+  const planShowTable =
+    plan.showDiscountTable ??
+    data.planShowDiscountTable ??
+    data.plan_details?.showDiscountTable ??
+    data.planDetails?.showDiscountTable ??
+    false;
   id("planAdhesionDate").value = plan.adhesionDate || "";
   id("planSellerKwh").value = planSeller || "";
   id("planContractedKwh").value = planAverage || "";
+  if (id("planSelected")) id("planSelected").value = planSelected || "";
   syncPlanKwhFields("average");
   id("planFidelity").value = fidelityMonths > 0 ? "custom" : "none";
   id("planFidelityMonths").value = fidelityMonths > 0 ? String(fidelityMonths) : "";
@@ -1459,6 +1662,7 @@ async function hydrateExisting(data) {
   id("planDiscountPercent").value = plan.discountPercentage || plan.discountPercent || data.discountPercent || "";
   const comp = qsa('input[name="compensationMode"]').find((x) => x.value === (plan.compensationMode || "geracao-compartilhada"));
   if (comp) comp.checked = true;
+  if (id("planShowDiscountTable")) id("planShowDiscountTable").checked = !!planShowTable;
   const details = data.plan_details || data.planDetails || {};
   id("detailPisCofins").checked = !!(details.paysPisAndCofins ?? details.paysPisCofins);
   id("detailIcms").checked = !!details.paysIcms;
@@ -1467,14 +1671,23 @@ async function hydrateExisting(data) {
   id("detailFioB").checked = !!(details.paysWireB ?? details.paysFioB);
   id("detailAddDistributor").checked = !!details.addDistributorValue;
   id("detailIsento").checked = !!(details.exemptFromPayment ?? details.isExempt);
-  renderExistingFile("fileContractRequired", "Contrato", state.existingDocuments.contract);
+  renderExistingFile("fileContractRequired", "Contrato do assinante", state.existingDocuments.contract);
   renderExistingFile("fileEnergyBillRequired", "Conta de energia", state.existingDocuments.energyBill);
   renderExistingFile("fileCnh", "CNH/RG", state.existingDocuments.cnh);
+  renderExistingFile("fileAdminCnh", "CNH do sócio administrador", state.existingDocuments.adminCnh);
   renderExistingFile("fileContractSocial", "Contrato social", state.existingDocuments.contractSocial);
   renderExistingFile("fileProcuracao", "Procuracao", state.existingDocuments.procuracao);
   state.personContacts = Array.isArray(data.contacts?.person) ? data.contacts.person.map((item) => normalizeContactEntry(item, "person")) : [];
   state.companyContacts = Array.isArray(data.contacts?.company) ? data.contacts.company.map((item) => normalizeContactEntry(item, "company")) : [];
-  state.notifications = data.notifications && typeof data.notifications === "object" ? data.notifications : {};
+  if (data.notificationsGrouped && typeof data.notificationsGrouped === "object") {
+    state.notifications = notificationsFromGrouped(data.notificationsGrouped);
+  } else if (data.notifications && typeof data.notifications === "object") {
+    state.notifications = data.notifications;
+  } else if (data.notificationsFlat && typeof data.notificationsFlat === "object") {
+    state.notifications = data.notificationsFlat;
+  } else {
+    state.notifications = {};
+  }
   const energyAccounts = Array.isArray(data.energyAccounts) ? data.energyAccounts : null;
   const energyAccount = data.energy_account || data.energyAccount || null;
   if (energyAccounts && energyAccounts.length) {

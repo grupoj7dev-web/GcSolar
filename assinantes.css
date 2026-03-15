@@ -447,6 +447,14 @@
     line-height: 1.25;
 }
 
+.subscriber-fantasy-name {
+    margin-top: 0.18rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--muted);
+}
+
 .subscriber-card-meta {
     font-size: 0.84rem;
     color: var(--muted);

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+Ôªø<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -41,7 +41,7 @@
         <a href="geradoras.html" class="nav-item"><i class="ph ph-solar-panel"></i><span>Geradoras</span></a>
         <a href="fatura-manual.html" class="nav-item"><i class="ph ph-file-plus"></i><span>Fatura Manual</span></a>
         <a href="procuracao.html" class="nav-item"><i class="ph ph-file-text"></i><span>Procura&#231;&#227;o</span></a>
-        <a href="faturas-validacao.html" class="nav-item"><i class="ph ph-seal-warning"></i><span>Faturas em ValidaÁ„o</span></a>
+        <a href="faturas-validacao.html" class="nav-item"><i class="ph ph-seal-warning"></i><span>Faturas em Valida√ß√£o</span></a>
         <a href="faturas-emitidas.html" class="nav-item"><i class="ph ph-receipt"></i><span>Faturas Emitidas</span></a>
         <a href="whatsapp.html" class="nav-item"><i class="ph ph-whatsapp-logo"></i><span>WhatsApp</span></a>
         <a href="parceiros.html" class="nav-item"><i class="ph ph-handshake"></i><span>Parceiros</span></a>
@@ -159,6 +159,7 @@
                 <label class="field"><span>Raz&#227;o Social *</span><input id="companyRazao"></label>
                 <label class="field"><span>Telefone (WhatsApp p/ Receber Faturas) *</span><input id="companyPhone" data-mask="phone"></label>
                 <label class="field"><span>E-mail (Receber Faturas) *</span><input id="companyEmail" type="email"></label>
+                <label class="field span-2"><span>Nome Respons√°vel Financeiro</span><input id="companyFinanceName"></label>
               </div>
               <div id="companyContacts"></div>
               <label class="field"><span>Observa&#231;&#245;es</span><textarea id="companyObs" rows="3"></textarea></label>
@@ -216,7 +217,7 @@
               <div class="grid cols-3 plan-grid">
                 <label class="field"><span>Data de Ades&#227;o *</span><input id="planAdhesionDate" type="date"></label>
                 <label class="field"><span>kWh Informado pelo Vendedor *</span><input id="planSellerKwh" type="number" min="0" step="0.01"></label>
-                <label class="field"><span>MÈdia Consumo (kWh) *</span><input id="planContractedKwh" type="number" min="0" step="0.01"></label>
+                <label class="field"><span>M√©dia Consumo (kWh) *</span><input id="planContractedKwh" type="number" min="0" step="0.01"></label>
                 <label class="field"><span>Fidelidade</span><select id="planFidelity"><option value="none">Sem Fidelidade</option><option value="custom">Com Fidelidade</option></select></label><label class="field hidden" id="planFidelityMonthsWrap"><span>Prazo da Fidelidade (meses)</span><input id="planFidelityMonths" type="number" min="1" step="1" inputmode="numeric"></label>
                 <label class="field span-2"><span>Desconto (%)</span><input id="planDiscountPercent" type="number" min="0" max="100" step="0.01"></label>
               </div>
@@ -293,7 +294,7 @@
                   <small>Configure avisos antes e depois do vencimento</small>
                 </div>
               </div>
-              <div id="notifyGrid"></div>
+              <div id="notifyGrid"></div>`r`n              <div id="notificationsSaveNotice" class="save-notice hidden"></div>
             </div>
           </section>
 
@@ -314,7 +315,7 @@
 
               <div class="attachments-grid">
                 <label class="field upload-card upload-card-required">
-                  <span>Contrato *</span>
+                  <span>Contrato do Assinante *</span>
                   <small>Arquivo principal formalizando a ades&#227;o do assinante.</small>
                   <input type="file" id="fileContractRequired" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
                 </label>
@@ -323,6 +324,7 @@
                   <small>Fatura atual da unidade consumidora vinculada ao plano.</small>
                   <input type="file" id="fileEnergyBillRequired" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
                 </label>
+                  <div id="energyBillExtraWrap"></div>
                 <label class="field upload-card" id="fileCnhWrap">
                   <span>CNH do Assinante (PF)</span>
                   <small>Documento de identifica&#231;&#227;o do titular pessoa f&#237;sica.</small>
@@ -333,6 +335,11 @@
                   <small>Documento societ&#225;rio necess&#225;rio para titular pessoa jur&#237;dica.</small>
                   <input type="file" id="fileContractSocial" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
                 </label>
+                  <label class="field upload-card hidden" id="fileAdminCnhWrap">
+                    <span>CNH do S&#243;cio Administrador (PJ)</span>
+                    <small>Documento do s&#243;cio administrador respons&#225;vel pela empresa.</small>
+                    <input type="file" id="fileAdminCnh" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                  </label>
                 <label class="field upload-card">
                   <span>Procura&#231;&#227;o do Assinante</span>
                   <small>Procura&#231;&#227;o assinada, quando aplic&#225;vel ao processo operacional.</small>
@@ -344,7 +351,7 @@
               <div class="attachments-note">
                 <strong>Orienta&#231;&#245;es de envio</strong>
                 <span>Use arquivos leg&#237;veis, preferencialmente em PDF, e evite fotos cortadas ou com reflexo.</span>
-              </div>
+              </div>`r`n              <div id="attachmentsSaveNotice" class="save-notice hidden"></div>
             </div>
           </section>
 
@@ -361,6 +368,9 @@
   <script type="module" src="access-control.js?v=20260314-relatorios1"></script>
     <script type="module" src="assinante-cadastro.js?v=20260314-noplans1"></script></body>
 </html>
+
+
+
 
 
 

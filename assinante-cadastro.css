@@ -1296,9 +1296,13 @@
 }
 
 .attachments-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.9rem;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem;
+}
+
+#energyBillExtraWrap {
+    display: contents;
 }
 
 .upload-card {
@@ -1538,4 +1542,21 @@
   .attachments-note {
     padding: 0.9rem;
   }
+}
+
+.save-notice {
+    margin-top: 0.9rem;
+    padding: 0.75rem 0.9rem;
+    border-radius: 12px;
+    background: #ecfdf3;
+    border: 1px solid #86efac;
+    color: #14532d;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.save-notice.warn {
+    background: #fff7ed;
+    border-color: #fdba74;
+    color: #7c2d12;
 }
