@@ -270,6 +270,114 @@ function resolveValor(item) {
   return toNumber(item.invoice_value || item.valor_total || item.valor);
 }
 
+function resolveSubscriberUcList(item) {
+  const buckets = [];
+
+  if (Array.isArray(item.energyAccounts)) buckets.push(...item.energyAccounts);
+  if (Array.isArray(item.energy_accounts)) buckets.push(...item.energy_accounts);
+  if (item.energy_account) buckets.push(item.energy_account);
+  if (item.energyAccount) buckets.push(item.energyAccount);
+
+  const directUc = onlyDigits(item.uc || item.consumer_unit || item.installationId || "");
+  const ucSet = new Set();
+  if (directUc) ucSet.add(directUc);
+
+  for (const account of buckets) {
+    const uc = onlyDigits(account?.uc || account?.consumer_unit || account?.installationId || "");
+    if (uc) ucSet.add(uc);
+  }
+
+  return [...ucSet];
+}
+
+function buildActiveUcSet(subscribers) {
+  const ucSet = new Set();
+  subscribers
+    .filter((x) => isActiveStatus(x.status))
+    .forEach((item) => {
+      resolveSubscriberUcList(item).forEach((uc) => ucSet.add(uc));
+    });
+  return ucSet;
+}
+
+function monthKeyFromDate(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "";
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function parseReferenceMonthKey(value) {
+  const raw = String(value || "").trim().toUpperCase();
+  if (!raw.includes("/")) return "";
+  const [monthRaw, yearRaw] = raw.split("/");
+  const year = Number(yearRaw);
+  if (!Number.isFinite(year)) return "";
+
+  const monthMap = {
+    JAN: 1,
+    FEV: 2,
+    MAR: 3,
+    ABR: 4,
+    MAI: 5,
+    JUN: 6,
+    JUL: 7,
+    AGO: 8,
+    SET: 9,
+    OUT: 10,
+    NOV: 11,
+    DEZ: 12,
+  };
+  const numericMonth = Number(monthRaw);
+  const month = Number.isFinite(numericMonth) && numericMonth >= 1 && numericMonth <= 12
+    ? numericMonth
+    : monthMap[monthRaw];
+  if (!month) return "";
+  return `${year}-${String(month).padStart(2, "0")}`;
+}
+
+function resolveItemMonthKey(item) {
+  const refKey = parseReferenceMonthKey(resolveReferencia(item));
+  if (refKey) return refKey;
+  return monthKeyFromDate(getDocDate(item));
+}
+
+function resolveItemUc(item) {
+  return onlyDigits(item.uc || item.consumer_unit || item.installationId || "");
+}
+
+function buildMonthlyProgress(targetMonthKey) {
+  const expectedUcSet = buildActiveUcSet(cache.subscribers);
+  const processedUcSet = new Set();
+  const sources = [...cache.invoiceData, ...cache.validacao, ...cache.emitidas];
+
+  for (const item of sources) {
+    const uc = resolveItemUc(item);
+    if (!uc || !expectedUcSet.has(uc)) continue;
+    if (resolveItemMonthKey(item) !== targetMonthKey) continue;
+    processedUcSet.add(uc);
+  }
+
+  const expected = expectedUcSet.size;
+  const processed = processedUcSet.size;
+  const missing = Math.max(expected - processed, 0);
+  const processedPct = expected > 0 ? (processed / expected) * 100 : 0;
+
+  return {
+    expected,
+    processed,
+    missing,
+    processedPct,
+  };
+}
+
+function formatMonthLabel(targetMonthKey) {
+  const [yearRaw, monthRaw] = String(targetMonthKey || "").split("-");
+  const year = Number(yearRaw);
+  const month = Number(monthRaw);
+  if (!year || !month) return "-";
+  const d = new Date(year, month - 1, 1);
+  return d.toLocaleDateString("pt-BR", { month: "short", year: "numeric" });
+}
+
 function getInvoiceIdentityKey(item) {
   const uc = normalizeIdentityPart(resolveUc(item));
   const referencia = normalizeIdentityPart(resolveReferencia(item));
@@ -389,6 +497,12 @@ function renderByPeriod(period) {
   const processadasPeriodo = cache.invoiceData.filter(
     (x) => inPeriod(x, period) && toNumber(x.invoice_value) > 0
   );
+  const now = new Date();
+  const currentMonthKey = monthKeyFromDate(now);
+  const previousMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const previousMonthKey = monthKeyFromDate(previousMonthDate);
+  const currentMonthlyProgress = buildMonthlyProgress(currentMonthKey);
+  const previousMonthlyProgress = buildMonthlyProgress(previousMonthKey);
 
   const totalFaturas = emitidasPeriodo.length;
   const valorTotal = emitidasPeriodo.reduce(
@@ -399,20 +513,21 @@ function renderByPeriod(period) {
   const assinantesAtivos = cache.subscribers.filter((x) => isActiveStatus(x.status)).length;
   const geradorasAtivas = cache.generators.filter((x) => isActiveStatus(x.status)).length;
 
-  const pendentes = validacaoPeriodo.filter((item) => {
+  const pendentes = currentMonthlyProgress.missing;
+  const processadas = currentMonthlyProgress.processed;
+  const pendentesFunil = validacaoPeriodo.filter((item) => {
     const status = String(item.status_validacao || item.status || "").toLowerCase().trim();
     if (status.includes("aprov")) return false;
     if (status.includes("rejeit")) return false;
     return true;
   }).length;
-  const processadas = processadasPeriodo.length;
   const emitidas = emitidasPeriodo.length;
   const pagas = emitidasPeriodo.filter(
     (x) => String(x.status_pagamento || "").toLowerCase() === "pago"
   ).length;
 
-  const totalFunil = pendentes + processadas + emitidas + pagas;
-  const pendentesPct = totalFunil > 0 ? (pendentes / totalFunil) * 100 : 0;
+  const totalFunil = pendentesFunil + processadasPeriodo.length + emitidas + pagas;
+  const pendentesPct = totalFunil > 0 ? (pendentesFunil / totalFunil) * 100 : 0;
   const conversao = emitidas > 0 ? (pagas / emitidas) * 100 : 0;
 
   cards.totalFaturas.textContent = int(totalFaturas);
@@ -423,9 +538,15 @@ function renderByPeriod(period) {
   cards.geradoras.textContent = int(geradorasAtivas);
 
   cards.pendentes.textContent = int(pendentes);
-  cards.pendentesMeta.textContent = `${pct(pendentesPct)} do total do funil`;
+  cards.pendentesMeta.innerHTML = [
+    `Atual (${formatMonthLabel(currentMonthKey)}): ${currentMonthlyProgress.processed}/${currentMonthlyProgress.expected} processadas, faltam ${currentMonthlyProgress.missing}`,
+    `Anterior (${formatMonthLabel(previousMonthKey)}): ${previousMonthlyProgress.processed}/${previousMonthlyProgress.expected} processadas, faltaram ${previousMonthlyProgress.missing}`,
+  ].join("<br>");
   cards.processadas.textContent = int(processadas);
-  cards.processadasMeta.textContent = "Leituras processadas no período";
+  cards.processadasMeta.innerHTML = [
+    `Atual (${formatMonthLabel(currentMonthKey)}): ${pct(currentMonthlyProgress.processedPct)} das UCs processadas`,
+    `Anterior (${formatMonthLabel(previousMonthKey)}): ${pct(previousMonthlyProgress.processedPct)} das UCs processadas`,
+  ].join("<br>");
   cards.emitidas.textContent = int(emitidas);
   cards.emitidasMeta.textContent = "Faturas oficialmente emitidas";
   cards.pagas.textContent = int(pagas);
