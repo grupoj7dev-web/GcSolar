@@ -557,8 +557,8 @@ function rowTemplate(record) {
       <td class="actions-col actions-cell">
         <button class="actions-btn" type="button" data-menu-toggle aria-label="Acoes"><i class="ph ph-dots-three"></i></button>
         <div class="actions-menu hidden">
-          <button class="menu-item download" type="button" data-action="download" data-id="${record.id}"><i class="ph ph-download-simple"></i>Baixar Fatura</button>
           <button class="menu-item view" type="button" data-action="view" data-id="${record.id}"><i class="ph ph-eye"></i>Visualizar Fatura</button>
+          <button class="menu-item download" type="button" data-action="download" data-id="${record.id}"><i class="ph ph-download-simple"></i>Baixar Fatura</button>
           ${canMarkPaid ? `<button class="menu-item pay" type="button" data-action="mark-paid" data-id="${record.id}"><i class="ph ph-check-circle"></i>Tornar pago</button>` : ""}
           ${returnAction}
           <button class="menu-item delete" type="button" data-action="delete" data-id="${record.id}"><i class="ph ph-trash"></i>Excluir</button>
