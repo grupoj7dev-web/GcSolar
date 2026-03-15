@@ -632,8 +632,7 @@ function renderScoreboard() {
 }
 
 function setUpdatedNow(suffix = "") {
-  const s = suffix ? ` (${suffix})` : "";
-  updatedAtLabel.textContent = `Atualizado em ${new Date().toLocaleString("pt-BR")}${s}`;
+  updatedAtLabel.textContent = `Atualizado em ${new Date().toLocaleString("pt-BR")}`;
 }
 
 function isLocalDevHost() {
