@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GC Solar | Procuracoes</title>
-    <meta name="description" content="Lista de procuracoes geradas.">
+    <title>GC Solar | Faturas em Pré-validação</title>
+    <meta name="description" content="Fila interna da J7 para conferência antes da validação do gestor.">
     <script>
         (function () {
             try {
@@ -20,8 +20,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <link rel="stylesheet" href="dashboard.css">
-    <link rel="stylesheet" href="procuracao-list.css">
+    <link rel="stylesheet" href="dashboard.css?v=20260314-prevalidacao1">
+    <link rel="stylesheet" href="faturas-validacao.css?v=20260314-prevalidacao1">
 </head>
 
 <body>
@@ -42,7 +42,8 @@
                 <a href="calcular-desconto.html" class="nav-item"><i class="ph ph-percent"></i><span>Calcular Desconto</span></a>
                 <a href="geradoras.html" class="nav-item"><i class="ph ph-solar-panel"></i><span>Geradoras</span></a>
                 <a href="fatura-manual.html" class="nav-item"><i class="ph ph-file-plus"></i><span>Fatura Manual</span></a>
-                <a href="procuracao.html" class="nav-item active"><i class="ph ph-file-text"></i><span>Procuração</span></a>
+                <a href="procuracao.html" class="nav-item"><i class="ph ph-file-text"></i><span>Procuração</span></a>
+                <a href="faturas-pre-validacao.html" class="nav-item active"><i class="ph ph-shield-check"></i><span>Faturas Pré-validação</span></a>
                 <a href="faturas-validacao.html" class="nav-item"><i class="ph ph-seal-warning"></i><span>Faturas em Validação</span></a>
                 <a href="faturas-emitidas.html" class="nav-item"><i class="ph ph-receipt"></i><span>Faturas Emitidas</span></a>
                 <a href="whatsapp.html" class="nav-item"><i class="ph ph-whatsapp-logo"></i><span>WhatsApp</span></a>
@@ -62,44 +63,70 @@
                     <a class="settings-btn" href="asaas-config.html" aria-label="Configurações ASAAS">
                         <i class="ph ph-gear-six"></i>
                     </a>
+                    <button class="settings-btn" id="refreshBtn" aria-label="Atualizar dados">
+                        <i class="ph ph-arrow-clockwise"></i>
+                    </button>
                 </div>
             </header>
 
-            <main class="proc-main">
-                <section class="proc-head card">
-                    <div class="proc-head-main">
-                        <span class="proc-head-icon"><i class="ph ph-file-text"></i></span>
-                        <div>
-                            <h1>Procuracoes</h1>
-                            <p>Acompanhe documentos gerados, baixe copias e crie novas procuracoes.</p>
-                        </div>
+            <main class="invoice-main">
+                <section class="invoice-head card">
+                    <div>
+                        <h1>Mesa de Pré-validação J7</h1>
+                        <p>Conferência interna da J7 antes de liberar a fatura para o gestor validar.</p>
                     </div>
-                    <a class="btn-primary-solid" href="procuracao-nova.html">
-                        <i class="ph ph-plus-circle"></i>
-                        Nova procuracao
-                    </a>
+                    <p class="invoice-updated" id="updatedAtLabel">Atualizando...</p>
                 </section>
 
-                <section class="card">
-                    <div class="results-summary">
-                        <span id="totalLabel">0 procuracoes</span>
+                <section class="status-grid" id="scoreGrid">
+                    <article class="status-card pending">
+                        <p class="status-label">Pendentes</p>
+                        <p class="status-value" id="scorePendentes">0</p>
+                        <p class="status-meta">Aguardando conferência J7</p>
+                    </article>
+                    <article class="status-card approved">
+                        <p class="status-label">Liberadas</p>
+                        <p class="status-value" id="scoreAprovadas">0</p>
+                        <p class="status-meta">Enviadas ao gestor</p>
+                    </article>
+                    <article class="status-card rejected">
+                        <p class="status-label">Rejeitadas</p>
+                        <p class="status-value" id="scoreRejeitadas">0</p>
+                        <p class="status-meta">Com falha para correção</p>
+                    </article>
+                    <article class="status-card rate">
+                        <p class="status-label">Taxa de Liberação</p>
+                        <p class="status-value" id="scoreTaxa">0%</p>
+                        <p class="status-meta">Liberadas x revisadas</p>
+                    </article>
+                </section>
+
+                <section class="card invoice-table-card">
+                    <div class="table-head-row">
+                        <p class="table-title">Faturas em Pré-validação</p>
+                        <div class="table-tools">
+                            <input id="invoiceSearchInput" class="table-search" type="search" placeholder="Buscar por nome, documento, UC ou referência">
+                            <p class="table-subtitle" id="pendingCounterLabel">0 itens</p>
+                        </div>
                     </div>
 
                     <div class="table-wrap">
-                        <table class="proc-table">
+                        <table class="invoice-table">
                             <thead>
                                 <tr>
-                                    <th>Outorgante</th>
-                                    <th>Tipo</th>
-                                    <th>Documento</th>
-                                    <th>Local/Data</th>
-                                    <th>Criada em</th>
-                                    <th class="actions-col">Acoes</th>
+                                    <th>UC</th>
+                                    <th>Nome</th>
+                                    <th>CPF/CNPJ</th>
+                                    <th>Referência</th>
+                                    <th>Valor</th>
+                                    <th>Vencimento</th>
+                                    <th>Status</th>
+                                    <th class="actions-col">Ações</th>
                                 </tr>
                             </thead>
-                            <tbody id="procTableBody">
+                            <tbody id="invoiceTableBody">
                                 <tr>
-                                    <td colspan="6" class="empty-row">Nenhuma procuracao gerada ainda.</td>
+                                    <td colspan="8" class="empty-row">Carregando faturas em pré-validação...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -110,7 +137,7 @@
     </div>
 
     <script type="module" src="access-control.js?v=20260314-prevalidacao1"></script>
-    <script type="module" src="procuracao-list.js"></script>
+    <script type="module" src="faturas-validacao.js?v=20260314-prevalidacao1"></script>
 <script>
   (function(d,t) {
     var BASE_URL="https://crm.iasolar.io";
@@ -125,15 +152,7 @@
       })
     }
   })(document,"script");
-</script></body>
+</script>
+</body>
 
 </html>
-
-
-
-
-
-
-
-
-

@@ -55,6 +55,12 @@ const LOCAL_DELETED_EMITIDAS_KEY = "gcsolar_emitidas_deleted_ids";
 
 const collapsedKey = "gcsolar_sidebar_collapsed";
 const themeKey = "gcsolar_theme";
+const SUPER_SUPER_ADMIN_EMAIL = "jheferson@gmail.com";
+const PAGE_NAME = window.location.pathname.split("/").pop() || "";
+const IS_PRE_VALIDATION_PAGE = PAGE_NAME === "faturas-pre-validacao.html";
+const STAGE_PRE = "pre_validacao";
+const STAGE_GESTOR = "gestor_validacao";
+const STAGE_EMITIDA = "emitida";
 
 let scope = null;
 let pendingInvoices = [];
@@ -64,6 +70,10 @@ let html2pdfLoader = null;
 let pdfLibsLoader = null;
 let asaasConfig = null;
 let invoiceSearchTerm = "";
+
+function isJ7TeamEmail(email) {
+  return String(email || "").toLowerCase().trim() === SUPER_SUPER_ADMIN_EMAIL;
+}
 
 function isLocalDevHost() {
   const host = String(window.location.hostname || "").toLowerCase();
@@ -232,6 +242,14 @@ function normalizeStatus(item) {
   if (raw.includes("rejeit")) return "rejeitada";
   if (raw.includes("pend")) return "pendente";
   return "pendente";
+}
+
+function getWorkflowStage(item) {
+  const raw = String(item.workflow_stage || item.etapa_fluxo || "").trim().toLowerCase();
+  if (raw === STAGE_PRE || raw === STAGE_GESTOR || raw === STAGE_EMITIDA) return raw;
+  if (String(item.fatura_emitida_ref || item.emitida_ref || "").trim()) return STAGE_EMITIDA;
+  if (item.pre_validado_em || item.pre_validado_em_iso || item.liberado_para_gestor_em) return STAGE_GESTOR;
+  return STAGE_PRE;
 }
 
 function isNotValidatedStatus(item) {
@@ -469,7 +487,12 @@ function belongsToScope(item) {
 }
 
 async function getUserScope(user) {
-  const result = { uid: user.uid, tenantId: user.uid, email: user.email || "" };
+  const result = {
+    uid: user.uid,
+    tenantId: user.uid,
+    email: user.email || "",
+    isJ7Team: isJ7TeamEmail(user.email || ""),
+  };
 
   const adminQ = query(collection(db, "gcredito_admins"), where("uid", "==", user.uid), limit(1));
   const adminSnap = await getDocs(adminQ);
@@ -717,6 +740,7 @@ function buildEmitidaPayload(record, paid = false, extra = {}) {
   return {
     ...record,
     origem_validacao_id: record.id,
+    workflow_stage: STAGE_EMITIDA,
     status_validacao: "aprovada",
     status: "aprovada",
     status_pagamento: paid ? "pago" : "pendente",
@@ -735,12 +759,13 @@ function buildEmitidaPayload(record, paid = false, extra = {}) {
 }
 
 function renderScoreboard() {
-  const pendentes = allValidacao.filter((x) => normalizeStatus(x) === "pendente").length;
-  const rejeitadas = allValidacao.filter((x) => normalizeStatus(x) === "rejeitada").length;
-
-  // "Aprovadas" deve refletir o volume atual efetivamente emitido.
-  // Se a emitida foi excluída, o contador também reduz.
-  const aprovadas = allEmitidas.length;
+  const currentStage = IS_PRE_VALIDATION_PAGE ? STAGE_PRE : STAGE_GESTOR;
+  const stageItems = allValidacao.filter((x) => getWorkflowStage(x) === currentStage);
+  const pendentes = stageItems.filter((x) => normalizeStatus(x) === "pendente").length;
+  const rejeitadas = stageItems.filter((x) => normalizeStatus(x) === "rejeitada").length;
+  const aprovadas = IS_PRE_VALIDATION_PAGE
+    ? allValidacao.filter((x) => getWorkflowStage(x) === STAGE_GESTOR).length
+    : allEmitidas.length;
 
   const reviewed = aprovadas + rejeitadas;
   const taxa = reviewed > 0 ? (aprovadas / reviewed) * 100 : 0;
@@ -755,6 +780,11 @@ function tableRow(record) {
   const status = normalizeStatus(record);
   const lastId = localStorage.getItem(LAST_VALIDACAO_KEY) || "";
   const rowClass = lastId && String(record.id) === String(lastId) ? "just-sent" : "";
+  const approveLabel = IS_PRE_VALIDATION_PAGE ? "Liberar para gestor" : "Aprovar";
+  const approveIcon = IS_PRE_VALIDATION_PAGE ? "ph-arrow-right" : "ph-check";
+  const extraEditAction = IS_PRE_VALIDATION_PAGE && scope?.isJ7Team
+    ? `<button class="menu-item edit" type="button" data-action="edit" data-id="${record.id}"><i class="ph ph-pencil-simple"></i>Editar Fatura</button>`
+    : "";
 
   return `
     <tr class="${rowClass}" data-row-id="${record.id}">
@@ -770,7 +800,8 @@ function tableRow(record) {
         <div class="actions-menu hidden">
           <button class="menu-item download" type="button" data-action="download" data-id="${record.id}"><i class="ph ph-download-simple"></i>Baixar Fatura</button>
           <button class="menu-item view" type="button" data-action="view" data-id="${record.id}"><i class="ph ph-eye"></i>Visualizar Fatura</button>
-          <button class="menu-item approve" type="button" data-action="approve" data-id="${record.id}"><i class="ph ph-check"></i>Aprovar</button>
+          ${extraEditAction}
+          <button class="menu-item approve" type="button" data-action="approve" data-id="${record.id}"><i class="ph ${approveIcon}"></i>${approveLabel}</button>
           <button class="menu-item reject" type="button" data-action="reject" data-id="${record.id}"><i class="ph ph-thumbs-down"></i>Rejeitar</button>
           <button class="menu-item delete" type="button" data-action="delete" data-id="${record.id}"><i class="ph ph-trash"></i>Excluir</button>
         </div>
@@ -841,7 +872,13 @@ async function loadData() {
     const id = String(x.id || "").trim();
     if (!id) return false;
     if (!isNotValidatedStatus(x)) return false;
-    if (validatedIdSet.has(id)) return false;
+    const stage = getWorkflowStage(x);
+    if (IS_PRE_VALIDATION_PAGE) {
+      if (stage !== STAGE_PRE) return false;
+    } else {
+      if (stage !== STAGE_GESTOR) return false;
+    }
+    if (!IS_PRE_VALIDATION_PAGE && validatedIdSet.has(id)) return false;
     return true;
   }));
 
@@ -1139,6 +1176,27 @@ function downloadInvoice(record) {
 }
 
 async function approveInvoice(record, markAsPaid = false) {
+  if (IS_PRE_VALIDATION_PAGE) {
+    const ok = window.confirm("Liberar esta fatura para o gestor validar?");
+    if (!ok) return;
+
+    await updateDoc(doc(db, COLL_VALIDACAO, record.id), {
+      workflow_stage: STAGE_GESTOR,
+      status_validacao: "pendente",
+      status: "pendente",
+      pre_validado_em: serverTimestamp(),
+      pre_validado_em_iso: new Date().toISOString(),
+      pre_validado_por: scope.uid,
+      pre_validado_por_email: scope.email,
+      liberado_para_gestor_em: serverTimestamp(),
+      liberado_para_gestor_em_iso: new Date().toISOString(),
+      updated_at: serverTimestamp(),
+    });
+
+    await loadData();
+    return;
+  }
+
   const confirmText = markAsPaid
     ? "Ao confirmar, a fatura sera aprovada e marcada como PAGA. Deseja continuar?"
     : "Ao confirmar, o sistema seguira para emissao (PIX e boleto no Asaas). Deseja continuar?";
@@ -1312,10 +1370,15 @@ async function approveInvoice(record, markAsPaid = false) {
 }
 
 async function rejectInvoice(record) {
-  const ok = window.confirm("Confirmar rejeicao desta fatura?");
+  const ok = window.confirm(
+    IS_PRE_VALIDATION_PAGE
+      ? "Confirmar rejeicao desta fatura na pre-validacao?"
+      : "Confirmar rejeicao desta fatura?"
+  );
   if (!ok) return;
 
   await updateDoc(doc(db, COLL_VALIDACAO, record.id), {
+    workflow_stage: IS_PRE_VALIDATION_PAGE ? STAGE_PRE : STAGE_GESTOR,
     status_validacao: "rejeitada",
     status: "rejeitada",
     rejeitado_em: serverTimestamp(),
@@ -1325,6 +1388,10 @@ async function rejectInvoice(record) {
   });
 
   await loadData();
+}
+
+function editInvoice(record) {
+  window.location.href = `fatura-manual.html?edit=${encodeURIComponent(record.id)}`;
 }
 
 async function deleteInvoice(record) {
@@ -1460,6 +1527,7 @@ function bindEvents() {
 
       if (action === "view") openInvoice(record);
       if (action === "download") downloadInvoice(record);
+      if (action === "edit") editInvoice(record);
       if (action === "approve") await approveInvoice(record, false);
       if (action === "reject") await rejectInvoice(record);
       if (action === "delete") await deleteInvoice(record);
@@ -1498,6 +1566,10 @@ onAuthStateChanged(auth, async (user) => {
 
   try {
     scope = await getUserScope(user);
+    if (IS_PRE_VALIDATION_PAGE && !scope.isJ7Team) {
+      window.location.replace("faturas-validacao.html");
+      return;
+    }
     await loadAsaasConfig();
     await loadData();
   } catch (error) {

@@ -1,11 +1,11 @@
-ï»¿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GC Solar | PrÃ©-assinante</title>
-    <meta name="description" content="Cadastro comercial de indicaÃ§Ã£o de assinante.">
+    <title>GC Solar | Pré-assinante</title>
+    <meta name="description" content="Cadastro comercial de indicação de assinante.">
     <script>
         (function () {
             try {
@@ -40,13 +40,13 @@
             <nav class="sidebar-nav">
                 <a href="dashboard.html" class="nav-item"><i class="ph ph-squares-four"></i><span>Dashboard</span></a>
                 <a href="assinantes.html" class="nav-item"><i class="ph ph-users-three"></i><span>Assinantes</span></a>
-                <a href="indicar-assinante.html" class="nav-item active"><i class="ph ph-user-plus"></i><span>PrÃ©-assinante</span></a>
+                <a href="indicar-assinante.html" class="nav-item active"><i class="ph ph-user-plus"></i><span>Pré-assinante</span></a>
                 <a href="cadastrar-rateio.html" class="nav-item"><i class="ph ph-share-network"></i><span>Cadastrar Rateio</span></a>
                 <a href="calcular-desconto.html" class="nav-item"><i class="ph ph-percent"></i><span>Calcular Desconto</span></a>
                 <a href="geradoras.html" class="nav-item"><i class="ph ph-solar-panel"></i><span>Geradoras</span></a>
                 <a href="fatura-manual.html" class="nav-item"><i class="ph ph-file-plus"></i><span>Fatura Manual</span></a>
-                <a href="procuracao.html" class="nav-item"><i class="ph ph-file-text"></i><span>ProcuraÃ§Ã£o</span></a>
-                <a href="faturas-validacao.html" class="nav-item"><i class="ph ph-seal-warning"></i><span>Faturas em ValidaÃ§Ã£o</span></a>
+                <a href="procuracao.html" class="nav-item"><i class="ph ph-file-text"></i><span>Procuração</span></a>
+                <a href="faturas-validacao.html" class="nav-item"><i class="ph ph-seal-warning"></i><span>Faturas em Validação</span></a>
                 <a href="faturas-emitidas.html" class="nav-item"><i class="ph ph-receipt"></i><span>Faturas Emitidas</span></a>
                 <a href="whatsapp.html" class="nav-item"><i class="ph ph-whatsapp-logo"></i><span>WhatsApp</span></a>
                 <a href="parceiros.html" class="nav-item"><i class="ph ph-handshake"></i><span>Parceiros</span></a>
@@ -62,7 +62,7 @@
                     <button class="settings-btn" id="themeBtn" aria-label="Alternar tema">
                         <i class="ph ph-moon"></i>
                     </button>
-                    <a class="settings-btn" href="asaas-config.html" aria-label="ConfiguraÃ§Ãµes ASAAS">
+                    <a class="settings-btn" href="asaas-config.html" aria-label="Configurações ASAAS">
                         <i class="ph ph-gear-six"></i>
                     </a>
                 </div>
@@ -72,8 +72,8 @@
                 <section class="card hero-card">
                     <div>
                         <p class="hero-label">Fluxo comercial</p>
-                        <h1>PrÃ©-assinante</h1>
-                        <p class="hero-sub">Cadastre dados, envie documentos e salve como aguardando aprovaÃ§Ã£o em uma Ãºnica jornada.</p>
+                        <h1>Pré-assinante</h1>
+                        <p class="hero-sub">Cadastre dados, envie documentos e salve como aguardando aprovação em uma única jornada.</p>
                     </div>
                     <p class="hero-updated" id="updatedText">Pronto para novo cadastro</p>
                 </section>
@@ -82,12 +82,12 @@
                     <div class="list-head">
                         <div>
                             <h2>Assinantes Indicados</h2>
-                            <p>Veja as indicaÃ§Ãµes salvas e acompanhe o status.</p>
+                            <p>Veja as indicações salvas e acompanhe o status.</p>
                         </div>
                         <div class="list-actions-row">
                             <button type="button" class="btn-primary-solid" id="novaIndicacaoTopBtn">
                                 <i class="ph ph-user-plus"></i>
-                                Nova indicaÃ§Ã£o
+                                Nova indicação
                             </button>
                         </div>
                     </div>
@@ -110,12 +110,12 @@
                                     <th id="vendedorHead" class="hidden">Vendedor</th>
                                     <th>Status</th>
                                     <th>Criado em</th>
-                                    <th>AÃ§Ãµes</th>
+                                    <th>Ações</th>
                                 </tr>
                             </thead>
                             <tbody id="indicacoesTableBody">
                                 <tr>
-                                    <td colspan="6" class="empty-row">Carregando indicaÃ§Ãµes...</td>
+                                    <td colspan="6" class="empty-row">Carregando indicações...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -126,12 +126,12 @@
                     <div class="list-head">
                         <div>
                             <h2>Assinantes Indicados</h2>
-                            <p>Veja as indicaÃ§Ãµes salvas e acompanhe o status.</p>
+                            <p>Veja as indicações salvas e acompanhe o status.</p>
                         </div>
                         <div class="list-actions-row">
                             <button type="button" class="btn-primary-solid" id="novaIndicacaoTopBtnKanban">
                                 <i class="ph ph-user-plus"></i>
-                                Nova indicaÃ§Ã£o
+                                Nova indicação
                             </button>
                         </div>
                     </div>
@@ -155,7 +155,7 @@
                     <div class="steps-row">
                         <div class="step-chip active" id="stepChip1"><span>1</span> Dados</div>
                         <div class="step-chip" id="stepChip2"><span>2</span> Documentos</div>
-                        <div class="step-chip" id="stepChip3"><span>3</span> ConcluÃ­do</div>
+                        <div class="step-chip" id="stepChip3"><span>3</span> Concluído</div>
                     </div>
 
                     <form id="indicacaoForm" novalidate>
@@ -166,15 +166,15 @@
                                 <div class="panel-glance">
                                     <div class="glance-item">
                                         <strong>Cadastro guiado</strong>
-                                        <span>Preencha apenas o necessÃ¡rio para avanÃ§ar.</span>
+                                        <span>Preencha apenas o necessário para avançar.</span>
                                     </div>
                                     <div class="glance-item">
-                                        <strong>MÃ¡scaras automÃ¡ticas</strong>
-                                        <span>CPF, CNPJ, telefone, CEP e UF sÃ£o formatados no preenchimento.</span>
+                                        <strong>Máscaras automáticas</strong>
+                                        <span>CPF, CNPJ, telefone, CEP e UF são formatados no preenchimento.</span>
                                     </div>
                                     <div class="glance-item">
                                         <strong>Fluxo comercial</strong>
-                                        <span>ApÃ³s salvar, a indicaÃ§Ã£o segue para aprovaÃ§Ã£o interna.</span>
+                                        <span>Após salvar, a indicação segue para aprovação interna.</span>
                                     </div>
                                 </div>
                             </div>
@@ -184,11 +184,11 @@
                                 <div class="type-toggle" role="tablist" aria-label="Tipo de cliente">
                                     <button type="button" class="type-card active" data-person-type="fisica">
                                         <i class="ph ph-user"></i>
-                                        <span>Pessoa FÃ­sica</span>
+                                        <span>Pessoa Física</span>
                                     </button>
                                     <button type="button" class="type-card" data-person-type="juridica">
                                         <i class="ph ph-buildings"></i>
-                                        <span>Pessoa JurÃ­dica</span>
+                                        <span>Pessoa Jurídica</span>
                                     </button>
                                 </div>
                                 <input type="hidden" id="tipoPessoa" value="fisica">
@@ -212,8 +212,8 @@
 
                             <div id="pjFields" class="form-grid hidden">
                                 <label class="field">
-                                    <span>RazÃ£o social</span>
-                                    <input id="razaoSocial" type="text" placeholder="RazÃ£o social da empresa">
+                                    <span>Razão social</span>
+                                    <input id="razaoSocial" type="text" placeholder="Razão social da empresa">
                                 </label>
                                 <label class="field">
                                     <span>Nome fantasia</span>
@@ -224,11 +224,11 @@
                                     <input id="cnpj" type="text" inputmode="numeric" data-mask="cnpj" placeholder="00.000.000/0000-00">
                                 </label>
                                 <label class="field">
-                                    <span>SÃ³cio/representante</span>
-                                    <input id="nomeRepresentante" type="text" placeholder="ResponsÃ¡vel legal">
+                                    <span>Sócio/representante</span>
+                                    <input id="nomeRepresentante" type="text" placeholder="Responsável legal">
                                 </label>
                                 <label class="field">
-                                    <span>Data de fundaÃ§Ã£o</span>
+                                    <span>Data de fundação</span>
                                     <input id="dataFundacao" type="date">
                                 </label>
                             </div>
@@ -239,25 +239,25 @@
                                     <label class="field">
                                         <span>E-mail</span>
                                         <input id="email" type="email" autocomplete="email" placeholder="cliente@exemplo.com" required>
-                                        <small class="field-hint">Usado para contato comercial e validaÃ§Ãµes futuras.</small>
+                                        <small class="field-hint">Usado para contato comercial e validações futuras.</small>
                                     </label>
                                     <label class="field">
                                         <span>Telefone / WhatsApp</span>
                                         <input id="telefone" type="text" inputmode="tel" data-mask="phone" placeholder="(00) 00000-0000" required>
-                                        <small class="field-hint">Esse nÃºmero serÃ¡ usado no envio do link e do cÃ³digo de assinatura.</small>
+                                        <small class="field-hint">Esse número será usado no envio do link e do código de assinatura.</small>
                                     </label>
                                 </div>
                             </div>
 
                             <div class="section-block">
-                                <h3>Dados da geraÃ§Ã£o</h3>
+                                <h3>Dados da geração</h3>
                                 <div class="form-grid form-grid-3">
                                     <label class="field">
-                                        <span>NÃºmero da UC</span>
-                                        <input id="uc" type="text" inputmode="numeric" data-mask="uc" placeholder="Somente nÃºmeros" required>
+                                        <span>Número da UC</span>
+                                        <input id="uc" type="text" inputmode="numeric" data-mask="uc" placeholder="Somente números" required>
                                     </label>
                                     <label class="field">
-                                        <span>Consumo mÃ©dio (kWh)</span>
+                                        <span>Consumo médio (kWh)</span>
                                         <input id="consumoMedio" type="number" min="0" step="0.01" placeholder="Ex.: 450" required>
                                     </label>
                                     <label class="field">
@@ -268,17 +268,17 @@
                                 <div class="checks-row">
                                     <label class="check-item">
                                         <input id="isencaoImpostos" type="checkbox">
-                                        <span>IsenÃ§Ã£o de impostos</span>
+                                        <span>Isenção de impostos</span>
                                     </label>
                                     <label class="check-item">
                                         <input id="isencaoFioB" type="checkbox">
-                                        <span>IsenÃ§Ã£o de fio B</span>
+                                        <span>Isenção de fio B</span>
                                     </label>
                                 </div>
                             </div>
 
                             <div class="section-block">
-                                <h3>EndereÃ§o da instalaÃ§Ã£o</h3>
+                                <h3>Endereço da instalação</h3>
                                 <div class="form-grid">
                                     <label class="field">
                                         <span>CEP</span>
@@ -292,7 +292,7 @@
                                         <input id="logradouro" type="text" placeholder="Rua, avenida, travessa..." required>
                                     </label>
                                     <label class="field">
-                                        <span>NÃºmero</span>
+                                        <span>Número</span>
                                         <input id="numero" type="text" placeholder="Ex.: 123" required>
                                     </label>
                                     <label class="field">
@@ -323,7 +323,7 @@
                                     </label>
                                     <label class="radio-item">
                                         <input type="radio" name="contaNoNome" value="nao">
-                                        <span>NÃ£o, estÃ¡ no nome de terceiro</span>
+                                        <span>Não, está no nome de terceiro</span>
                                     </label>
                                 </div>
 
@@ -348,7 +348,7 @@
                                 <div class="radio-row">
                                     <label class="radio-item">
                                         <input type="radio" name="modalidade" value="nao_mudar_titularidade" checked>
-                                        <span>NÃ£o mudar titularidade (geraÃ§Ã£o compartilhada)</span>
+                                        <span>Não mudar titularidade (geração compartilhada)</span>
                                     </label>
                                     <label class="radio-item">
                                         <input type="radio" name="modalidade" value="mudar_titularidade">
@@ -368,26 +368,26 @@
                         <section id="step2" class="step-panel hidden">
                             <div class="panel-head">
                                 <h2>Fase 2 - Upload de documentos</h2>
-                                <p>Envie os arquivos obrigatÃ³rios para concluir a indicaÃ§Ã£o.</p>
+                                <p>Envie os arquivos obrigatórios para concluir a indicação.</p>
                             </div>
 
                             <div class="summary-bar" id="summaryBar"></div>
 
                             <div class="upload-grid">
                                 <label class="upload-card">
-                                    <span>Conta de energia (obrigatÃ³rio)</span>
+                                    <span>Conta de energia (obrigatório)</span>
                                     <input id="docContaEnergia" type="file" accept=".pdf,image/*" required>
                                 </label>
                                 <label class="upload-card">
-                                    <span>Documento (CNH/RG) do responsÃ¡vel (obrigatÃ³rio)</span>
+                                    <span>Documento (CNH/RG) do responsável (obrigatório)</span>
                                     <input id="docIdentificacao" type="file" accept=".pdf,image/*" required>
                                 </label>
                                 <label class="upload-card" id="contratoSocialCard">
-                                    <span>Contrato social (obrigatÃ³rio para PJ)</span>
+                                    <span>Contrato social (obrigatório para PJ)</span>
                                     <input id="docContratoSocial" type="file" accept=".pdf,image/*">
                                 </label>
                                 <label class="upload-card" id="docTerceiroCard">
-                                    <span>Documento do terceiro (obrigatÃ³rio se conta for de terceiro)</span>
+                                    <span>Documento do terceiro (obrigatório se conta for de terceiro)</span>
                                     <input id="docTerceiro" type="file" accept=".pdf,image/*">
                                 </label>
                             </div>
@@ -399,7 +399,7 @@
                                 </button>
                                 <div class="actions-inline">
                                     <button type="submit" class="btn-primary-solid" id="salvarBtn">
-                                        Salvar como aguardando aprovaÃ§Ã£o
+                                        Salvar como aguardando aprovação
                                     </button>
                                 </div>
                             </div>
@@ -408,10 +408,10 @@
 
                     <section id="successPanel" class="success-panel hidden">
                         <div class="success-icon"><i class="ph ph-seal-check"></i></div>
-                        <h2>IndicaÃ§Ã£o recebida com sucesso</h2>
-                        <p>Os dados e documentos foram enviados para anÃ¡lise. O cliente ficou com status <strong>Aguardando AprovaÃ§Ã£o</strong>.</p>
+                        <h2>Indicação recebida com sucesso</h2>
+                        <p>Os dados e documentos foram enviados para análise. O cliente ficou com status <strong>Aguardando Aprovação</strong>.</p>
                         <div class="actions-row center">
-                            <button type="button" class="btn-secondary" id="novaIndicacaoBtn">Nova indicaÃ§Ã£o</button>
+                            <button type="button" class="btn-secondary" id="novaIndicacaoBtn">Nova indicação</button>
                             <button type="button" class="btn-secondary" id="voltarListaBtn">Voltar para kanban</button>
                             <a href="assinantes.html" class="btn-primary-solid">Ir para Assinantes</a>
                         </div>
@@ -427,10 +427,10 @@
         <div class="modal-card">
             <div class="modal-head">
                 <div>
-                    <h3 id="indicacaoModalTitle">DossiÃª do PrÃ©-assinante</h3>
-                    <p id="indicacaoModalStatus">Em anÃ¡lise</p>
+                    <h3 id="indicacaoModalTitle">Dossiê do Pré-assinante</h3>
+                    <p id="indicacaoModalStatus">Em análise</p>
                 </div>
-                <button type="button" class="modal-close-btn" id="indicacaoModalCloseBtn" aria-label="Fechar dossiÃª">
+                <button type="button" class="modal-close-btn" id="indicacaoModalCloseBtn" aria-label="Fechar dossiê">
                     <i class="ph ph-x"></i>
                 </button>
             </div>
@@ -466,7 +466,7 @@
                     <div class="contract-modal-content">
                         <strong id="contractModalName">Contrato pronto para assinatura</strong>
                         <p id="contractModalMessage">Contrato enviado para o WhatsApp do cliente.</p>
-                        <p class="contract-modal-note">Caso queira enviar tambÃ©m, basta copiar o link.</p>
+                        <p class="contract-modal-note">Caso queira enviar também, basta copiar o link.</p>
                         <div class="contract-modal-cta-row">
                             <a class="contract-modal-link" id="contractModalLink" href="#" target="_blank" rel="noopener noreferrer">Conferir contrato</a>
                             <button type="button" class="contract-modal-link contract-modal-copy" id="contractModalCopyBtn">Copiar link</button>
@@ -482,7 +482,7 @@
         </div>
     </div>
 
-    <script type="module" src="access-control.js?v=20260314-super1"></script>
+    <script type="module" src="access-control.js?v=20260314-prevalidacao1"></script>
     <script type="module" src="indicar-assinante.js?v=20260314-super1"></script></body>
 
 </html>

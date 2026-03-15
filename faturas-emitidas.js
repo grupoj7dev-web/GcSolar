@@ -1,6 +1,7 @@
 ﻿import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import {
+  addDoc,
   collection,
   deleteDoc,
   doc,
@@ -53,6 +54,8 @@ const LOCAL_DELETED_KEY = "gcsolar_emitidas_deleted_ids";
 
 const collapsedKey = "gcsolar_sidebar_collapsed";
 const themeKey = "gcsolar_theme";
+const SUPER_SUPER_ADMIN_EMAIL = "jheferson@gmail.com";
+const STAGE_PRE = "pre_validacao";
 
 let scope = null;
 let emittedInvoices = [];
@@ -65,6 +68,10 @@ let asaasBackendLastError = "";
 let invoiceSearchTerm = "";
 
 const ASAAS_BACKEND_COOLDOWN_MS = 5 * 60 * 1000;
+
+function isJ7TeamEmail(email) {
+  return String(email || "").toLowerCase().trim() === SUPER_SUPER_ADMIN_EMAIL;
+}
 
 function getLocallyDeletedIds() {
   try {
@@ -484,7 +491,12 @@ function belongsToScope(item) {
 }
 
 async function getUserScope(user) {
-  const result = { uid: user.uid, tenantId: user.uid, email: user.email || "" };
+  const result = {
+    uid: user.uid,
+    tenantId: user.uid,
+    email: user.email || "",
+    isJ7Team: isJ7TeamEmail(user.email || ""),
+  };
 
   const adminQ = query(collection(db, "gcredito_admins"), where("uid", "==", user.uid), limit(1));
   const adminSnap = await getDocs(adminQ);
@@ -530,6 +542,9 @@ function rowTemplate(record) {
   const canMarkPaid = status !== "pago";
   const lastId = localStorage.getItem(LAST_EMITIDA_KEY) || "";
   const rowClass = lastId && String(record.id) === String(lastId) ? "just-sent" : "";
+  const returnAction = scope?.isJ7Team
+    ? `<button class="menu-item reject" type="button" data-action="return-pre" data-id="${record.id}"><i class="ph ph-arrow-u-up-left"></i>Voltar para pre-validacao</button>`
+    : "";
   return `
     <tr class="${rowClass}" data-row-id="${record.id}">
       <td>${resolveUc(record)}</td>
@@ -545,6 +560,7 @@ function rowTemplate(record) {
           <button class="menu-item download" type="button" data-action="download" data-id="${record.id}"><i class="ph ph-download-simple"></i>Baixar Fatura</button>
           <button class="menu-item view" type="button" data-action="view" data-id="${record.id}"><i class="ph ph-eye"></i>Visualizar Fatura</button>
           ${canMarkPaid ? `<button class="menu-item pay" type="button" data-action="mark-paid" data-id="${record.id}"><i class="ph ph-check-circle"></i>Tornar pago</button>` : ""}
+          ${returnAction}
           <button class="menu-item delete" type="button" data-action="delete" data-id="${record.id}"><i class="ph ph-trash"></i>Excluir</button>
         </div>
       </td>
@@ -772,47 +788,7 @@ async function deleteInvoice(record) {
     environment: asaasConfig.environment,
   });
 
-  const endpoints = getAsaasApiEndpoints("/api/asaas-delete-charges");
-
-  let deleteOk = false;
-  let lastError = null;
-  for (const endpoint of endpoints) {
-    try {
-      const reqPayload = {
-        environment: asaasConfig.environment,
-        apiKey: asaasConfig.apiKey,
-        pixPaymentId,
-        boletoPaymentId,
-        externalReference,
-      };
-      console.log("[EMITIDAS][DELETE] Chamando endpoint", endpoint, {
-        ...reqPayload,
-        apiKey: reqPayload.apiKey ? "***" : "",
-      });
-
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(reqPayload),
-      });
-      const body = await response.json().catch(() => ({}));
-      console.log("[EMITIDAS][DELETE] Resposta endpoint", endpoint, {
-        status: response.status,
-        ok: response.ok,
-        body,
-      });
-      if (!response.ok || body?.ok === false) {
-        const details = body?.failed?.length ? ` | failed=${JSON.stringify(body.failed)}` : "";
-        throw new Error(`${body?.error || `HTTP ${response.status}`}${details}`);
-      }
-      deleteOk = true;
-      clearAsaasBackendOffline();
-      break;
-    } catch (error) {
-      console.error("[EMITIDAS][DELETE] Falha endpoint", endpoint, error);
-      lastError = error;
-    }
-  }
+  const { deleteOk, lastError } = await deleteAsaasChargesForRecord(record);
 
   if (!deleteOk) {
     markAsaasBackendOffline(lastError);
@@ -910,6 +886,131 @@ async function deleteInvoice(record) {
 
   console.log("[EMITIDAS][DELETE] Exclusao em cascata concluida", deletedByCollection);
   await loadData();
+}
+
+async function deleteAsaasChargesForRecord(record) {
+  const pixPaymentId = String(record.asaas_pix_charge_id || record.pix_id || "").trim();
+  const boletoPaymentId = String(record.asaas_boleto_charge_id || "").trim();
+  const externalReference = String(record.asaas_external_reference || "").trim();
+  const endpoints = getAsaasApiEndpoints("/api/asaas-delete-charges");
+
+  let deleteOk = false;
+  let lastError = null;
+  for (const endpoint of endpoints) {
+    try {
+      const reqPayload = {
+        environment: asaasConfig.environment,
+        apiKey: asaasConfig.apiKey,
+        pixPaymentId,
+        boletoPaymentId,
+        externalReference,
+      };
+      console.log("[EMITIDAS][DELETE] Chamando endpoint", endpoint, {
+        ...reqPayload,
+        apiKey: reqPayload.apiKey ? "***" : "",
+      });
+
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(reqPayload),
+      });
+      const body = await response.json().catch(() => ({}));
+      console.log("[EMITIDAS][DELETE] Resposta endpoint", endpoint, {
+        status: response.status,
+        ok: response.ok,
+        body,
+      });
+      if (!response.ok || body?.ok === false) {
+        const details = body?.failed?.length ? ` | failed=${JSON.stringify(body.failed)}` : "";
+        throw new Error(`${body?.error || `HTTP ${response.status}`}${details}`);
+      }
+      deleteOk = true;
+      clearAsaasBackendOffline();
+      break;
+    } catch (error) {
+      console.error("[EMITIDAS][DELETE] Falha endpoint", endpoint, error);
+      lastError = error;
+    }
+  }
+
+  return { deleteOk, lastError };
+}
+
+async function findValidationRecordForReturn(record) {
+  const sameValue = (a, b) => String(a || "").trim() && String(a || "").trim() === String(b || "").trim();
+  const targetOrigem = String(record.origem_validacao_id || record.validacao_id || "").trim();
+  if (targetOrigem) {
+    const directSnap = await getDocsFromServer(collection(db, COLL_VALIDACAO));
+    const direct = directSnap.docs
+      .map((d) => ({ id: d.id, ...d.data() }))
+      .find((item) => sameValue(item.id, targetOrigem));
+    if (direct) return direct;
+  }
+
+  const byIdentitySnap = await getDocsFromServer(collection(db, COLL_VALIDACAO));
+  return byIdentitySnap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .find((item) =>
+      String(resolveUc(item) || "").trim() === String(resolveUc(record) || "").trim() &&
+      String(resolveReferencia(item) || "").trim() === String(resolveReferencia(record) || "").trim() &&
+      onlyDigits(resolveDocumento(item)) === onlyDigits(resolveDocumento(record))
+    ) || null;
+}
+
+async function returnToPreValidation(record) {
+  if (!scope?.isJ7Team) {
+    window.alert("Apenas a equipe J7 pode devolver faturas para pre-validacao.");
+    return;
+  }
+
+  const ok = window.confirm("Voltar esta fatura emitida para a pre-validacao da J7?");
+  if (!ok) return;
+
+  if (!asaasConfig) await loadAsaasConfig();
+  if (asaasConfig?.apiKey) {
+    const { deleteOk, lastError } = await deleteAsaasChargesForRecord(record);
+    if (!deleteOk) {
+      markAsaasBackendOffline(lastError);
+      window.alert(`Falha ao remover cobrancas ASAAS antes do retorno: ${lastError?.message || "erro desconhecido"}`);
+      return;
+    }
+  }
+
+  const validationRecord = await findValidationRecordForReturn(record);
+  const revertPayload = {
+    ...record,
+    workflow_stage: STAGE_PRE,
+    status_validacao: "pendente",
+    status: "pendente",
+    fatura_emitida_ref: "",
+    emitida_ref: "",
+    devolvida_para_pre_validacao_em: serverTimestamp(),
+    devolvida_para_pre_validacao_em_iso: new Date().toISOString(),
+    devolvida_para_pre_validacao_por: scope.uid,
+    devolvida_para_pre_validacao_por_email: scope.email,
+    updated_at: serverTimestamp(),
+    aprovado_em: null,
+    aprovado_em_iso: null,
+    aprovado_por: null,
+    aprovado_por_email: null,
+  };
+
+  if (validationRecord?.id) {
+    await updateDoc(doc(db, COLL_VALIDACAO, validationRecord.id), revertPayload);
+    localStorage.setItem("gcsolar_last_validacao_id", validationRecord.id);
+  } else {
+    const created = await addDoc(collection(db, COLL_VALIDACAO), {
+      ...revertPayload,
+      origem_validacao_id: record.origem_validacao_id || record.validacao_id || "",
+      created_at: serverTimestamp(),
+    });
+    localStorage.setItem("gcsolar_last_validacao_id", created.id);
+  }
+
+  await deleteDoc(doc(db, COLL_EMITIDAS, record.id));
+  await loadData();
+  window.location.href = "faturas-pre-validacao.html";
 }
 
 function mapAsaasStatusToPayment(status, dueDate) {
@@ -1121,6 +1222,7 @@ function bindEvents() {
       if (action === "view") openInvoice(record);
       if (action === "download") downloadInvoice(record);
       if (action === "mark-paid") await markAsPaid(record);
+      if (action === "return-pre") await returnToPreValidation(record);
       if (action === "delete") await deleteInvoice(record);
     } catch (error) {
       console.error(error);

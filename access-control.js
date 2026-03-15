@@ -59,6 +59,7 @@ const PAGE_PERMISSION_MAP = {
   "geradoras.html": "geradoras",
   "geradora-wizard.html": "geradoras",
   "fatura-manual.html": "faturas",
+  "faturas-pre-validacao.html": "faturasPreValidacao",
   "faturas-validacao.html": "faturas",
   "faturas-emitidas.html": "faturas",
   "procuracao.html": "procuracao",
@@ -78,6 +79,7 @@ const NAV_PERMISSION_BY_HREF = {
   "calcular-desconto.html": "desconto",
   "geradoras.html": "geradoras",
   "fatura-manual.html": "faturas",
+  "faturas-pre-validacao.html": "faturasPreValidacao",
   "procuracao.html": "procuracao",
   "faturas-validacao.html": "faturas",
   "faturas-emitidas.html": "faturas",
@@ -159,6 +161,7 @@ async function findEmployeeByUid(uid) {
 function canAccessPermission(profile, permissionKey) {
   if (!permissionKey) return true;
   if (!profile) return false;
+  if (permissionKey === "faturasPreValidacao") return profile.isSuperSuperAdmin === true;
   if (profile.isSuperAdmin || profile.isAdmin) return true;
   if (profile.isBlocked) return false;
 
@@ -186,6 +189,29 @@ function ensureAclStyle() {
     .sidebar-nav a.nav-item.gc-nav-allowed { display: flex !important; }
   `;
   document.head.appendChild(style);
+}
+
+function ensureSpecialNavLinks(profile) {
+  const nav = document.querySelector(".sidebar-nav");
+  if (!nav) return;
+
+  const existing = nav.querySelector('[data-gc-dynamic="faturas-pre-validacao"]');
+  if (!profile?.isSuperSuperAdmin) {
+    existing?.remove();
+    return;
+  }
+
+  if (existing) return;
+
+  const anchor = nav.querySelector('a.nav-item[href="faturas-validacao.html"]');
+  if (!anchor) return;
+
+  const link = document.createElement("a");
+  link.href = "faturas-pre-validacao.html";
+  link.className = "nav-item";
+  link.setAttribute("data-gc-dynamic", "faturas-pre-validacao");
+  link.innerHTML = '<i class="ph ph-shield-check"></i><span>Faturas Pré-validação</span>';
+  nav.insertBefore(link, anchor);
 }
 
 // Bloqueio imediato para evitar flicker de menu completo antes da validacao.
@@ -324,6 +350,7 @@ async function buildProfile(user) {
   if (isSuperSuperAdminEmail(email)) {
     return {
       uid: user.uid,
+      isSuperSuperAdmin: true,
       isSuperAdmin: true,
       isAdmin: true,
       isBlocked: false,
@@ -335,6 +362,7 @@ async function buildProfile(user) {
   if (admin) {
     return {
       uid: user.uid,
+      isSuperSuperAdmin: false,
       isSuperAdmin: false,
       isAdmin: true,
       isBlocked: false,
@@ -347,6 +375,7 @@ async function buildProfile(user) {
   if (!employee) {
     return {
       uid: user.uid,
+      isSuperSuperAdmin: false,
       isSuperAdmin: false,
       isAdmin: false,
       isBlocked: false,
@@ -357,6 +386,7 @@ async function buildProfile(user) {
 
   return {
     uid: user.uid,
+    isSuperSuperAdmin: false,
     isSuperAdmin: false,
     isAdmin: false,
     isBlocked: isBlockedStatus(employee.status),
@@ -390,6 +420,7 @@ onAuthStateChanged(auth, async (user) => {
     const profile = await buildProfile(user);
     debugLog("profile", {
       uid: profile.uid,
+      isSuperSuperAdmin: profile.isSuperSuperAdmin,
       isSuperAdmin: profile.isSuperAdmin,
       isAdmin: profile.isAdmin,
       isBlocked: profile.isBlocked,
@@ -405,6 +436,7 @@ onAuthStateChanged(auth, async (user) => {
       return;
     }
 
+    ensureSpecialNavLinks(profile);
     applyNavPermissions(profile);
 
     if (!permissionNeeded) {

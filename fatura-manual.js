@@ -3,11 +3,14 @@ import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/
 import {
   addDoc,
   collection,
+  doc,
   getDocs,
+  getDoc,
   getFirestore,
   limit,
   query,
   serverTimestamp,
+  updateDoc,
   where,
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
@@ -37,6 +40,8 @@ const sendValidationBtn = document.getElementById("sendValidationBtn");
 const COLL_VALIDACAO = "gcredito_faturas_validacao";
 const collapsedKey = "gcsolar_sidebar_collapsed";
 const themeKey = "gcsolar_theme";
+const STAGE_PRE = "pre_validacao";
+const editRecordId = new URLSearchParams(window.location.search).get("edit") || "";
 
 let currentUser = null;
 let currentUserEmail = "";
@@ -45,6 +50,7 @@ let originalPreviewDataUrl = "";
 let pdfjsLibPromise = null;
 let lastExtractData = null;
 let authReady = false;
+let editingRecord = null;
 
 const debugLines = [];
 
@@ -62,7 +68,8 @@ function resetDebug() {
 function setValidationButtonState(enabled, busy = false) {
   if (!sendValidationBtn) return;
   sendValidationBtn.disabled = !enabled || busy;
-  sendValidationBtn.textContent = busy ? "Enviando..." : "Enviar para validação";
+  const idleLabel = editingRecord ? "Salvar correcao" : "Enviar para validacao";
+  sendValidationBtn.textContent = busy ? "Enviando..." : idleLabel;
 }
 
 function isMobile() {
@@ -798,7 +805,7 @@ async function postInvoiceToV2(file) {
 }
 
 async function sendToValidation() {
-  if (!lastExtractData || !currentUser) {
+  if ((!lastExtractData && !editingRecord?.fatura_energypay_html) || !currentUser) {
     window.alert("Gere uma fatura antes de enviar para validacao.");
     return;
   }
@@ -806,9 +813,10 @@ async function sendToValidation() {
   setValidationButtonState(true, true);
   try {
     const scope = await getUserScope(currentUser);
-    const info = lastExtractData.info_fatura || {};
-    const dados = lastExtractData.dados_extraidos || {};
-    const totals = lastExtractData.fatura_calculada_v2?.totals || {};
+    const sourceData = lastExtractData || editingRecord?.extraction_result || {};
+    const info = sourceData.info_fatura || {};
+    const dados = sourceData.dados_extraidos || {};
+    const totals = sourceData.fatura_calculada_v2?.totals || {};
     const dueDate = resolveDueDate(
       info.mes_referencia || dados.month_reference || "",
       info.vencimento || dados.expiration_date || ""
@@ -817,6 +825,7 @@ async function sendToValidation() {
     const payload = {
       status_validacao: "pendente",
       status: "pendente",
+      workflow_stage: STAGE_PRE,
       tenantId: scope.tenantId,
       tenant_id: scope.tenantId,
       user_id: scope.uid,
@@ -839,12 +848,47 @@ async function sendToValidation() {
       data_emissao: dados.data_emissao || new Date().toLocaleDateString("pt-BR"),
       created_at: serverTimestamp(),
       updated_at: serverTimestamp(),
-      extraction_result: lastExtractData,
+      extraction_result: sourceData,
       fatura_energypay_html: invoiceRenderHost?.innerHTML || "",
       fatura_equatorial_preview: originalPreviewDataUrl || "",
       fatura_url: "",
-      source: "fatura_manual",
+      source: editingRecord ? "fatura_manual_edicao" : "fatura_manual",
+      pre_validado_em: null,
+      pre_validado_em_iso: null,
+      pre_validado_por: null,
+      pre_validado_por_email: null,
+      liberado_para_gestor_em: null,
+      liberado_para_gestor_em_iso: null,
+      aprovado_em: null,
+      aprovado_em_iso: null,
+      aprovado_por: null,
+      aprovado_por_email: null,
+      rejeitado_em: null,
+      rejeitado_por: null,
+      rejeitado_por_email: null,
+      fatura_emitida_ref: "",
+      emitida_ref: "",
+      asaas_sync_status: "",
+      enviado_para_asaas: false,
+      asaas_customer_id: "",
+      asaas_external_reference: "",
+      asaas_payment_id: "",
+      asaas_pix_charge_id: "",
+      asaas_boleto_charge_id: "",
+      boleto_identification_field: "",
+      boleto_barcode: "",
+      pix_qr_code: "",
+      whatsapp_send_status: "",
+      whatsapp_send_error: "",
     };
+
+    if (editingRecord) {
+      await updateDoc(doc(db, COLL_VALIDACAO, editingRecord.id), payload);
+      localStorage.setItem("gcsolar_last_validacao_id", editingRecord.id);
+      debug(`Fatura atualizada para pre-validacao: ${editingRecord.id}`);
+      window.location.href = "faturas-pre-validacao.html";
+      return;
+    }
 
     const ref = await addDoc(collection(db, COLL_VALIDACAO), payload);
     localStorage.setItem("gcsolar_last_validacao_id", ref.id);
@@ -855,6 +899,34 @@ async function sendToValidation() {
     window.alert("Falha ao enviar para validacao.");
     setValidationButtonState(true, false);
   }
+}
+
+async function loadEditingRecord() {
+  if (!editRecordId || !currentUser) return;
+
+  const snap = await getDoc(doc(db, COLL_VALIDACAO, editRecordId));
+  if (!snap.exists()) {
+    window.alert("Fatura para edicao nao encontrada.");
+    window.location.replace("faturas-pre-validacao.html");
+    return;
+  }
+
+  editingRecord = { id: snap.id, ...snap.data() };
+  lastExtractData = editingRecord.extraction_result || null;
+  originalPreviewDataUrl = String(editingRecord.fatura_equatorial_preview || "").trim();
+  uploadFileName.textContent = `Modo edicao da fatura ${editingRecord.referencia || editingRecord.month_reference || ""} - UC ${editingRecord.uc || editingRecord.consumer_unit || ""}`;
+
+  if (String(editingRecord.fatura_energypay_html || "").trim()) {
+    invoiceRenderHost.innerHTML = editingRecord.fatura_energypay_html;
+  }
+
+  if (originalPreviewDataUrl) {
+    originalInvoiceHost.innerHTML = `<img class="original-invoice-image" src="${originalPreviewDataUrl}" alt="Fatura original">`;
+  } else {
+    originalInvoiceHost.innerHTML = '<p class="preview-empty">Upload uma nova fatura para substituir o preview original.</p>';
+  }
+
+  setValidationButtonState(Boolean(lastExtractData || editingRecord.fatura_energypay_html), false);
 }
 
 toggleSidebarBtn?.addEventListener("click", () => {
@@ -923,6 +995,12 @@ onAuthStateChanged(auth, (user) => {
   currentUserEmail = user?.email || "";
   authReady = true;
   debug(`Usuario autenticado: ${currentUserEmail || "nao autenticado"}`);
+  if (currentUser) {
+    loadEditingRecord().catch((error) => {
+      console.error(error);
+      window.alert("Nao foi possivel carregar a fatura para edicao.");
+    });
+  }
 });
 
 const savedTheme = localStorage.getItem(themeKey);
