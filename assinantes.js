@@ -257,11 +257,19 @@ function buildActiveSubscriberModal(item) {
   const planDetails = raw.plan_details || raw.planDetails || {};
   const planContract = raw.plan_contract || raw.planContract || {};
   const contrato = raw.contrato || {};
+  const documents = raw.documents || {};
+  const docsLegacy = raw.documentos || raw.anexos || {};
   const docs = [
     docLink("Contrato assinado", firstFilled(contrato.signedPdfUrl, raw.contratoAssinadoUrl)),
     docLink("Contrato gerado", firstFilled(contrato.pdfUrl, raw.contratoPdfUrl)),
     docLink("Comprovante de assinatura", firstFilled(raw.assinaturaComprovanteUrl)),
     docLink("Imagem da assinatura", firstFilled(raw.assinaturaImagemUrl)),
+    docLink("Conta de energia", firstFilled(documents.energyBill?.url, docsLegacy.contaEnergiaUrl, raw.contaEnergiaUrl)),
+    docLink("CNH/RG do responsável", firstFilled(documents.cnh?.url, docsLegacy.cnhUrl, raw.cnhUrl)),
+    docLink("Contrato social", firstFilled(documents.contractSocial?.url, docsLegacy.contratoSocialUrl, raw.contratoSocialUrl)),
+    docLink("Documento do terceiro", firstFilled(documents.thirdPartyDocument?.url, docsLegacy.cnhDonoContaUrl, raw.cnhDonoContaUrl)),
+    docLink("Procuração", firstFilled(documents.procuracao?.url, docsLegacy.procuracaoUrl, raw.procuracaoUrl)),
+    docLink("Protocolo de transferência", firstFilled(documents.transferProtocol?.url, raw.transfer?.protocol?.url)),
   ].filter(Boolean);
 
   const contractedKwh =

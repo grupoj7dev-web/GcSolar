@@ -1160,6 +1160,15 @@ function buildSubscriberPayloadFromIndicacao(item) {
   const cpfCnpj = item.cpfCnpj || "";
   const nowIso = new Date().toISOString();
   const contratoPdfUrl = item?.contrato?.pdfUrl || item?.contratoPdfUrl || item?.documentos?.contratoPdfUrl || "";
+  const docs = item?.documentos || {};
+  const documents = {
+    contract: contratoPdfUrl ? { url: contratoPdfUrl, name: "Contrato gerado" } : null,
+    energyBill: docs.contaEnergiaUrl ? { url: docs.contaEnergiaUrl, name: "Conta de energia" } : null,
+    cnh: docs.cnhUrl ? { url: docs.cnhUrl, name: "CNH ou RG do titular" } : null,
+    contractSocial: docs.contratoSocialUrl ? { url: docs.contratoSocialUrl, name: "Contrato social" } : null,
+    thirdPartyDocument: docs.cnhDonoContaUrl ? { url: docs.cnhDonoContaUrl, name: "Documento do terceiro" } : null,
+    procuracao: docs.procuracaoUrl ? { url: docs.procuracaoUrl, name: "Procuracao" } : null,
+  };
 
   return {
     user_id: item.createdBy || item.user_id || scope.uid,
@@ -1191,6 +1200,11 @@ function buildSubscriberPayloadFromIndicacao(item) {
     plan_contract: {
       contractedKwh: Number(item.consumoMedio || 0),
       discountPercentage: Number(item.desconto || 0),
+    },
+    documents,
+    documentos: {
+      ...docs,
+      contratoPdfUrl,
     },
     contrato: contratoPdfUrl ? {
       pdfUrl: contratoPdfUrl,

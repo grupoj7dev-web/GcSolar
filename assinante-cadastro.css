@@ -1278,6 +1278,36 @@
   background: #0b6a34;
 }
 
+.upload-existing {
+  display: grid;
+  gap: 0.18rem;
+  margin-top: 0.7rem;
+  padding: 0.62rem 0.72rem;
+  border-radius: 12px;
+  border: 1px solid #cfe0d5;
+  background: #f4faf6;
+}
+
+.upload-existing span {
+  color: #537061;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.upload-existing a {
+  color: #0f6f3c;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+  word-break: break-word;
+}
+
+.upload-existing a:hover {
+  text-decoration: underline;
+}
+
 .attachments-note {
   display: grid;
   gap: 0.18rem;

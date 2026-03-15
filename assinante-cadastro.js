@@ -45,6 +45,7 @@ const state = {
   companyContacts: [],
   transfer: {},
   notifications: {},
+  existingDocuments: {},
   draftReady: false,
 };
 
@@ -191,6 +192,80 @@ function readAddress(group) {
   Object.keys(out).forEach((k) => { out[k] = clean(root.querySelector(`[data-address-field='${k}']`)?.value || ""); });
   out.state = out.state.toUpperCase();
   return normalizeAddress(out);
+}
+
+function firstFilled(...values) {
+  for (const value of values) {
+    if (value === 0) return value;
+    if (clean(value)) return value;
+  }
+  return "";
+}
+
+function normalizeDocumentEntry(entry, fallbackLabel = "Arquivo") {
+  if (!entry) return null;
+  if (typeof entry === "string") {
+    const url = clean(entry);
+    return url ? { url, name: fallbackLabel } : null;
+  }
+  if (typeof entry === "object") {
+    const url = clean(entry.url || entry.downloadURL || entry.downloadUrl || entry.pdfUrl || entry.path || "");
+    if (!url) return null;
+    return {
+      ...entry,
+      url,
+      name: clean(entry.name || entry.fileName || fallbackLabel) || fallbackLabel,
+    };
+  }
+  return null;
+}
+
+function extractExistingDocuments(data) {
+  const docs = data?.documents || {};
+  const docsLegacy = data?.documentos || data?.anexos || {};
+  const contrato = data?.contrato || {};
+  const transferProtocol =
+    data?.transfer?.protocol ||
+    data?.transferProtocol ||
+    data?.documents?.transferProtocol ||
+    null;
+
+  return {
+    contract: normalizeDocumentEntry(firstFilled(docs.contract, contrato.pdfUrl, data?.contratoPdfUrl), "Contrato"),
+    energyBill: normalizeDocumentEntry(firstFilled(docs.energyBill, docsLegacy.contaEnergiaUrl, data?.contaEnergiaUrl), "Conta de energia"),
+    cnh: normalizeDocumentEntry(firstFilled(docs.cnh, docsLegacy.cnhUrl, data?.cnhUrl), "CNH/RG"),
+    contractSocial: normalizeDocumentEntry(firstFilled(docs.contractSocial, docsLegacy.contratoSocialUrl, data?.contratoSocialUrl), "Contrato social"),
+    procuracao: normalizeDocumentEntry(firstFilled(docs.procuracao, docsLegacy.procuracaoUrl, data?.procuracaoUrl), "Procuracao"),
+    transferProtocol: normalizeDocumentEntry(firstFilled(docs.transferProtocol, transferProtocol), "Protocolo de transferencia"),
+    thirdPartyDocument: normalizeDocumentEntry(firstFilled(docs.thirdPartyDocument, docsLegacy.cnhDonoContaUrl, data?.cnhDonoContaUrl), "Documento do terceiro"),
+  };
+}
+
+function ensureExistingFileSlot(inputId) {
+  const input = id(inputId);
+  const card = input?.closest(".upload-card");
+  if (!input || !card) return null;
+  let slot = card.querySelector(`[data-existing-slot="${inputId}"]`);
+  if (!slot) {
+    slot = document.createElement("div");
+    slot.className = "upload-existing hidden";
+    slot.dataset.existingSlot = inputId;
+    input.insertAdjacentElement("afterend", slot);
+  }
+  return slot;
+}
+
+function renderExistingFile(inputId, label, entry) {
+  const slot = ensureExistingFileSlot(inputId);
+  if (!slot) return;
+  const doc = normalizeDocumentEntry(entry, label);
+  if (!doc?.url) {
+    slot.innerHTML = "";
+    slot.classList.add("hidden");
+    return;
+  }
+  slot.innerHTML = `<span>Arquivo atual</span><a href="${doc.url}" target="_blank" rel="noopener noreferrer">${escapeHtml(doc.name || label)}</a>`;
+  slot.classList.remove("hidden");
 }
 
 function normalizeAddress(addr = {}) {
@@ -1182,21 +1257,32 @@ function bindEvents() {
       const uploadErrors = [];
       const uploadSafe = async (file, key, label) => {
         try {
-          return await uploadOptional(file, key);
+      return await uploadOptional(file, key);
         } catch (err) {
           const reason = err?.message || String(err);
           uploadErrors.push(`${label || file?.name || key}: ${reason}`);
           return null;
         }
       };
+      const existingDocuments = state.existingDocuments || {};
       payload.documents = {
-        contract: await uploadSafe(id("fileContractRequired")?.files?.[0], "doc_contract", "Contrato"),
-        energyBill: await uploadSafe(id("fileEnergyBillRequired")?.files?.[0], "doc_energy_bill", "Conta de energia"),
-        cnh: await uploadSafe(id("fileCnh")?.files?.[0], "doc_cnh_rg", "CNH/RG"),
-        contractSocial: await uploadSafe(id("fileContractSocial")?.files?.[0], "doc_contrato_social", "Contrato social"),
-        procuracao: await uploadSafe(id("fileProcuracao")?.files?.[0], "doc_procuracao", "Procuração"),
-        transferProtocol: await uploadSafe(id("fileTransferProtocol")?.files?.[0], "doc_transfer_protocol", "Protocolo de transferência"),
+        contract: await uploadSafe(id("fileContractRequired")?.files?.[0], "doc_contract", "Contrato") || existingDocuments.contract || null,
+        energyBill: await uploadSafe(id("fileEnergyBillRequired")?.files?.[0], "doc_energy_bill", "Conta de energia") || existingDocuments.energyBill || null,
+        cnh: await uploadSafe(id("fileCnh")?.files?.[0], "doc_cnh_rg", "CNH/RG") || existingDocuments.cnh || null,
+        contractSocial: await uploadSafe(id("fileContractSocial")?.files?.[0], "doc_contrato_social", "Contrato social") || existingDocuments.contractSocial || null,
+        procuracao: await uploadSafe(id("fileProcuracao")?.files?.[0], "doc_procuracao", "Procuração") || existingDocuments.procuracao || null,
+        transferProtocol: await uploadSafe(id("fileTransferProtocol")?.files?.[0], "doc_transfer_protocol", "Protocolo de transferência") || existingDocuments.transferProtocol || null,
+        thirdPartyDocument: existingDocuments.thirdPartyDocument || null,
       };
+      payload.documentos = {
+        contaEnergiaUrl: payload.documents.energyBill?.url || "",
+        cnhUrl: payload.documents.cnh?.url || "",
+        contratoSocialUrl: payload.documents.contractSocial?.url || "",
+        cnhDonoContaUrl: payload.documents.thirdPartyDocument?.url || "",
+        procuracaoUrl: payload.documents.procuracao?.url || "",
+        contratoPdfUrl: payload.documents.contract?.url || "",
+      };
+      payload.contratoPdfUrl = payload.documents.contract?.url || payload.contratoPdfUrl || "";
       if (payload.transfer.enabled) {
         payload.transfer.protocol = payload.documents.transferProtocol || null;
       }
@@ -1227,6 +1313,7 @@ function bindEvents() {
 
 async function hydrateExisting(data) {
   if (!data) return;
+  state.existingDocuments = extractExistingDocuments(data);
   id("concessionaria").value = data.concessionaria || "equatorial-goias";
   const type = data.holderType || data.subscriber?.holderType || "person";
   const radio = qsa('input[name="holderType"]').find((x) => x.value === type);
@@ -1287,6 +1374,12 @@ async function hydrateExisting(data) {
   id("detailFioB").checked = !!(details.paysWireB ?? details.paysFioB);
   id("detailAddDistributor").checked = !!details.addDistributorValue;
   id("detailIsento").checked = !!(details.exemptFromPayment ?? details.isExempt);
+  renderExistingFile("fileContractRequired", "Contrato", state.existingDocuments.contract);
+  renderExistingFile("fileEnergyBillRequired", "Conta de energia", state.existingDocuments.energyBill);
+  renderExistingFile("fileCnh", "CNH/RG", state.existingDocuments.cnh);
+  renderExistingFile("fileContractSocial", "Contrato social", state.existingDocuments.contractSocial);
+  renderExistingFile("fileProcuracao", "Procuracao", state.existingDocuments.procuracao);
+  renderExistingFile("fileTransferProtocol", "Protocolo de transferencia", state.existingDocuments.transferProtocol || state.existingDocuments.thirdPartyDocument);
   if (data.transfer?.enabled === true) id("transferRequiredYes").checked = true;
   else id("transferRequiredNo").checked = true;
   id("transferHolderType").value = data.transfer?.holderType || "person";
